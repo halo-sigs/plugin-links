@@ -1,4 +1,4 @@
-package io.github.guqing.template;
+package run.halo.links;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

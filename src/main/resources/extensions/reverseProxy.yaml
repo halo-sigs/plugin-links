@@ -3,7 +3,7 @@ kind: ReverseProxy
 metadata:
   name: reverse-proxy-template
   labels:
-    plugin.halo.run/pluginName: io.github.guqing.apples
+    plugin.halo.run/pluginName: run.halo.links
 rules:
   - path: /static/**
     file:

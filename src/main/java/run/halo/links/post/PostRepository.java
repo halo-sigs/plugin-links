@@ -1,4 +1,4 @@
-package io.github.guqing.template.post;
+package run.halo.links.post;
 
 import java.time.LocalDateTime;
 import java.util.Map;

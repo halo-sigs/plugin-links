@@ -1,4 +1,4 @@
-package io.github.guqing.template.post;
+package run.halo.links.post;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
