@@ -1,3 +1,4 @@
+import "./styles/tailwind.css";
 import { definePlugin } from "@halo-dev/admin-shared";
 import type { PagesPublicState } from "@halo-dev/admin-shared";
 import LinkList from "@/views/LinkList.vue";

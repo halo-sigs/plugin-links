@@ -1,0 +1,23 @@
+apiVersion: core.halo.run/v1alpha1
+kind: Link
+metadata:
+  name: guqing
+spec:
+  url: 'https://guqing.xyz'
+  displayName: Guqing Blog
+  logo: 'https://guqing.xyz/avatar'
+  description: King of mamama
+  groupName: null
+  priority: 0
+---
+apiVersion: core.halo.run/v1alpha1
+kind: Link
+metadata:
+  name: ryanwang
+spec:
+  url: 'https://ryanc.cc'
+  displayName: Ryan Wang Blog
+  logo: 'https://ryanc.cc/avatar'
+  description: King of gagaga
+  groupName: null
+  priority: 0
