@@ -1,35 +1,25 @@
 import { definePlugin } from "@halo-dev/admin-shared";
-import DefaultView from "./views/DefaultView.vue";
-import { IconGrid } from "@halo-dev/components";
-import "./styles/index.css";
+import type { PagesPublicState } from "@halo-dev/admin-shared";
+import LinkList from "@/views/LinkList.vue";
+import type { Ref } from "vue";
 
 export default definePlugin({
-  name: "PluginTemplate",
+  name: "PluginLinks",
   components: [],
-  extensionPoints: {},
   routes: [
     {
-      path: "/hello-world",
-      name: "HelloWorld",
-      component: DefaultView,
+      path: "/functional/links",
+      name: "Links",
+      component: LinkList,
     },
   ],
-  menus: [
-    {
-      name: "From PluginTemplate",
-      items: [
-        {
-          name: "HelloWorld",
-          path: "/hello-world",
-          icon: IconGrid,
-        },
-      ],
+  extensionPoints: {
+    PAGES: (state: Ref<PagesPublicState>) => {
+      state.value.functionalPages.push({
+        name: "友情链接",
+        url: "/links",
+        path: "/functional/links",
+      });
     },
-  ],
-  activated() {
-    // TODO
-  },
-  deactivated() {
-    // TODO
   },
 });

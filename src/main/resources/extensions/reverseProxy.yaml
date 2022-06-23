@@ -3,11 +3,8 @@ kind: ReverseProxy
 metadata:
   name: reverse-proxy-template
   labels:
-    plugin.halo.run/pluginName: run.halo.links
+    plugin.halo.run/plugin-name: PluginLinks
 rules:
   - path: /static/**
     file:
       directory: static
-  - path: /admin/**
-    file:
-      directory: admin

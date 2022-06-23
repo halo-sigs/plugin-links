@@ -2,7 +2,7 @@ apiVersion: plugin.halo.run/v1alpha1
 kind: Plugin
 metadata:
   # The name defines how the plugin is invoked,A unique name
-  name: run.halo.links
+  name: PluginLinks
 spec:
   # 'version' is a valid semantic version string (see semver.org).
   version: 0.0.1
@@ -15,3 +15,4 @@ spec:
   displayName: "友情链接"
   description: "友情链接管理"
   license: MIT
+  enabled: true
