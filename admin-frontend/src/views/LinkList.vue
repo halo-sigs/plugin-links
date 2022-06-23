@@ -74,10 +74,10 @@ export default defineComponent({
 </template>
 <style lang="scss" scoped>
 .links-container {
-  @apply grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  @apply grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8;
 
   .link-item {
-    @apply relative rounded border border-gray-300 bg-white px-5 py-4 shadow-sm hover:shadow flex items-center space-x-3 hover:border-gray-400;
+    @apply relative rounded border border-gray-300 bg-white px-5 py-4 shadow-sm hover:shadow flex items-center space-x-3 hover:border-gray-400 cursor-pointer;
   }
 
   .link-avatar-container {
