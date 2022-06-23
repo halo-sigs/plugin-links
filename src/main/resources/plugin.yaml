@@ -6,14 +6,14 @@ metadata:
 spec:
   # 'version' is a valid semantic version string (see semver.org).
   version: 0.0.1
-  requires: "*"
+  requires: ">=2.0.0"
   author: halo-dev
   logo: https://halo.run/logo
-  pluginClass: run.halo.links.LinkApplication
+  pluginClass: run.halo.links.LinkPlugin
   # 'homepage' usually links to the GitHub repository of the plugin
-  homepage: https://github.com/ruibaby/plugin-links
+  homepage: https://github.com/halo-sigs/plugin-links
   # 'displayName' explains what the plugin does in only a few words
   displayName: "友情链接"
-  description: "友情链接管理"
+  description: "友情链接管理模块"
   license: MIT
   enabled: true

@@ -13,15 +13,25 @@ import run.halo.app.extension.GVK;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @GVK(group = "core.halo.run", version = "v1alpha1",
-    kind = "Link", plural = "links", singular = "link")
+        kind = "Link", plural = "links", singular = "link")
 public class Link extends AbstractExtension {
 
-    @Schema(required = true)
-    private String url;
+    private LinkSpec spec;
 
-    private String logo;
+    @Data
+    public static class LinkSpec {
+        @Schema(required = true)
+        private String url;
 
-    private String description;
+        @Schema(required = true)
+        private String displayName;
 
-    private String groupName;
+        private String logo;
+
+        private String description;
+
+        private String groupName;
+
+        private Integer priority;
+    }
 }

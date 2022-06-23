@@ -8,11 +8,11 @@ import run.halo.app.plugin.BasePlugin;
  * @author guqing
  * @since 2.0.0
  */
-public class LinkApplication extends BasePlugin {
+public class LinkPlugin extends BasePlugin {
 
     private final SchemeManager schemeManager;
 
-    public LinkApplication(PluginWrapper wrapper) {
+    public LinkPlugin(PluginWrapper wrapper) {
         super(wrapper);
         schemeManager = getApplicationContext().getBean(SchemeManager.class);
     }
