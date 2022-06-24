@@ -1,15 +1,16 @@
 <script lang="ts" setup name="LinkList">
-import { ref, onMounted, computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
-  VPageHeader,
-  VButton,
-  VSpace,
-  VCard,
-  VModal,
-  VInput,
-  VTextarea,
   IconAddCircle,
   IconDeleteBin,
+  IconSave,
+  VButton,
+  VCard,
+  VInput,
+  VModal,
+  VPageHeader,
+  VSpace,
+  VTextarea,
 } from "@halo-dev/components";
 import axiosInstance from "@/utils/api-client";
 import type { Link } from "@/types/extension";
@@ -181,7 +182,14 @@ onMounted(handleFetchLinks);
       </div>
     </form>
     <template #footer>
-      <VButton :loading="createForm.saving" @click="handleCreateLink">
+      <VButton
+        type="secondary"
+        :loading="createForm.saving"
+        @click="handleCreateLink"
+      >
+        <template #icon>
+          <IconSave class="w-full h-full" />
+        </template>
         保存
       </VButton>
     </template>

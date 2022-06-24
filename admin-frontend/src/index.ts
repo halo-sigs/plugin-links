@@ -1,6 +1,6 @@
 import "./styles/tailwind.css";
-import { definePlugin } from "@halo-dev/admin-shared";
 import type { PagesPublicState } from "@halo-dev/admin-shared";
+import { BasicLayout, definePlugin } from "@halo-dev/admin-shared";
 import LinkList from "@/views/LinkList.vue";
 import type { Ref } from "vue";
 
@@ -9,9 +9,15 @@ export default definePlugin({
   components: [],
   routes: [
     {
-      path: "/functional/links",
-      name: "Links",
-      component: LinkList,
+      path: "/pages/functional/links",
+      component: BasicLayout,
+      children: [
+        {
+          path: "",
+          name: "Links",
+          component: LinkList,
+        },
+      ],
     },
   ],
   extensionPoints: {
@@ -19,7 +25,7 @@ export default definePlugin({
       state.value.functionalPages.push({
         name: "友情链接",
         url: "/links",
-        path: "/functional/links",
+        path: "/pages/functional/links",
       });
     },
   },
