@@ -21,3 +21,15 @@ spec:
   description: King of gagaga
   groupName: null
   priority: 0
+---
+apiVersion: core.halo.run/v1alpha1
+kind: Link
+metadata:
+  name: johnniang
+spec:
+  url: 'https://johnniang.me'
+  displayName: Johnniang  Blog
+  logo: 'https://johnniang.me/avatar'
+  description: King of xiaomi
+  groupName: null
+  priority: 0

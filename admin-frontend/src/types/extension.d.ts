@@ -8,10 +8,10 @@ export type LinkGroupSpec = {
 export type LinkSpec = {
   url: string;
   displayName: string;
-  logo: string;
-  description: string;
-  groupName: string;
-  priority: number;
+  logo?: string;
+  description?: string;
+  groupName?: string;
+  priority?: number;
 };
 
 export type LinkGroup = Extension<LinkGroupSpec>;
