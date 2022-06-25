@@ -1,5 +1,6 @@
 <script lang="ts" setup name="LinkList">
 import { computed, onMounted, ref } from "vue";
+import draggable from "vuedraggable";
 import {
   IconAddCircle,
   IconDeleteBin,
@@ -20,6 +21,7 @@ interface createFormState {
   saving: boolean;
 }
 
+const drag = ref(false);
 const links = ref<Link[]>();
 const createModal = ref(false);
 const createForm = ref<createFormState>({
@@ -37,6 +39,7 @@ const createForm = ref<createFormState>({
   },
   saving: false,
 });
+const batchSaving = ref(false);
 
 const isUpdateMode = computed(() => {
   return !!createForm.value.link.metadata.creationTimestamp;
@@ -51,7 +54,18 @@ const handleFetchLinks = async () => {
     const { data } = await axiosInstance.get<Link[]>(
       `/apis/core.halo.run/v1alpha1/links`
     );
-    links.value = data;
+    // sort by priority
+
+    links.value = data
+      .map((link) => {
+        if (link.spec) {
+          link.spec.priority = link.spec.priority || 0;
+        }
+        return link;
+      })
+      .sort((a, b) => {
+        return (a.spec?.priority || 0) - (b.spec?.priority || 0);
+      });
   } catch (e) {
     console.error(e);
   }
@@ -85,6 +99,29 @@ const handleCreateLink = async () => {
   }
 };
 
+const handleSaveInBatch = () => {
+  try {
+    batchSaving.value = true;
+    const promises = links.value?.map((link: Link, index) => {
+      if (link.spec) {
+        link.spec.priority = index;
+      }
+      return axiosInstance.put<Link>(
+        `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+        link
+      );
+    });
+    if (promises) {
+      Promise.all(promises);
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    batchSaving.value = false;
+    handleFetchLinks();
+  }
+};
+
 const handleDelete = (link: Link) => {
   try {
     axiosInstance.delete(
@@ -114,27 +151,38 @@ onMounted(handleFetchLinks);
   </VPageHeader>
   <div class="p-4">
     <VCard title="默认">
-      <div class="links-container">
-        <div
-          @click.stop="handleOpenCreateModal(link)"
-          v-for="(link, i) in links"
-          :key="i"
-          class="link-item"
-        >
-          <div class="link-avatar-container">
-            <img :src="link.spec.logo" :alt="link.spec.displayName" />
-          </div>
-          <div class="link-metas">
-            <div>
-              <p class="link-name">{{ link.spec.displayName }}</p>
-              <p class="link-description">{{ link.spec.description }}</p>
+      <template #actions>
+        <VSpace>
+          <VButton size="sm" :loading="batchSaving" @click="handleSaveInBatch"
+            >保存
+          </VButton>
+        </VSpace>
+      </template>
+      <draggable
+        v-model="links"
+        group="people"
+        @start="drag = true"
+        @end="drag = false"
+        item-key="id"
+        class="links-container"
+      >
+        <template #item="{ element }">
+          <div @click.stop="handleOpenCreateModal(element)" class="link-item">
+            <div class="link-avatar-container">
+              <img :src="element.spec.logo" :alt="element.spec.displayName" />
+            </div>
+            <div class="link-metas">
+              <div>
+                <p class="link-name">{{ element.spec.displayName }}</p>
+                <p class="link-description">{{ element.spec.description }}</p>
+              </div>
+            </div>
+            <div class="absolute right-1 top-1">
+              <IconDeleteBin @click.stop="handleDelete(element)" />
             </div>
           </div>
-          <div class="absolute right-1 top-1">
-            <IconDeleteBin @click.stop="handleDelete(link)" />
-          </div>
-        </div>
-      </div>
+        </template>
+      </draggable>
     </VCard>
   </div>
   <VModal v-model:visible="createModal" :title="createModalTitle" :width="600">
