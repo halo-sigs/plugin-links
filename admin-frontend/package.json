@@ -10,11 +10,17 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@codemirror/language": "^6.1.0",
+    "@codemirror/language-data": "^6.1.0",
+    "@codemirror/legacy-modes": "^6.1.0",
     "@halo-dev/admin-shared": "link:/Users/ryanwang/Workspace/github/halo-dev/halo-admin-next/packages/shared",
     "@halo-dev/components": "link:/Users/ryanwang/Workspace/github/halo-dev/halo-admin-next/packages/components",
+    "@replit/codemirror-vim": "^6.0.0",
     "axios": "^0.27.2",
+    "codemirror": "^6.0.0",
     "vue": "^3.2.37",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "yaml": "^2.1.1"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.1.3",
