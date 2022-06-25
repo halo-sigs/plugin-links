@@ -11,10 +11,11 @@ import {
 } from "@halo-dev/components";
 import LinkCreationModal from "../components/LinkCreationModal.vue";
 import axiosInstance from "@/utils/api-client";
-import type { Link } from "@/types/extension";
+import type { Link, LinkGroup } from "@/types/extension";
 
 const drag = ref(false);
 const links = ref<Link[]>();
+const groups = ref<LinkGroup[]>();
 const selectedLink = ref<Link | null>(null);
 const createModal = ref(false);
 const batchSaving = ref(false);
@@ -34,6 +35,26 @@ const handleFetchLinks = async () => {
           link.spec.priority = link.spec.priority || 0;
         }
         return link;
+      })
+      .sort((a, b) => {
+        return (a.spec?.priority || 0) - (b.spec?.priority || 0);
+      });
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+const handleFetchLinkGroups = async () => {
+  try {
+    const { data } = await axiosInstance.get<LinkGroup[]>(
+      `/apis/core.halo.run/v1alpha1/linkgroups`
+    );
+    groups.value = data
+      .map((group) => {
+        if (group.spec) {
+          group.spec.priority = group.spec.priority || 0;
+        }
+        return group;
       })
       .sort((a, b) => {
         return (a.spec?.priority || 0) - (b.spec?.priority || 0);
@@ -71,6 +92,27 @@ const handleSaveInBatch = async () => {
   }
 };
 
+const handleSaveGroupInBatch = async () => {
+  try {
+    const promises = groups.value?.map((group: LinkGroup, index) => {
+      if (group.spec) {
+        group.spec.priority = index;
+      }
+      return axiosInstance.put<LinkGroup>(
+        `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`,
+        group
+      );
+    });
+    if (promises) {
+      await Promise.all(promises);
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    await handleFetchLinkGroups();
+  }
+};
+
 const handleDelete = (link: Link) => {
   try {
     axiosInstance.delete(
@@ -83,7 +125,10 @@ const handleDelete = (link: Link) => {
   }
 };
 
-onMounted(handleFetchLinks);
+onMounted(() => {
+  handleFetchLinks();
+  handleFetchLinkGroups();
+});
 </script>
 <template>
   <LinkCreationModal
@@ -104,40 +149,73 @@ onMounted(handleFetchLinks);
     </template>
   </VPageHeader>
   <div class="p-4">
-    <VCard title="默认">
-      <template #actions>
-        <VSpace>
-          <VButton size="sm" :loading="batchSaving" @click="handleSaveInBatch">
-            保存
-          </VButton>
-        </VSpace>
-      </template>
-      <Draggable
-        v-model="links"
-        group="people"
-        @start="drag = true"
-        @end="drag = false"
-        item-key="id"
-        class="links-container"
-      >
-        <template #item="{ element }">
-          <div @click.stop="handleOpenCreateModal(element)" class="link-item">
-            <div class="link-avatar-container">
-              <img :src="element.spec.logo" :alt="element.spec.displayName" />
-            </div>
-            <div class="link-metas">
-              <div>
-                <p class="link-name">{{ element.spec.displayName }}</p>
-                <p class="link-description">{{ element.spec.description }}</p>
+    <div class="flex flex-row gap-2">
+      <div class="w-80">
+        <VCard title="分组">
+          <Draggable
+            v-model="groups"
+            group="group"
+            item-key="id"
+            tag="ul"
+            @change="handleSaveGroupInBatch"
+          >
+            <template #item="{ element }">
+              <li>
+                {{ element.spec?.displayName }}
+              </li>
+            </template>
+          </Draggable>
+        </VCard>
+      </div>
+      <div class="flex-1">
+        <VCard title="默认">
+          <template #actions>
+            <VSpace>
+              <VButton
+                size="sm"
+                :loading="batchSaving"
+                @click="handleSaveInBatch"
+              >
+                保存
+              </VButton>
+            </VSpace>
+          </template>
+          <Draggable
+            v-model="links"
+            group="people"
+            @start="drag = true"
+            @end="drag = false"
+            item-key="id"
+            class="links-container"
+          >
+            <template #item="{ element }">
+              <div
+                @click.stop="handleOpenCreateModal(element)"
+                class="link-item"
+              >
+                <div class="link-avatar-container">
+                  <img
+                    :src="element.spec.logo"
+                    :alt="element.spec.displayName"
+                  />
+                </div>
+                <div class="link-metas">
+                  <div>
+                    <p class="link-name">{{ element.spec.displayName }}</p>
+                    <p class="link-description">
+                      {{ element.spec.description }}
+                    </p>
+                  </div>
+                </div>
+                <div class="absolute right-1 top-1">
+                  <IconDeleteBin @click.stop="handleDelete(element)" />
+                </div>
               </div>
-            </div>
-            <div class="absolute right-1 top-1">
-              <IconDeleteBin @click.stop="handleDelete(element)" />
-            </div>
-          </div>
-        </template>
-      </Draggable>
-    </VCard>
+            </template>
+          </Draggable>
+        </VCard>
+      </div>
+    </div>
   </div>
 </template>
 <style lang="scss" scoped>

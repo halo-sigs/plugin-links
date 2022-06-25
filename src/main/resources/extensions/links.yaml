@@ -1,13 +1,25 @@
 apiVersion: core.halo.run/v1alpha1
 kind: Link
 metadata:
+  name: halo
+spec:
+  url: 'https://halo.run'
+  displayName: Halo
+  logo: 'https://halo.run/logo'
+  description: CMS
+  groupName: 默认分组
+  priority: 0
+---
+apiVersion: core.halo.run/v1alpha1
+kind: Link
+metadata:
   name: guqing
 spec:
   url: 'https://guqing.xyz'
-  displayName: Guqing Blog
+  displayName: guqing's Blog
   logo: 'https://guqing.xyz/avatar'
-  description: King of mamama
-  groupName: null
+  description: Core Developer of Halo
+  groupName: 默认分组
   priority: 0
 ---
 apiVersion: core.halo.run/v1alpha1
@@ -16,10 +28,10 @@ metadata:
   name: ryanwang
 spec:
   url: 'https://ryanc.cc'
-  displayName: Ryan Wang Blog
+  displayName: Ryan Wang's Blog
   logo: 'https://ryanc.cc/avatar'
-  description: King of gagaga
-  groupName: null
+  description: Core Developer of Halo
+  groupName: 默认分组
   priority: 0
 ---
 apiVersion: core.halo.run/v1alpha1
@@ -28,8 +40,8 @@ metadata:
   name: johnniang
 spec:
   url: 'https://johnniang.me'
-  displayName: Johnniang  Blog
+  displayName: John Niang's Blog
   logo: 'https://johnniang.me/avatar'
-  description: King of xiaomi
-  groupName: null
+  description: Core Developer of Halo
+  groupName: 默认分组
   priority: 0
