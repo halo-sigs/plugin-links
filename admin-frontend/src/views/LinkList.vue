@@ -226,7 +226,7 @@ onMounted(() => {
                 <div class="flex w-full flex-1 sm:w-auto">
                   <VInput
                     v-if="!checkAll"
-                    class="w-full sm:w-72"
+                    class="w-72"
                     placeholder="输入关键词搜索"
                   />
                   <VSpace v-else>
@@ -410,32 +410,4 @@ onMounted(() => {
     </div>
   </div>
 </template>
-<style lang="scss" scoped>
-.links-container {
-  @apply grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8;
-
-  .link-item {
-    @apply relative flex cursor-pointer items-center space-x-3 rounded border border-gray-300 bg-white px-4 py-5 shadow-sm hover:border-gray-400 hover:shadow;
-  }
-
-  .link-avatar-container {
-    @apply flex-shrink-0;
-
-    img {
-      @apply h-10 w-10 rounded-full;
-    }
-  }
-
-  .link-metas {
-    @apply min-w-0 flex-1;
-
-    .link-name {
-      @apply truncate text-sm text-gray-500;
-    }
-
-    .link-description {
-      @apply truncate text-sm text-gray-500;
-    }
-  }
-}
-</style>
+<style lang="scss" scoped></style>
