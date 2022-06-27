@@ -187,7 +187,7 @@ onMounted(() => {
                 <div>
                   <IconList class="drag-element cursor-move" />
                 </div>
-                <span class="ml-3 flex flex-1 flex-col cursor-pointer">
+                <span class="ml-3 flex flex-1 cursor-pointer flex-col">
                   <span class="block text-sm font-medium">
                     {{ element.spec?.displayName }}
                   </span>
@@ -262,23 +262,23 @@ onMounted(() => {
                   :class="{
                     'bg-gray-100': checkAll,
                   }"
-                  class="relative block cursor-pointer px-4 py-3 transition-all hover:bg-gray-50"
+                  class="relative block px-4 py-3 transition-all hover:bg-gray-50"
                 >
                   <div
                     v-show="checkAll"
-                    class="absolute inset-y-0 left-0 w-0.5 bg-themeable-primary"
+                    class="bg-themeable-primary absolute inset-y-0 left-0 w-0.5"
                   ></div>
                   <div class="relative flex flex-row items-center">
                     <div class="mr-4 hidden items-center sm:flex">
                       <input
                         v-model="checkAll"
-                        class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                        class="h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600"
                         type="checkbox"
                       />
                     </div>
                     <div v-if="link.spec.logo" class="mr-4">
                       <div
-                        class="h-12 w-12 rounded border bg-white hover:shadow-sm overflow-hidden"
+                        class="h-12 w-12 overflow-hidden rounded border bg-white hover:shadow-sm"
                       >
                         <img
                           :alt="link.metadata.name"
@@ -289,8 +289,8 @@ onMounted(() => {
                     </div>
                     <div class="flex-1">
                       <div class="flex flex-row items-center">
-                        <div class="mr-2 drag-element cursor-move">
-                          <IconList class="w-4 h-4" />
+                        <div class="drag-element mr-2 cursor-move">
+                          <IconList class="h-4 w-4" />
                         </div>
                         <span
                           class="truncate text-sm font-medium text-gray-900"
@@ -415,7 +415,7 @@ onMounted(() => {
   @apply grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8;
 
   .link-item {
-    @apply relative rounded border border-gray-300 bg-white px-4 py-5 shadow-sm hover:shadow flex items-center space-x-3 hover:border-gray-400 cursor-pointer;
+    @apply relative flex cursor-pointer items-center space-x-3 rounded border border-gray-300 bg-white px-4 py-5 shadow-sm hover:border-gray-400 hover:shadow;
   }
 
   .link-avatar-container {
@@ -427,14 +427,14 @@ onMounted(() => {
   }
 
   .link-metas {
-    @apply flex-1 min-w-0;
+    @apply min-w-0 flex-1;
 
     .link-name {
-      @apply text-sm text-gray-500 truncate;
+      @apply truncate text-sm text-gray-500;
     }
 
     .link-description {
-      @apply text-sm text-gray-500 truncate;
+      @apply truncate text-sm text-gray-500;
     }
   }
 }

@@ -145,7 +145,7 @@ const handleCreateLink = async () => {
         @click="handleCreateLink"
       >
         <template #icon>
-          <IconSave class="w-full h-full" />
+          <IconSave class="h-full w-full" />
         </template>
         保存
       </VButton>
