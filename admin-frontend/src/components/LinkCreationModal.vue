@@ -1,6 +1,5 @@
 <script lang="ts" setup name="LinkCreationModal">
 import {
-  IconEye,
   IconSave,
   VButton,
   VInput,
@@ -10,12 +9,7 @@ import {
 import type { PropType } from "vue";
 import { computed, ref, watch } from "vue";
 import type { Link } from "@/types/extension";
-import axiosInstance from "@/utils/api-client";
-import { basicSetup, EditorView } from "codemirror";
-import { StreamLanguage } from "@codemirror/language";
-import { yaml as yamlLang } from "@codemirror/legacy-modes/mode/yaml";
-import yaml from "yaml";
-import { vim } from "@replit/codemirror-vim";
+import { axiosInstance } from "@halo-dev/admin-shared";
 
 const props = defineProps({
   visible: {
@@ -50,11 +44,6 @@ const createForm = ref<createFormState>({
   },
   saving: false,
 });
-const codeMode = ref(false);
-const rawCode = ref("");
-const codeEditorView = ref();
-
-console.log(yaml.stringify(createForm.value.link));
 
 const isUpdateMode = computed(() => {
   return !!createForm.value.link.metadata.creationTimestamp;
@@ -98,28 +87,6 @@ const handleCreateLink = async () => {
     createForm.value.saving = false;
   }
 };
-
-const handleOpenCodeMode = () => {
-  codeMode.value = !codeMode.value;
-  if (codeMode.value) {
-    rawCode.value = yaml.stringify(createForm.value.link);
-    handleCreateYamlEditor();
-  } else {
-    createForm.value.link = yaml.parse(rawCode.value);
-  }
-};
-
-const yamlEditor = ref();
-const handleCreateYamlEditor = () => {
-  if (codeEditorView.value) {
-    codeEditorView.value.destroy();
-  }
-  codeEditorView.value = new EditorView({
-    doc: rawCode.value,
-    extensions: [basicSetup, StreamLanguage.define(yamlLang), vim()],
-    parent: yamlEditor.value,
-  });
-};
 </script>
 <template>
   <VModal
@@ -128,10 +95,7 @@ const handleCreateYamlEditor = () => {
     :title="createModalTitle"
     :width="650"
   >
-    <div class="w-full flex justify-end mb-2">
-      <IconEye @click="handleOpenCodeMode" />
-    </div>
-    <form v-if="!codeMode">
+    <form>
       <div class="space-y-6 divide-y-0 sm:divide-y sm:divide-gray-200">
         <div class="sm:grid sm:grid-cols-3 sm:items-start sm:gap-4 sm:pt-5">
           <label
@@ -173,9 +137,6 @@ const handleCreateYamlEditor = () => {
           </div>
         </div>
       </div>
-    </form>
-    <form v-show="codeMode">
-      <div ref="yamlEditor"></div>
     </form>
     <template #footer>
       <VButton

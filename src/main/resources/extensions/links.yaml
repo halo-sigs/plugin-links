@@ -7,7 +7,7 @@ spec:
   displayName: Halo
   logo: 'https://halo.run/logo'
   description: CMS
-  groupName: 默认分组
+  groupName: default
   priority: 0
 ---
 apiVersion: core.halo.run/v1alpha1
@@ -19,7 +19,7 @@ spec:
   displayName: guqing's Blog
   logo: 'https://guqing.xyz/avatar'
   description: Core Developer of Halo
-  groupName: 默认分组
+  groupName: default
   priority: 0
 ---
 apiVersion: core.halo.run/v1alpha1
@@ -31,7 +31,7 @@ spec:
   displayName: Ryan Wang's Blog
   logo: 'https://ryanc.cc/avatar'
   description: Core Developer of Halo
-  groupName: 默认分组
+  groupName: default
   priority: 0
 ---
 apiVersion: core.halo.run/v1alpha1
@@ -43,5 +43,5 @@ spec:
   displayName: John Niang's Blog
   logo: 'https://johnniang.me/avatar'
   description: Core Developer of Halo
-  groupName: 默认分组
+  groupName: default
   priority: 0

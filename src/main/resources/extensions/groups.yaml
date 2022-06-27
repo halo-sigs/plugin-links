@@ -5,3 +5,11 @@ metadata:
 spec:
   displayName: 默认分组
   priority: 0
+---
+apiVersion: core.halo.run/v1alpha1
+kind: LinkGroup
+metadata:
+  name: test
+spec:
+  displayName: 测试分组
+  priority: 0
