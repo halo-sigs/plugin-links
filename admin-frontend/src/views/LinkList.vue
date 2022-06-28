@@ -1,6 +1,5 @@
 <script lang="ts" setup name="LinkList">
 import { onMounted, ref, watch } from "vue";
-import type { Ref } from "vue";
 import Draggable from "vuedraggable";
 import {
   IconAddCircle,
@@ -16,6 +15,7 @@ import LinkCreationModal from "../components/LinkCreationModal.vue";
 import { axiosInstance } from "@halo-dev/admin-shared";
 import type { Link, LinkGroup } from "@/types/extension";
 import yaml from "yaml";
+import { useFileSystemAccess } from "@vueuse/core";
 
 const drag = ref(false);
 const links = ref<Link[]>();
@@ -164,8 +164,11 @@ const handleExportSelectedLinks = async () => {
   }
   const yamlString = links.value
     ?.map((link) => {
-      return yaml.stringify(link);
+      if (selectedLinks.value.includes(link.metadata.name)) {
+        return yaml.stringify(link);
+      }
     })
+    .filter((link) => link)
     .join("---\n");
   const blob = new Blob([yamlString], { type: "text/yaml" });
   const url = URL.createObjectURL(blob);
@@ -173,6 +176,47 @@ const handleExportSelectedLinks = async () => {
   link.href = url;
   link.download = "links.yaml";
   link.click();
+};
+
+const handleImportFromYaml = async () => {
+  const res = useFileSystemAccess({
+    dataType: "Text",
+    types: [
+      {
+        description: "yaml",
+        accept: {
+          "text/yaml": [".yaml", ".yml"],
+        },
+      },
+    ],
+    excludeAcceptAllOption: true,
+  });
+
+  await res.open();
+
+  try {
+    const parsed = yaml.parse(res.data.value);
+    if (Array.isArray(parsed)) {
+      const promises = parsed.map((link) => {
+        return axiosInstance.post<Link>(
+          `/apis/core.halo.run/v1alpha1/links`,
+          link
+        );
+      });
+      if (promises) {
+        await Promise.all(promises);
+      }
+    } else {
+      await axiosInstance.post<Link>(
+        `/apis/core.halo.run/v1alpha1/links`,
+        parsed
+      );
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    await handleFetchLinks();
+  }
 };
 
 const handleCheckAllChange = (e: Event) => {
@@ -206,7 +250,7 @@ onMounted(() => {
   <VPageHeader title="友情链接">
     <template #actions>
       <VSpace>
-        <VButton size="sm" type="default" @click="createModal = true">
+        <VButton size="sm" type="default" @click="handleImportFromYaml">
           导入
         </VButton>
         <VButton type="secondary" @click="createModal = true">
