@@ -13,8 +13,10 @@
   "dependencies": {
     "@halo-dev/admin-shared": "link:/Users/ryanwang/Workspace/github/halo-dev/halo-admin-next/packages/shared",
     "@halo-dev/components": "link:/Users/ryanwang/Workspace/github/halo-dev/halo-admin-next/packages/components",
+    "@vueuse/components": "^8.7.5",
     "@vueuse/core": "^8.7.5",
     "vue": "^3.2.37",
+    "vue-router": "^4.0.16",
     "vuedraggable": "^4.1.0",
     "yaml": "^2.1.1"
   },
