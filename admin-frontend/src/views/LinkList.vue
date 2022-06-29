@@ -11,6 +11,7 @@ import {
   VInput,
   VPageHeader,
   VSpace,
+  useDialog,
 } from "@halo-dev/components";
 import LinkCreationModal from "../components/LinkCreationModal.vue";
 import { axiosInstance } from "@halo-dev/admin-shared";
@@ -28,6 +29,8 @@ const selectedGroup = ref<LinkGroup | null>(null);
 const createModal = ref(false);
 const batchSaving = ref(false);
 const checkedAll = ref(false);
+
+const dialog = useDialog();
 
 const handleFetchLinks = async () => {
   selectedLink.value = null;
@@ -139,19 +142,27 @@ const handleDelete = (link: Link) => {
   }
 };
 
-const handleDeleteInBatch = async () => {
-  try {
-    const promises = selectedLinks.value.map((link) => {
-      return axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link}`);
-    });
-    if (promises) {
-      await Promise.all(promises);
-    }
-  } catch (e) {
-    console.error(e);
-  } finally {
-    await handleFetchLinks();
-  }
+const handleDeleteInBatch = () => {
+  dialog.warning({
+    title: "是否确认删除所选的链接？",
+    description: "删除之后将无法恢复。",
+    onConfirm: async () => {
+      try {
+        const promises = selectedLinks.value.map((link) => {
+          return axiosInstance.delete(
+            `/apis/core.halo.run/v1alpha1/links/${link}`
+          );
+        });
+        if (promises) {
+          await Promise.all(promises);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        await handleFetchLinks();
+      }
+    },
+  });
 };
 
 const handleGetLinksByGroup = (group: LinkGroup) => {
