@@ -1,0 +1,28 @@
+apiVersion: v1alpha1
+kind: Role
+metadata:
+  name: role-template-link-view
+  labels:
+    plugin.halo.run/role-template: "true"
+  annotations:
+    plugin.halo.run/module: "Link Management"
+    plugin.halo.run/display-name: "友情链接查看"
+rules:
+  - pluginName: PluginLinks
+    resources: [ "links" ]
+    verbs: [ "get", "list" ]
+---
+apiVersion: v1alpha1
+kind: Role
+metadata:
+  name: role-template-link-manage
+  labels:
+    plugin.halo.run/role-template: "true"
+  annotations:
+    plugin.halo.run/dependencies: "[ \"role-template-link-view\" ]"
+    plugin.halo.run/module: "Link Management"
+    plugin.halo.run/display-name: "友情链接管理"
+rules:
+  - pluginName: PluginLinks
+    resources: [ "links" ]
+    verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
