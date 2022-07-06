@@ -1,11 +1,5 @@
-<script lang="ts" setup name="LinkCreationModal">
-import {
-  IconSave,
-  VButton,
-  VInput,
-  VModal,
-  VTextarea,
-} from "@halo-dev/components";
+<script lang="ts" name="LinkCreationModal" setup>
+import { IconSave, VButton, VModal } from "@halo-dev/components";
 import type { PropType } from "vue";
 import { computed, ref, watch } from "vue";
 import type { Link } from "@/types/extension";
@@ -90,59 +84,38 @@ const handleCreateLink = async () => {
 </script>
 <template>
   <VModal
-    @update:visible="handleVisibleChange"
-    :visible="visible"
     :title="createModalTitle"
+    :visible="visible"
     :width="650"
+    @update:visible="handleVisibleChange"
   >
-    <form>
-      <div class="space-y-6 divide-y-0 sm:divide-y sm:divide-gray-200">
-        <div class="sm:grid sm:grid-cols-3 sm:items-start sm:gap-4 sm:pt-5">
-          <label
-            class="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2"
-          >
-            网站名称
-          </label>
-          <div class="mt-1 sm:col-span-2 sm:mt-0">
-            <VInput v-model="createForm.link.spec.displayName"></VInput>
-          </div>
-        </div>
-
-        <div class="sm:grid sm:grid-cols-3 sm:items-start sm:gap-4 sm:pt-5">
-          <label
-            class="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2"
-          >
-            网站地址
-          </label>
-          <div class="mt-1 sm:col-span-2 sm:mt-0">
-            <VInput v-model="createForm.link.spec.url"></VInput>
-          </div>
-        </div>
-
-        <div class="sm:grid sm:grid-cols-3 sm:items-center sm:gap-4 sm:pt-5">
-          <label class="block text-sm font-medium text-gray-700"> Logo </label>
-          <div class="mt-1 sm:col-span-2 sm:mt-0">
-            <VInput v-model="createForm.link.spec.logo"></VInput>
-          </div>
-        </div>
-
-        <div class="sm:grid sm:grid-cols-3 sm:items-start sm:gap-4 sm:pt-5">
-          <label
-            class="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2"
-          >
-            描述
-          </label>
-          <div class="mt-1 sm:col-span-2 sm:mt-0">
-            <VTextarea v-model="createForm.link.spec.description"></VTextarea>
-          </div>
-        </div>
-      </div>
-    </form>
+    <FormKit
+      id="link-form"
+      v-model="createForm.link.spec"
+      :actions="false"
+      type="form"
+      @submit="handleCreateLink"
+    >
+      <FormKit
+        label="网站名称"
+        name="displayName"
+        type="text"
+        validation="required"
+      ></FormKit>
+      <FormKit
+        label="网站地址"
+        name="url"
+        type="url"
+        validation="required"
+      ></FormKit>
+      <FormKit label="Logo" name="logo" type="text"></FormKit>
+      <FormKit label="描述" name="description" type="textarea"></FormKit>
+    </FormKit>
     <template #footer>
       <VButton
-        type="secondary"
         :loading="createForm.saving"
-        @click="handleCreateLink"
+        type="secondary"
+        @click="$formkit.submit('link-form')"
       >
         <template #icon>
           <IconSave class="h-full w-full" />
