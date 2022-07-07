@@ -1,4 +1,4 @@
-<script lang="ts" setup name="LinkList">
+<script lang="ts" name="LinkList" setup>
 import { onMounted, ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import {
@@ -6,12 +6,11 @@ import {
   IconInformation,
   IconList,
   IconSettings,
+  useDialog,
   VButton,
   VCard,
-  VInput,
   VPageHeader,
   VSpace,
-  useDialog,
 } from "@halo-dev/components";
 import LinkCreationModal from "../components/LinkCreationModal.vue";
 import { axiosInstance } from "@halo-dev/admin-shared";
@@ -278,22 +277,22 @@ onMounted(() => {
   <div class="p-4">
     <div class="flex flex-row gap-2">
       <div class="w-80">
-        <VCard title="分组" :bodyClass="['!p-0']">
+        <VCard :bodyClass="['!p-0']" title="分组">
           <Draggable
             v-model="groups"
+            class="divide-y divide-gray-100 bg-white"
             group="group"
             item-key="metadata.name"
             tag="div"
             @change="handleSaveGroupInBatch"
-            class="divide-y divide-gray-100 bg-white"
           >
             <template #item="{ element }">
               <div
-                class="relative flex items-center p-4"
                 :class="{
                   'bg-gray-50':
                     selectedGroup?.metadata.name === element.metadata.name,
                 }"
+                class="relative flex items-center p-4"
                 @click="selectedGroup = element"
               >
                 <div>
@@ -337,11 +336,11 @@ onMounted(() => {
                   />
                 </div>
                 <div class="flex w-full flex-1 sm:w-auto">
-                  <VInput
+                  <FormKit
                     v-if="!selectedLinks.length"
-                    class="w-72"
                     placeholder="输入关键词搜索"
-                  />
+                    type="text"
+                  ></FormKit>
                   <VSpace v-else>
                     <VButton type="danger" @click="handleDeleteInBatch">
                       删除
@@ -350,8 +349,8 @@ onMounted(() => {
                       <VButton type="default">更多</VButton>
                       <template #popper>
                         <div class="w-48 p-2">
-                          <VSpace direction="column" class="w-full">
-                            <VButton @click="handleExportSelectedLinks" block>
+                          <VSpace class="w-full" direction="column">
+                            <VButton block @click="handleExportSelectedLinks">
                               导出
                             </VButton>
                           </VSpace>
@@ -362,8 +361,8 @@ onMounted(() => {
                 </div>
                 <div class="mt-4 flex sm:mt-0">
                   <VButton
-                    size="sm"
                     :loading="batchSaving"
+                    size="sm"
                     @click="handleSaveInBatch"
                   >
                     保存排序
@@ -374,13 +373,13 @@ onMounted(() => {
           </template>
           <Draggable
             v-model="links"
-            group="link"
-            @start="drag = true"
-            @end="drag = false"
-            item-key="id"
             class="box-border h-full w-full divide-y divide-gray-100"
-            tag="ul"
+            group="link"
             handle=".drag-element"
+            item-key="id"
+            tag="ul"
+            @end="drag = false"
+            @start="drag = true"
           >
             <template #item="{ element: link }">
               <li>
@@ -398,10 +397,10 @@ onMounted(() => {
                     <div class="mr-4 hidden items-center sm:flex">
                       <input
                         v-model="selectedLinks"
-                        name="link-checkbox"
-                        class="h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600"
-                        type="checkbox"
                         :value="link.metadata.name"
+                        class="h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600"
+                        name="link-checkbox"
+                        type="checkbox"
                       />
                     </div>
                     <div v-if="link.spec.logo" class="mr-4">

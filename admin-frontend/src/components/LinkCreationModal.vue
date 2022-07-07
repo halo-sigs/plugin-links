@@ -18,6 +18,31 @@ const props = defineProps({
 
 const emit = defineEmits(["update:visible", "close"]);
 
+const formSchema = [
+  {
+    $formkit: "text",
+    name: "displayName",
+    label: "网站名称",
+    validation: "required",
+  },
+  {
+    $formkit: "url",
+    name: "url",
+    label: "网站地址",
+    validation: "required",
+  },
+  {
+    $formkit: "text",
+    name: "logo",
+    label: "Logo",
+  },
+  {
+    $formkit: "textarea",
+    name: "description",
+    label: "描述",
+  },
+];
+
 interface createFormState {
   link: Link;
   saving: boolean;
@@ -96,20 +121,7 @@ const handleCreateLink = async () => {
       type="form"
       @submit="handleCreateLink"
     >
-      <FormKit
-        label="网站名称"
-        name="displayName"
-        type="text"
-        validation="required"
-      ></FormKit>
-      <FormKit
-        label="网站地址"
-        name="url"
-        type="url"
-        validation="required"
-      ></FormKit>
-      <FormKit label="Logo" name="logo" type="text"></FormKit>
-      <FormKit label="描述" name="description" type="textarea"></FormKit>
+      <FormKitSchema :schema="formSchema" />
     </FormKit>
     <template #footer>
       <VButton
