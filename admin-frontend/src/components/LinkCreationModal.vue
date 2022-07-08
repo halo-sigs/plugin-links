@@ -4,6 +4,7 @@ import type { PropType } from "vue";
 import { computed, ref, watch } from "vue";
 import type { Link } from "@/types/extension";
 import { axiosInstance } from "@halo-dev/admin-shared";
+import cloneDeep from "lodash.clonedeep";
 
 const props = defineProps({
   visible: {
@@ -74,7 +75,7 @@ const createModalTitle = computed(() => {
 
 watch(props, (newVal) => {
   if (newVal.visible && props.link) {
-    createForm.value.link = props.link;
+    createForm.value.link = cloneDeep(props.link);
   }
 });
 

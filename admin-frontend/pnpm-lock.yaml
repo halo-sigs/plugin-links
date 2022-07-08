@@ -18,6 +18,7 @@ specifiers:
   eslint: ^8.18.0
   eslint-plugin-vue: ^8.7.1
   jsdom: ^19.0.0
+  lodash.clonedeep: ^4.5.0
   npm-run-all: ^4.1.5
   postcss: ^8.4.14
   prettier: ^2.7.1
@@ -39,6 +40,7 @@ dependencies:
   '@halo-dev/components': 0.0.0-alpha.0_ih75cifwcorwrinxmu6n466o5y
   '@vueuse/components': 8.9.1_vue@3.2.37
   '@vueuse/core': 8.9.1_vue@3.2.37
+  lodash.clonedeep: 4.5.0
   vue: 3.2.37
   vue-router: 4.1.1_vue@3.2.37
   vuedraggable: 4.1.0_vue@3.2.37
@@ -2338,6 +2340,10 @@ packages:
     resolution: {integrity: sha512-lL87ytIGP2FU5PWwNDo0w3WhIo2gopIAxPg9RxDYF7m4rr5ahuZxP22xnJHIvaLTe4Z9P6uKKY2UHiwyB4pcrw==}
     engines: {node: '>=14'}
     dev: true
+
+  /lodash.clonedeep/4.5.0:
+    resolution: {integrity: sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ==}
+    dev: false
 
   /lodash.merge/4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
