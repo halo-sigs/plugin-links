@@ -1,4 +1,4 @@
-name: Nightly Build Plugin Jar
+name: Build Plugin Jar
 
 on:
   push:
@@ -53,4 +53,4 @@ jobs:
           name: plugin-links
           path: |
             build/libs
-          retention-days: 1
+          retention-days: 7
