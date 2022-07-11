@@ -10,6 +10,7 @@ import {
   VButton,
   VCard,
   VPageHeader,
+  VPagination,
   VSpace,
 } from "@halo-dev/components";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
@@ -500,75 +501,7 @@ onMounted(() => {
               <div
                 class="links-flex links-flex-1 links-items-center links-justify-end"
               >
-                <div>
-                  <nav
-                    aria-label="Pagination"
-                    class="links-relative links-z-0 links-inline-flex -links-space-x-px links-rounded-md links-shadow-sm"
-                  >
-                    <a
-                      class="links-relative links-inline-flex links-items-center links-rounded-l-md links-border links-border-gray-300 links-bg-white links-px-2 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50"
-                      href="#"
-                    >
-                      <span class="links-sr-only">Previous</span>
-                      <svg
-                        aria-hidden="true"
-                        class="links-h-5 links-w-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          clip-rule="evenodd"
-                          d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </a>
-                    <a
-                      aria-current="page"
-                      class="links-relative links-z-10 links-inline-flex links-items-center links-border links-border-indigo-500 links-bg-indigo-50 links-px-4 links-py-2 links-text-sm links-font-medium links-text-indigo-600"
-                      href="#"
-                    >
-                      1
-                    </a>
-                    <a
-                      class="links-relative links-inline-flex links-items-center links-border links-border-gray-300 links-bg-white links-px-4 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50"
-                      href="#"
-                    >
-                      2
-                    </a>
-                    <span
-                      class="links-relative links-inline-flex links-items-center links-border links-border-gray-300 links-bg-white links-px-4 links-py-2 links-text-sm links-font-medium links-text-gray-700"
-                    >
-                      ...
-                    </span>
-                    <a
-                      class="links-relative links-hidden links-items-center links-border links-border-gray-300 links-bg-white links-px-4 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50 md:links-inline-flex"
-                      href="#"
-                    >
-                      4
-                    </a>
-                    <a
-                      class="links-relative links-inline-flex links-items-center links-rounded-r-md links-border links-border-gray-300 links-bg-white links-px-2 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50"
-                      href="#"
-                    >
-                      <span class="links-sr-only">Next</span>
-                      <svg
-                        aria-hidden="true"
-                        class="links-h-5 links-w-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          clip-rule="evenodd"
-                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </a>
-                  </nav>
-                </div>
+                <VPagination :page="1" :size="10" :total="20" />
               </div>
             </div>
           </template>
