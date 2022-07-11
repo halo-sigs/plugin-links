@@ -44,12 +44,12 @@ const formSchema = [
   },
 ];
 
-interface createFormState {
+interface LinkEditingFormState {
   link: Link;
   saving: boolean;
 }
 
-const createForm = ref<createFormState>({
+const initialFormState: LinkEditingFormState = {
   link: {
     metadata: {
       name: Math.random().toString(),
@@ -63,20 +63,24 @@ const createForm = ref<createFormState>({
     apiVersion: "core.halo.run/v1alpha1",
   },
   saving: false,
+};
+
+const editingFormState = ref<LinkEditingFormState>(cloneDeep(initialFormState));
+
+const isUpdateForm = computed(() => {
+  return !!editingFormState.value.link.metadata.creationTimestamp;
 });
 
-const isUpdateMode = computed(() => {
-  return !!createForm.value.link.metadata.creationTimestamp;
-});
-
-const createModalTitle = computed(() => {
-  return isUpdateMode.value ? "编辑链接" : "添加链接";
+const editingTitle = computed(() => {
+  return isUpdateForm.value ? "编辑链接" : "添加链接";
 });
 
 watch(props, (newVal) => {
   if (newVal.visible && props.link) {
-    createForm.value.link = cloneDeep(props.link);
+    editingFormState.value.link = cloneDeep(props.link);
+    return;
   }
+  editingFormState.value = cloneDeep(initialFormState);
 });
 
 const handleVisibleChange = (visible: boolean) => {
@@ -86,47 +90,47 @@ const handleVisibleChange = (visible: boolean) => {
   }
 };
 
-const handleCreateLink = async () => {
+const handleSaveLink = async () => {
   try {
-    createForm.value.saving = true;
-    if (isUpdateMode.value) {
+    editingFormState.value.saving = true;
+    if (isUpdateForm.value) {
       await axiosInstance.put<Link>(
-        `/apis/core.halo.run/v1alpha1/links/${createForm.value.link.metadata.name}`,
-        createForm.value.link
+        `/apis/core.halo.run/v1alpha1/links/${editingFormState.value.link.metadata.name}`,
+        editingFormState.value.link
       );
     } else {
       await axiosInstance.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
-        createForm.value.link
+        editingFormState.value.link
       );
     }
     handleVisibleChange(false);
   } catch (e) {
     console.error(e);
   } finally {
-    createForm.value.saving = false;
+    editingFormState.value.saving = false;
   }
 };
 </script>
 <template>
   <VModal
-    :title="createModalTitle"
+    :title="editingTitle"
     :visible="visible"
     :width="650"
     @update:visible="handleVisibleChange"
   >
     <FormKit
       id="link-form"
-      v-model="createForm.link.spec"
+      v-model="editingFormState.link.spec"
       :actions="false"
       type="form"
-      @submit="handleCreateLink"
+      @submit="handleSaveLink"
     >
       <FormKitSchema :schema="formSchema" />
     </FormKit>
     <template #footer>
       <VButton
-        :loading="createForm.saving"
+        :loading="editingFormState.saving"
         type="secondary"
         @click="$formkit.submit('link-form')"
       >

@@ -12,7 +12,7 @@ import {
   VPageHeader,
   VSpace,
 } from "@halo-dev/components";
-import LinkCreationModal from "../components/LinkCreationModal.vue";
+import LinkEditingModal from "../components/LinkEditingModal.vue";
 import { axiosInstance } from "@halo-dev/admin-shared";
 import type { Link, LinkGroup } from "@/types/extension";
 import yaml from "yaml";
@@ -25,7 +25,7 @@ const groups = ref<LinkGroup[]>();
 const selectedLink = ref<Link | null>(null);
 const selectedLinks = ref<string[]>([]);
 const selectedGroup = ref<LinkGroup | null>(null);
-const createModal = ref(false);
+const editingModal = ref(false);
 const batchSaving = ref(false);
 const checkedAll = ref(false);
 
@@ -82,7 +82,7 @@ const handleFetchLinkGroups = async () => {
 
 const handleOpenCreateModal = (link: Link) => {
   selectedLink.value = link;
-  createModal.value = true;
+  editingModal.value = true;
 };
 
 const handleSaveInBatch = async () => {
@@ -254,8 +254,8 @@ onMounted(() => {
 });
 </script>
 <template>
-  <LinkCreationModal
-    v-model:visible="createModal"
+  <LinkEditingModal
+    v-model:visible="editingModal"
     :link="selectedLink"
     @close="handleFetchLinks"
   />
@@ -265,7 +265,7 @@ onMounted(() => {
         <VButton size="sm" type="default" @click="handleImportFromYaml">
           导入
         </VButton>
-        <VButton type="secondary" @click="createModal = true">
+        <VButton type="secondary" @click="editingModal = true">
           <template #icon>
             <IconAddCircle class="links-h-full links-w-full" />
           </template>
