@@ -131,7 +131,7 @@ const handleCreateLink = async () => {
         @click="$formkit.submit('link-form')"
       >
         <template #icon>
-          <IconSave class="h-full w-full" />
+          <IconSave class="links-h-full links-w-full" />
         </template>
         保存
       </VButton>

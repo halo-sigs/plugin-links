@@ -267,20 +267,20 @@ onMounted(() => {
         </VButton>
         <VButton type="secondary" @click="createModal = true">
           <template #icon>
-            <IconAddCircle class="h-full w-full" />
+            <IconAddCircle class="links-h-full links-w-full" />
           </template>
           新增链接
         </VButton>
       </VSpace>
     </template>
   </VPageHeader>
-  <div class="p-4">
-    <div class="flex flex-row gap-2">
-      <div class="w-80">
+  <div class="links-p-4">
+    <div class="links-flex links-flex-row links-gap-2">
+      <div class="links-w-80">
         <VCard :bodyClass="['!p-0']" title="分组">
           <Draggable
             v-model="groups"
-            class="divide-y divide-gray-100 bg-white"
+            class="links-divide-y links-divide-gray-100 links-bg-white"
             group="group"
             item-key="metadata.name"
             tag="div"
@@ -289,26 +289,28 @@ onMounted(() => {
             <template #item="{ element }">
               <div
                 :class="{
-                  'bg-gray-50':
+                  'links-bg-gray-50':
                     selectedGroup?.metadata.name === element.metadata.name,
                 }"
-                class="relative flex items-center p-4"
+                class="links-relative links-flex links-items-center links-p-4"
                 @click="selectedGroup = element"
               >
                 <div>
-                  <IconList class="drag-element cursor-move" />
+                  <IconList class="drag-element links-cursor-move" />
                 </div>
-                <span class="ml-3 flex flex-1 cursor-pointer flex-col">
-                  <span class="block text-sm font-medium">
+                <span
+                  class="links-ml-3 links-flex links-flex-1 links-cursor-pointer links-flex-col"
+                >
+                  <span class="links-block links-text-sm links-font-medium">
                     {{ element.spec?.displayName }}
                   </span>
-                  <span class="block text-sm text-gray-400">
+                  <span class="links-block links-text-sm links-text-gray-400">
                     {{ handleGetLinksByGroup(element).length }} 个
                   </span>
                 </span>
-                <div class="self-center">
+                <div class="links-self-center">
                   <IconSettings
-                    class="cursor-pointer transition-all hover:text-blue-600"
+                    class="links-cursor-pointer links-transition-all hover:links-text-blue-600"
                   />
                 </div>
               </div>
@@ -320,22 +322,28 @@ onMounted(() => {
           </template>
         </VCard>
       </div>
-      <div class="flex-1">
+      <div class="links-flex-1">
         <VCard :body-class="['!p-0']">
           <template #header>
-            <div class="block w-full bg-gray-50 px-4 py-3">
+            <div
+              class="links-block links-w-full links-bg-gray-50 links-px-4 links-py-3"
+            >
               <div
-                class="relative flex flex-col items-start sm:flex-row sm:items-center"
+                class="links-relative links-flex links-flex-col links-items-start sm:links-flex-row sm:links-items-center"
               >
-                <div class="mr-4 hidden items-center sm:flex">
+                <div
+                  class="links-mr-4 links-hidden links-items-center sm:links-flex"
+                >
                   <input
                     v-model="checkedAll"
-                    class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                    class="links-h-4 links-w-4 links-rounded links-border-gray-300 links-text-indigo-600"
                     type="checkbox"
                     @change="handleCheckAllChange"
                   />
                 </div>
-                <div class="flex w-full flex-1 sm:w-auto">
+                <div
+                  class="links-flex links-w-full links-flex-1 sm:links-w-auto"
+                >
                   <FormKit
                     v-if="!selectedLinks.length"
                     placeholder="输入关键词搜索"
@@ -348,8 +356,8 @@ onMounted(() => {
                     <FloatingDropdown>
                       <VButton type="default">更多</VButton>
                       <template #popper>
-                        <div class="w-48 p-2">
-                          <VSpace class="w-full" direction="column">
+                        <div class="links-w-48 links-p-2">
+                          <VSpace class="links-w-full" direction="column">
                             <VButton block @click="handleExportSelectedLinks">
                               导出
                             </VButton>
@@ -359,7 +367,7 @@ onMounted(() => {
                     </FloatingDropdown>
                   </VSpace>
                 </div>
-                <div class="mt-4 flex sm:mt-0">
+                <div class="links-mt-4 links-flex sm:links-mt-0">
                   <VButton
                     :loading="batchSaving"
                     size="sm"
@@ -373,7 +381,7 @@ onMounted(() => {
           </template>
           <Draggable
             v-model="links"
-            class="box-border h-full w-full divide-y divide-gray-100"
+            class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
             group="link"
             handle=".drag-element"
             item-key="id"
@@ -385,38 +393,44 @@ onMounted(() => {
               <li>
                 <div
                   :class="{
-                    'bg-gray-100': selectedLinks.includes(link.metadata.name),
+                    'links-bg-gray-100': selectedLinks.includes(
+                      link.metadata.name
+                    ),
                   }"
-                  class="relative block px-4 py-3 transition-all hover:bg-gray-50"
+                  class="links-relative links-block links-px-4 links-py-3 links-transition-all hover:links-bg-gray-50"
                 >
                   <div
                     v-show="selectedLinks.includes(link.metadata.name)"
-                    class="bg-themeable-primary absolute inset-y-0 left-0 w-0.5"
+                    class="links-bg-themeable-primary links-absolute links-inset-y-0 links-left-0 links-w-0.5"
                   ></div>
-                  <div class="relative flex flex-row items-center">
-                    <div class="mr-4 hidden items-center sm:flex">
+                  <div
+                    class="links-relative links-flex links-flex-row links-items-center"
+                  >
+                    <div
+                      class="links-mr-4 links-hidden links-items-center sm:links-flex"
+                    >
                       <input
                         v-model="selectedLinks"
                         :value="link.metadata.name"
-                        class="h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600"
+                        class="links-h-4 links-w-4 links-cursor-pointer links-rounded links-border-gray-300 links-text-indigo-600"
                         name="link-checkbox"
                         type="checkbox"
                       />
                     </div>
-                    <div v-if="link.spec.logo" class="mr-4">
+                    <div v-if="link.spec.logo" class="links-mr-4">
                       <div
-                        class="inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded border bg-white hover:shadow-sm"
+                        class="links-inline-flex links-h-12 links-w-12 links-items-center links-justify-center links-overflow-hidden links-rounded links-border links-bg-white hover:links-shadow-sm"
                       >
                         <UseImage :src="link.spec.logo">
                           <template #loading>
                             <svg
-                              class="h-5 w-5 animate-spin"
+                              class="links-h-5 links-w-5 links-animate-spin"
                               fill="none"
                               viewBox="0 0 24 24"
                               xmlns="http://www.w3.org/2000/svg"
                             >
                               <circle
-                                class="opacity-25"
+                                class="links-opacity-25"
                                 cx="12"
                                 cy="12"
                                 r="10"
@@ -424,49 +438,49 @@ onMounted(() => {
                                 stroke-width="4"
                               ></circle>
                               <path
-                                class="opacity-75"
+                                class="links-opacity-75"
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                 fill="currentColor"
                               ></path>
                             </svg>
                           </template>
                           <template #error>
-                            <IconInformation class="h-5 w-5" />
+                            <IconInformation class="links-h-5 links-w-5" />
                           </template>
                         </UseImage>
                       </div>
                     </div>
-                    <div class="flex-1">
-                      <div class="flex flex-row items-center">
-                        <div class="drag-element mr-2 cursor-move">
-                          <IconList class="h-4 w-4" />
+                    <div class="links-flex-1">
+                      <div class="links-flex links-flex-row links-items-center">
+                        <div class="drag-element links-mr-2 links-cursor-move">
+                          <IconList class="links-h-4 links-w-4" />
                         </div>
                         <span
-                          class="truncate text-sm font-medium text-gray-900"
+                          class="links-truncate links-text-sm links-font-medium links-text-gray-900"
                         >
                           {{ link.spec.displayName }}
                         </span>
                       </div>
-                      <div class="mt-2 flex">
+                      <div class="links-mt-2 links-flex">
                         <VSpace align="start" direction="column" spacing="xs">
-                          <span class="text-xs text-gray-500">
+                          <span class="links-text-xs links-text-gray-500">
                             {{ link.spec.description }}
                           </span>
                         </VSpace>
                       </div>
                     </div>
-                    <div class="flex">
+                    <div class="links-flex">
                       <div
-                        class="inline-flex flex-col flex-col-reverse items-end gap-4 sm:flex-row sm:items-center sm:gap-6"
+                        class="links-inline-flex links-flex-col links-flex-col-reverse links-items-end links-gap-4 sm:links-flex-row sm:links-items-center sm:links-gap-6"
                       >
                         <time
-                          class="text-sm text-gray-500"
+                          class="links-text-sm links-text-gray-500"
                           datetime="2020-01-07"
                         >
                           {{ link.metadata.creationTimestamp }}
                         </time>
 
-                        <span class="cursor-pointer">
+                        <span class="links-cursor-pointer">
                           <IconSettings
                             @click.stop="handleOpenCreateModal(link)"
                           />
@@ -480,21 +494,25 @@ onMounted(() => {
           </Draggable>
 
           <template #footer>
-            <div class="flex items-center justify-end bg-white">
-              <div class="flex flex-1 items-center justify-end">
+            <div
+              class="links-flex links-items-center links-justify-end links-bg-white"
+            >
+              <div
+                class="links-flex links-flex-1 links-items-center links-justify-end"
+              >
                 <div>
                   <nav
                     aria-label="Pagination"
-                    class="relative z-0 inline-flex -space-x-px rounded-md shadow-sm"
+                    class="links-relative links-z-0 links-inline-flex -links-space-x-px links-rounded-md links-shadow-sm"
                   >
                     <a
-                      class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
+                      class="links-relative links-inline-flex links-items-center links-rounded-l-md links-border links-border-gray-300 links-bg-white links-px-2 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50"
                       href="#"
                     >
-                      <span class="sr-only">Previous</span>
+                      <span class="links-sr-only">Previous</span>
                       <svg
                         aria-hidden="true"
-                        class="h-5 w-5"
+                        class="links-h-5 links-w-5"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg"
@@ -508,36 +526,36 @@ onMounted(() => {
                     </a>
                     <a
                       aria-current="page"
-                      class="relative z-10 inline-flex items-center border border-indigo-500 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600"
+                      class="links-relative links-z-10 links-inline-flex links-items-center links-border links-border-indigo-500 links-bg-indigo-50 links-px-4 links-py-2 links-text-sm links-font-medium links-text-indigo-600"
                       href="#"
                     >
                       1
                     </a>
                     <a
-                      class="relative inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
+                      class="links-relative links-inline-flex links-items-center links-border links-border-gray-300 links-bg-white links-px-4 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50"
                       href="#"
                     >
                       2
                     </a>
                     <span
-                      class="relative inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700"
+                      class="links-relative links-inline-flex links-items-center links-border links-border-gray-300 links-bg-white links-px-4 links-py-2 links-text-sm links-font-medium links-text-gray-700"
                     >
                       ...
                     </span>
                     <a
-                      class="relative hidden items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 md:inline-flex"
+                      class="links-relative links-hidden links-items-center links-border links-border-gray-300 links-bg-white links-px-4 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50 md:links-inline-flex"
                       href="#"
                     >
                       4
                     </a>
                     <a
-                      class="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
+                      class="links-relative links-inline-flex links-items-center links-rounded-r-md links-border links-border-gray-300 links-bg-white links-px-2 links-py-2 links-text-sm links-font-medium links-text-gray-500 hover:links-bg-gray-50"
                       href="#"
                     >
-                      <span class="sr-only">Next</span>
+                      <span class="links-sr-only">Next</span>
                       <svg
                         aria-hidden="true"
-                        class="h-5 w-5"
+                        class="links-h-5 links-w-5"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg"
