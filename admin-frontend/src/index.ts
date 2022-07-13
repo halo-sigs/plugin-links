@@ -18,6 +18,9 @@ export default definePlugin({
           component: LinkList,
         },
       ],
+      meta: {
+        permission: ["links:view"],
+      },
     },
   ],
   extensionPoints: {

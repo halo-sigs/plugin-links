@@ -10,6 +10,8 @@ spec:
   author: halo-dev
   logo: https://halo.run/logo
   pluginClass: run.halo.links.LinkPlugin
+  settingName: links-settings
+  configMapName: links-settings
   # 'homepage' usually links to the GitHub repository of the plugin
   homepage: https://github.com/halo-sigs/plugin-links
   # 'displayName' explains what the plugin does in only a few words
