@@ -14,8 +14,8 @@ import {
   VSpace,
 } from "@halo-dev/components";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
-import { axiosInstance } from "@halo-dev/admin-shared";
-import type { Link, LinkGroup } from "@/types/extension";
+import { apiClient } from "@halo-dev/admin-shared";
+import type { Link, LinkGroup } from "@halo-dev/api-client";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
 import { UseImage } from "@vueuse/components";
@@ -36,9 +36,8 @@ const handleFetchLinks = async () => {
   selectedLink.value = null;
 
   try {
-    const { data } = await axiosInstance.get<Link[]>(
-      `/apis/core.halo.run/v1alpha1/links`
-    );
+    const { data } =
+      await apiClient.extension.link.listcoreHaloRunV1alpha1Link();
     // sort by priority
 
     links.value = data
@@ -58,9 +57,8 @@ const handleFetchLinks = async () => {
 
 const handleFetchLinkGroups = async () => {
   try {
-    const { data } = await axiosInstance.get<LinkGroup[]>(
-      `/apis/core.halo.run/v1alpha1/linkgroups`
-    );
+    const { data } =
+      await apiClient.extension.linkGroup.listcoreHaloRunV1alpha1LinkGroup();
     groups.value = data
       .map((group) => {
         if (group.spec) {
@@ -93,8 +91,8 @@ const handleSaveInBatch = async () => {
       if (link.spec) {
         link.spec.priority = index;
       }
-      return axiosInstance.put<Link>(
-        `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+      return apiClient.extension.link.updatecoreHaloRunV1alpha1Link(
+        link.metadata.name,
         link
       );
     });
@@ -115,8 +113,8 @@ const handleSaveGroupInBatch = async () => {
       if (group.spec) {
         group.spec.priority = index;
       }
-      return axiosInstance.put<LinkGroup>(
-        `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`,
+      return apiClient.extension.linkGroup.updatecoreHaloRunV1alpha1LinkGroup(
+        group.metadata.name,
         group
       );
     });
@@ -132,9 +130,7 @@ const handleSaveGroupInBatch = async () => {
 
 const handleDelete = (link: Link) => {
   try {
-    axiosInstance.delete(
-      `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
-    );
+    apiClient.extension.link.deletecoreHaloRunV1alpha1Link(link.metadata.name);
   } catch (e) {
     console.error(e);
   } finally {
@@ -149,9 +145,7 @@ const handleDeleteInBatch = () => {
     onConfirm: async () => {
       try {
         const promises = selectedLinks.value.map((link) => {
-          return axiosInstance.delete(
-            `/apis/core.halo.run/v1alpha1/links/${link}`
-          );
+          return apiClient.extension.link.deletecoreHaloRunV1alpha1Link(link);
         });
         if (promises) {
           await Promise.all(promises);
@@ -211,19 +205,13 @@ const handleImportFromYaml = async () => {
     const parsed = yaml.parse(res.data.value);
     if (Array.isArray(parsed)) {
       const promises = parsed.map((link) => {
-        return axiosInstance.post<Link>(
-          `/apis/core.halo.run/v1alpha1/links`,
-          link
-        );
+        return apiClient.extension.link.createcoreHaloRunV1alpha1Link(link);
       });
       if (promises) {
         await Promise.all(promises);
       }
     } else {
-      await axiosInstance.post<Link>(
-        `/apis/core.halo.run/v1alpha1/links`,
-        parsed
-      );
+      await apiClient.extension.link.createcoreHaloRunV1alpha1Link(parsed);
     }
   } catch (e) {
     console.error(e);

@@ -15,6 +15,8 @@ export default definePlugin({
         {
           path: "",
           name: "Links",
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
           component: LinkList,
         },
       ],

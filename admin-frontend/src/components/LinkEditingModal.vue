@@ -2,8 +2,8 @@
 import { IconSave, VButton, VModal } from "@halo-dev/components";
 import type { PropType } from "vue";
 import { computed, ref, watch } from "vue";
-import type { Link } from "@/types/extension";
-import { axiosInstance } from "@halo-dev/admin-shared";
+import type { Link } from "@halo-dev/api-client";
+import { apiClient } from "@halo-dev/admin-shared";
 import cloneDeep from "lodash.clonedeep";
 
 const props = defineProps({
@@ -94,13 +94,12 @@ const handleSaveLink = async () => {
   try {
     editingFormState.value.saving = true;
     if (isUpdateForm.value) {
-      await axiosInstance.put<Link>(
-        `/apis/core.halo.run/v1alpha1/links/${editingFormState.value.link.metadata.name}`,
+      await apiClient.extension.link.updatecoreHaloRunV1alpha1Link(
+        editingFormState.value.link.metadata.name,
         editingFormState.value.link
       );
     } else {
-      await axiosInstance.post<Link>(
-        `/apis/core.halo.run/v1alpha1/links`,
+      await apiClient.extension.link.createcoreHaloRunV1alpha1Link(
         editingFormState.value.link
       );
     }
