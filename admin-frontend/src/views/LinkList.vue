@@ -40,7 +40,7 @@ const handleFetchLinks = async () => {
       await apiClient.extension.link.listcoreHaloRunV1alpha1Link();
     // sort by priority
 
-    links.value = data
+    links.value = data.items
       .map((link) => {
         if (link.spec) {
           link.spec.priority = link.spec.priority || 0;
@@ -59,7 +59,7 @@ const handleFetchLinkGroups = async () => {
   try {
     const { data } =
       await apiClient.extension.linkGroup.listcoreHaloRunV1alpha1LinkGroup();
-    groups.value = data
+    groups.value = data.items
       .map((group) => {
         if (group.spec) {
           group.spec.priority = group.spec.priority || 0;

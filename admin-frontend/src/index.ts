@@ -21,7 +21,7 @@ export default definePlugin({
         },
       ],
       meta: {
-        permission: ["links:view"],
+        permissions: ["plugin:links:view"],
       },
     },
   ],

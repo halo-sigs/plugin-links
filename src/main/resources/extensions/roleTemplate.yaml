@@ -7,6 +7,8 @@ metadata:
   annotations:
     plugin.halo.run/module: "Link Management"
     plugin.halo.run/display-name: "友情链接查看"
+    rbac.authorization.halo.run/ui-permissions: |
+      ["plugin:links:view"]
 rules:
   - pluginName: PluginLinks
     resources: [ "links" ]
@@ -19,9 +21,12 @@ metadata:
   labels:
     plugin.halo.run/role-template: "true"
   annotations:
-    plugin.halo.run/dependencies: "[ \"role-template-link-view\" ]"
     plugin.halo.run/module: "Link Management"
     plugin.halo.run/display-name: "友情链接管理"
+    rbac.authorization.halo.run/ui-permissions: |
+      ["plugin:links:manage"]
+    rbac.authorization.halo.run/dependencies: |
+      ["role-template-link-view"]
 rules:
   - pluginName: PluginLinks
     resources: [ "links" ]
