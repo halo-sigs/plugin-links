@@ -17,5 +17,6 @@ spec:
   # 'displayName' explains what the plugin does in only a few words
   displayName: "友情链接"
   description: "友情链接管理模块"
-  license: MIT
+  license:
+    - name: "MIT"
   enabled: true
