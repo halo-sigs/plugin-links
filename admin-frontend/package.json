@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@halo-dev/admin-shared": "^0.0.0-alpha.2",
-    "@halo-dev/api-client": "^0.0.0",
+    "@halo-dev/api-client": "^0.0.2",
     "@halo-dev/components": "^0.0.0-alpha.1",
     "@vueuse/components": "^8.9.2",
     "@vueuse/core": "^8.9.2",

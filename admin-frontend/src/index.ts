@@ -31,6 +31,7 @@ export default definePlugin({
         name: "友情链接",
         url: "/links",
         path: "/pages/functional/links",
+        permissions: ["plugin:links:view"],
       });
     },
   },

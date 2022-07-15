@@ -250,7 +250,7 @@ onMounted(() => {
   />
   <VPageHeader title="友情链接">
     <template #actions>
-      <VSpace>
+      <VSpace v-permission="['plugin:links:manage']">
         <VButton size="sm" type="default" @click="handleImportFromYaml">
           导入
         </VButton>
@@ -297,7 +297,10 @@ onMounted(() => {
                     {{ handleGetLinksByGroup(element).length }} 个
                   </span>
                 </span>
-                <div class="links-self-center">
+                <div
+                  v-permission="['plugin:links:manage']"
+                  class="links-self-center"
+                >
                   <IconSettings
                     class="links-cursor-pointer links-transition-all hover:links-text-blue-600"
                   />
@@ -307,7 +310,12 @@ onMounted(() => {
           </Draggable>
 
           <template #footer>
-            <VButton block type="secondary">新增分组</VButton>
+            <VButton
+              v-permission="['plugin:links:manage']"
+              block
+              type="secondary"
+              >新增分组</VButton
+            >
           </template>
         </VCard>
       </div>
@@ -356,7 +364,10 @@ onMounted(() => {
                     </FloatingDropdown>
                   </VSpace>
                 </div>
-                <div class="links-mt-4 links-flex sm:links-mt-0">
+                <div
+                  v-permission="['plugin:links:manage']"
+                  class="links-mt-4 links-flex sm:links-mt-0"
+                >
                   <VButton
                     :loading="batchSaving"
                     size="sm"
@@ -469,7 +480,10 @@ onMounted(() => {
                           {{ link.metadata.creationTimestamp }}
                         </time>
 
-                        <span class="links-cursor-pointer">
+                        <span
+                          v-permission="['plugin:links:manage']"
+                          class="links-cursor-pointer"
+                        >
                           <IconSettings
                             @click.stop="handleOpenCreateModal(link)"
                           />
