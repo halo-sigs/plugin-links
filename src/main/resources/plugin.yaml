@@ -9,7 +9,6 @@ spec:
   requires: ">=2.0.0"
   author: halo-dev
   logo: https://halo.run/logo
-  pluginClass: run.halo.links.LinkPlugin
   settingName: links-settings
   configMapName: links-settings
   # 'homepage' usually links to the GitHub repository of the plugin
