@@ -1,23 +1,19 @@
 <script lang="ts" name="LinkCreationModal" setup>
 import { IconSave, VButton, VModal } from "@halo-dev/components";
-import type { PropType } from "vue";
 import { computed, ref, watch } from "vue";
 import type { Link } from "@halo-dev/api-client";
 import { apiClient } from "@halo-dev/admin-shared";
 import cloneDeep from "lodash.clonedeep";
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    default: false,
-  },
-  link: {
-    type: Object as PropType<Link | null>,
-    default: null,
-  },
-});
+const props = defineProps<{
+  visible: boolean;
+  link: Link | null;
+}>();
 
-const emit = defineEmits(["update:visible", "close"]);
+const emit = defineEmits<{
+  (event: "update:visible", value: boolean): void;
+  (event: "close"): void;
+}>();
 
 const formSchema = [
   {
