@@ -3,7 +3,7 @@ kind: Role
 metadata:
   name: role-template-link-view
   labels:
-    plugin.halo.run/role-template: "true"
+    halo.run/role-template: "true"
   annotations:
     rbac.authorization.halo.run/module: "Link Management"
     rbac.authorization.halo.run/display-name: "友情链接查看"
@@ -19,7 +19,7 @@ kind: Role
 metadata:
   name: role-template-link-manage
   labels:
-    plugin.halo.run/role-template: "true"
+    halo.run/role-template: "true"
   annotations:
     rbac.authorization.halo.run/module: "Link Management"
     rbac.authorization.halo.run/display-name: "友情链接管理"
