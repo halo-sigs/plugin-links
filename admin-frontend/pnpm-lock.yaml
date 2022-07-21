@@ -1,9 +1,9 @@
 lockfileVersion: 5.4
 
 specifiers:
-  '@halo-dev/admin-shared': ^0.0.0-alpha.2
-  '@halo-dev/api-client': ^0.0.2
-  '@halo-dev/components': ^0.0.0-alpha.1
+  '@halo-dev/admin-shared': '*'
+  '@halo-dev/api-client': '*'
+  '@halo-dev/components': '*'
   '@rushstack/eslint-patch': ^1.1.4
   '@types/jsdom': ^16.2.14
   '@types/lodash.clonedeep': ^4.5.7
@@ -38,9 +38,9 @@ specifiers:
   yaml: ^2.1.1
 
 dependencies:
-  '@halo-dev/admin-shared': 0.0.0-alpha.2_xxca4fmgsp7cw4caxfykg2fuya
+  '@halo-dev/admin-shared': 0.0.0-alpha.3_xxca4fmgsp7cw4caxfykg2fuya
   '@halo-dev/api-client': 0.0.2
-  '@halo-dev/components': 0.0.0-alpha.1_xxca4fmgsp7cw4caxfykg2fuya
+  '@halo-dev/components': 0.0.0-alpha.2_xxca4fmgsp7cw4caxfykg2fuya
   '@vueuse/components': 8.9.2_vue@3.2.37
   '@vueuse/core': 8.9.2_vue@3.2.37
   lodash.clonedeep: 4.5.0
@@ -387,14 +387,14 @@ packages:
       - supports-color
     dev: true
 
-  /@halo-dev/admin-shared/0.0.0-alpha.2_xxca4fmgsp7cw4caxfykg2fuya:
-    resolution: {integrity: sha512-vedJN9SWIGoCmDlssLFQzIXa3Wk9pmDV3V77G/iW7IVQZFHKxAoEmj2xYwBsxc9Iiuo8luMRlFJpjUdy/Vhz8w==}
+  /@halo-dev/admin-shared/0.0.0-alpha.3_xxca4fmgsp7cw4caxfykg2fuya:
+    resolution: {integrity: sha512-rizOLAzAcmcedZN9gwnhGFmKKf7p4byik7m68sqFFBGmFma0nxUtMf9YMjAEky85bCeeZApyVLB80Mxu1KGU9A==}
     peerDependencies:
       vue: ^3.2.37
       vue-router: ^4.0.16
     dependencies:
-      '@halo-dev/api-client': 0.0.0
-      '@halo-dev/components': 0.0.0-alpha.0_xxca4fmgsp7cw4caxfykg2fuya
+      '@halo-dev/api-client': 0.0.3
+      '@halo-dev/components': 0.0.0-alpha.2_xxca4fmgsp7cw4caxfykg2fuya
       axios: 0.27.2
       vue: 3.2.37
       vue-router: 4.1.2_vue@3.2.37
@@ -402,26 +402,16 @@ packages:
       - debug
     dev: false
 
-  /@halo-dev/api-client/0.0.0:
-    resolution: {integrity: sha512-DC+0MsnX3e5IkqFFya3gz8JK893hGH+9ohKzLp1b7QqYj1Hvxxc1Nbr77IxvVbktZ14LUZTeHOdWHdqFAFQdvw==}
-    dev: false
-
   /@halo-dev/api-client/0.0.2:
     resolution: {integrity: sha512-7amtdteNPCZ9ObM969HfknIqd+eXK8gjJ0cKWc7F7TET6puerlPxmmPC0SSdUEpnTf8zK1XUJg+Y06joxZboHA==}
     dev: false
 
-  /@halo-dev/components/0.0.0-alpha.0_xxca4fmgsp7cw4caxfykg2fuya:
-    resolution: {integrity: sha512-cbDZJTrRarxLpsRqzddmFlhl7CH3/LnUfnL7urpX9Qwo4DVFtMq2+LrO5vTHbIE6Z2NRgynWINtG83MUv4gfCg==}
-    peerDependencies:
-      vue: ^3.2.37
-      vue-router: ^4.0.16
-    dependencies:
-      vue: 3.2.37
-      vue-router: 4.1.2_vue@3.2.37
+  /@halo-dev/api-client/0.0.3:
+    resolution: {integrity: sha512-ybtVcjeeFqOldPIKRrm3socfGtbSR5GL+MXVmkSJwD2fCwT9OiXEvs3cgceWceIZI0Ug7AEKwxbcO+ZfOmDlYA==}
     dev: false
 
-  /@halo-dev/components/0.0.0-alpha.1_xxca4fmgsp7cw4caxfykg2fuya:
-    resolution: {integrity: sha512-zrMlGoPsVzF8cgK64eMgJspun8C8GjjqOOoXrq1RLu0yK0AuN0otCYc7PUTYhPzxqy4R7hWmdSnj8uzPd9QqjA==}
+  /@halo-dev/components/0.0.0-alpha.2_xxca4fmgsp7cw4caxfykg2fuya:
+    resolution: {integrity: sha512-0dfzvWLR83wv8AI59vrukExRS4xRtbKKEN9jOxuO83Lr/rlKuc36bQzUbWruHSI9Ceu+LflnPdbOWrjwWRZYKg==}
     peerDependencies:
       vue: ^3.2.37
       vue-router: ^4.0.16

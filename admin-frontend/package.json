@@ -11,9 +11,9 @@
     "prettier": "prettier --write './src/**/*.{vue,js,jsx,ts,tsx,css,scss,json,yml,yaml,html}'"
   },
   "dependencies": {
-    "@halo-dev/admin-shared": "^0.0.0-alpha.2",
-    "@halo-dev/api-client": "^0.0.2",
-    "@halo-dev/components": "^0.0.0-alpha.1",
+    "@halo-dev/admin-shared": "*",
+    "@halo-dev/api-client": "*",
+    "@halo-dev/components": "*",
     "@vueuse/components": "^8.9.2",
     "@vueuse/core": "^8.9.2",
     "lodash.clonedeep": "^4.5.0",

@@ -10,7 +10,7 @@ metadata:
     rbac.authorization.halo.run/ui-permissions: |
       ["plugin:links:view"]
 rules:
-  - pluginName: PluginLinks
+  - apiGroups: [ "" ]
     resources: [ "links" ]
     verbs: [ "get", "list" ]
 ---
@@ -28,6 +28,6 @@ metadata:
     rbac.authorization.halo.run/dependencies: |
       ["role-template-link-view"]
 rules:
-  - pluginName: PluginLinks
+  - apiGroups: [ "" ]
     resources: [ "links" ]
     verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
