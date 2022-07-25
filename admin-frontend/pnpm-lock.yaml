@@ -2,7 +2,6 @@ lockfileVersion: 5.4
 
 specifiers:
   '@halo-dev/admin-shared': '*'
-  '@halo-dev/api-client': '*'
   '@halo-dev/components': '*'
   '@rushstack/eslint-patch': ^1.1.4
   '@types/jsdom': ^16.2.14
@@ -17,6 +16,7 @@ specifiers:
   '@vueuse/components': ^8.9.2
   '@vueuse/core': ^8.9.2
   autoprefixer: ^10.4.7
+  axios: ^0.27.2
   eslint: ^8.19.0
   eslint-plugin-vue: ^8.7.1
   jsdom: ^19.0.0
@@ -39,10 +39,10 @@ specifiers:
 
 dependencies:
   '@halo-dev/admin-shared': 0.0.0-alpha.3_xxca4fmgsp7cw4caxfykg2fuya
-  '@halo-dev/api-client': 0.0.2
   '@halo-dev/components': 0.0.0-alpha.2_xxca4fmgsp7cw4caxfykg2fuya
   '@vueuse/components': 8.9.2_vue@3.2.37
   '@vueuse/core': 8.9.2_vue@3.2.37
+  axios: 0.27.2
   lodash.clonedeep: 4.5.0
   vue: 3.2.37
   vue-router: 4.1.2_vue@3.2.37
@@ -400,10 +400,6 @@ packages:
       vue-router: 4.1.2_vue@3.2.37
     transitivePeerDependencies:
       - debug
-    dev: false
-
-  /@halo-dev/api-client/0.0.2:
-    resolution: {integrity: sha512-7amtdteNPCZ9ObM969HfknIqd+eXK8gjJ0cKWc7F7TET6puerlPxmmPC0SSdUEpnTf8zK1XUJg+Y06joxZboHA==}
     dev: false
 
   /@halo-dev/api-client/0.0.3:

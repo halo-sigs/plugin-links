@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@halo-dev/admin-shared": "*",
-    "@halo-dev/api-client": "*",
     "@halo-dev/components": "*",
     "@vueuse/components": "^8.9.2",
     "@vueuse/core": "^8.9.2",
+    "axios": "^0.27.2",
     "lodash.clonedeep": "^4.5.0",
     "vue": "^3.2.37",
     "vue-router": "^4.1.2",

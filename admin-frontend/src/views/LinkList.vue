@@ -14,8 +14,8 @@ import {
   VSpace,
 } from "@halo-dev/components";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
-import { apiClient } from "@halo-dev/admin-shared";
-import type { Link, LinkGroup } from "@halo-dev/api-client";
+import apiClient from "@/utils/api-client";
+import type { Link, LinkGroup, LinkList, LinkGroupList } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
 import { UseImage } from "@vueuse/components";
@@ -36,8 +36,9 @@ const handleFetchLinks = async () => {
   selectedLink.value = null;
 
   try {
-    const { data } =
-      await apiClient.extension.link.listcoreHaloRunV1alpha1Link();
+    const { data } = await apiClient.get<LinkList>(
+      "/apis/core.halo.run/v1alpha1/links"
+    );
     // sort by priority
 
     links.value = data.items
@@ -57,8 +58,9 @@ const handleFetchLinks = async () => {
 
 const handleFetchLinkGroups = async () => {
   try {
-    const { data } =
-      await apiClient.extension.linkGroup.listcoreHaloRunV1alpha1LinkGroup();
+    const { data } = await apiClient.get<LinkGroupList>(
+      "/apis/core.halo.run/v1alpha1/linkgroups"
+    );
     groups.value = data.items
       .map((group) => {
         if (group.spec) {
@@ -91,8 +93,8 @@ const handleSaveInBatch = async () => {
       if (link.spec) {
         link.spec.priority = index;
       }
-      return apiClient.extension.link.updatecoreHaloRunV1alpha1Link(
-        link.metadata.name,
+      return apiClient.put(
+        `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
         link
       );
     });
@@ -113,8 +115,8 @@ const handleSaveGroupInBatch = async () => {
       if (group.spec) {
         group.spec.priority = index;
       }
-      return apiClient.extension.linkGroup.updatecoreHaloRunV1alpha1LinkGroup(
-        group.metadata.name,
+      return apiClient.put(
+        `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`,
         group
       );
     });
@@ -130,7 +132,9 @@ const handleSaveGroupInBatch = async () => {
 
 const handleDelete = (link: Link) => {
   try {
-    apiClient.extension.link.deletecoreHaloRunV1alpha1Link(link.metadata.name);
+    apiClient.delete(
+      `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
+    );
   } catch (e) {
     console.error(e);
   } finally {
@@ -145,7 +149,7 @@ const handleDeleteInBatch = () => {
     onConfirm: async () => {
       try {
         const promises = selectedLinks.value.map((link) => {
-          return apiClient.extension.link.deletecoreHaloRunV1alpha1Link(link);
+          return apiClient.delete(`/apis/core.halo.run/v1alpha1/links/${link}`);
         });
         if (promises) {
           await Promise.all(promises);
@@ -205,13 +209,13 @@ const handleImportFromYaml = async () => {
     const parsed = yaml.parse(res.data.value);
     if (Array.isArray(parsed)) {
       const promises = parsed.map((link) => {
-        return apiClient.extension.link.createcoreHaloRunV1alpha1Link(link);
+        return apiClient.post("/apis/core.halo.run/v1alpha1/links", link);
       });
       if (promises) {
         await Promise.all(promises);
       }
     } else {
-      await apiClient.extension.link.createcoreHaloRunV1alpha1Link(parsed);
+      await apiClient.post("/apis/core.halo.run/v1alpha1/links", parsed);
     }
   } catch (e) {
     console.error(e);
@@ -314,8 +318,8 @@ onMounted(() => {
               v-permission="['plugin:links:manage']"
               block
               type="secondary"
-              >新增分组</VButton
-            >
+              >新增分组
+            </VButton>
           </template>
         </VCard>
       </div>

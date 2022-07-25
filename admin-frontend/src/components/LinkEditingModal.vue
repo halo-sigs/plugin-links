@@ -1,9 +1,17 @@
 <script lang="ts" name="LinkCreationModal" setup>
-import { IconSave, VButton, VModal } from "@halo-dev/components";
+import {
+  IconSave,
+  VButton,
+  VModal,
+  VCodemirror,
+  IconEye,
+  IconCodeBoxLine,
+} from "@halo-dev/components";
 import { computed, ref, watch } from "vue";
-import type { Link } from "@halo-dev/api-client";
-import { apiClient } from "@halo-dev/admin-shared";
+import type { Link } from "@/types";
+import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
+import YAML from "yaml";
 
 const props = defineProps<{
   visible: boolean;
@@ -43,6 +51,8 @@ const formSchema = [
 interface LinkEditingFormState {
   link: Link;
   saving: boolean;
+  rawMode: boolean;
+  raw: string;
 }
 
 const initialFormState: LinkEditingFormState = {
@@ -59,6 +69,8 @@ const initialFormState: LinkEditingFormState = {
     apiVersion: "core.halo.run/v1alpha1",
   },
   saving: false,
+  rawMode: false,
+  raw: "",
 };
 
 const editingFormState = ref<LinkEditingFormState>(cloneDeep(initialFormState));
@@ -69,6 +81,10 @@ const isUpdateForm = computed(() => {
 
 const editingTitle = computed(() => {
   return isUpdateForm.value ? "编辑链接" : "添加链接";
+});
+
+const modalWidth = computed(() => {
+  return editingFormState.value.rawMode ? 750 : 650;
 });
 
 watch(props, (newVal) => {
@@ -88,14 +104,19 @@ const handleVisibleChange = (visible: boolean) => {
 
 const handleSaveLink = async () => {
   try {
+    if (editingFormState.value.rawMode) {
+      editingFormState.value.link = YAML.parse(editingFormState.value.raw);
+    }
+
     editingFormState.value.saving = true;
     if (isUpdateForm.value) {
-      await apiClient.extension.link.updatecoreHaloRunV1alpha1Link(
-        editingFormState.value.link.metadata.name,
+      await apiClient.put(
+        `/apis/core.halo.run/v1alpha1/links/${editingFormState.value.link.metadata.name}`,
         editingFormState.value.link
       );
     } else {
-      await apiClient.extension.link.createcoreHaloRunV1alpha1Link(
+      await apiClient.post(
+        `/apis/core.halo.run/v1alpha1/links`,
         editingFormState.value.link
       );
     }
@@ -106,23 +127,49 @@ const handleSaveLink = async () => {
     editingFormState.value.saving = false;
   }
 };
+
+const handleRawModeChange = () => {
+  editingFormState.value.rawMode = !editingFormState.value.rawMode;
+
+  if (editingFormState.value.rawMode) {
+    editingFormState.value.raw = YAML.stringify(editingFormState.value.link);
+  } else {
+    editingFormState.value.link = YAML.parse(editingFormState.value.raw);
+  }
+};
 </script>
 <template>
   <VModal
     :title="editingTitle"
     :visible="visible"
-    :width="650"
+    :width="modalWidth"
     @update:visible="handleVisibleChange"
   >
-    <FormKit
-      id="link-form"
-      v-model="editingFormState.link.spec"
-      :actions="false"
-      type="form"
-      @submit="handleSaveLink"
-    >
-      <FormKitSchema :schema="formSchema" />
-    </FormKit>
+    <template #actions>
+      <div class="modal-header-action" @click="handleRawModeChange">
+        <IconCodeBoxLine v-if="!editingFormState.rawMode" />
+        <IconEye v-else />
+      </div>
+    </template>
+
+    <VCodemirror
+      v-show="editingFormState.rawMode"
+      v-model="editingFormState.raw"
+      height="50vh"
+      language="yaml"
+    />
+
+    <div v-show="!editingFormState.rawMode">
+      <FormKit
+        id="link-form"
+        v-model="editingFormState.link.spec"
+        :actions="false"
+        type="form"
+        @submit="handleSaveLink"
+      >
+        <FormKitSchema :schema="formSchema" />
+      </FormKit>
+    </div>
     <template #footer>
       <VButton
         :loading="editingFormState.saving"
