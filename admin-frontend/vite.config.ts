@@ -38,6 +38,8 @@ export default defineConfig({
           "@halo-dev/shared": "HaloAdminShared",
           "@halo-dev/components": "HaloComponents",
         },
+        // https://github.com/vitejs/vite/issues/9318
+        generatedCode: "es5",
       },
     },
   },
