@@ -8,6 +8,7 @@ import run.halo.app.extension.GVK;
 
 /**
  * @author guqing
+ * @author ryanwang
  * @since 2.0.0
  */
 @Data
@@ -29,8 +30,6 @@ public class Link extends AbstractExtension {
         private String logo;
 
         private String description;
-
-        private String groupName;
 
         private Integer priority;
     }

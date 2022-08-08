@@ -1,5 +1,5 @@
 <script lang="ts" name="LinkList" setup>
-import { onMounted, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import {
   IconAddCircle,
@@ -13,22 +13,24 @@ import {
   VPagination,
   VSpace,
 } from "@halo-dev/components";
+import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
 import apiClient from "@/utils/api-client";
-import type { Link, LinkGroup, LinkList, LinkGroupList } from "@/types";
+import type { Link, LinkGroup, LinkList } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
 import { UseImage } from "@vueuse/components";
+import cloneDeep from "lodash.clonedeep";
 
 const drag = ref(false);
 const links = ref<Link[]>();
-const groups = ref<LinkGroup[]>();
 const selectedLink = ref<Link | null>(null);
 const selectedLinks = ref<string[]>([]);
 const selectedGroup = ref<LinkGroup | null>(null);
 const editingModal = ref(false);
 const batchSaving = ref(false);
 const checkedAll = ref(false);
+const groupListRef = ref();
 
 const dialog = useDialog();
 
@@ -36,11 +38,20 @@ const handleFetchLinks = async () => {
   selectedLink.value = null;
 
   try {
-    const { data } = await apiClient.get<LinkList>(
-      "/apis/core.halo.run/v1alpha1/links"
-    );
-    // sort by priority
+    if (!selectedGroup.value?.spec?.links) {
+      return;
+    }
 
+    const { data } = await apiClient.get<LinkList>(
+      "/apis/core.halo.run/v1alpha1/links",
+      {
+        params: {
+          fieldSelector: [`name=(${selectedGroup.value.spec.links.join(",")})`],
+        },
+      }
+    );
+
+    // sort by priority
     links.value = data.items
       .map((link) => {
         if (link.spec) {
@@ -52,32 +63,7 @@ const handleFetchLinks = async () => {
         return (a.spec?.priority || 0) - (b.spec?.priority || 0);
       });
   } catch (e) {
-    console.error(e);
-  }
-};
-
-const handleFetchLinkGroups = async () => {
-  try {
-    const { data } = await apiClient.get<LinkGroupList>(
-      "/apis/core.halo.run/v1alpha1/linkgroups"
-    );
-    groups.value = data.items
-      .map((group) => {
-        if (group.spec) {
-          group.spec.priority = group.spec.priority || 0;
-        }
-        return group;
-      })
-      .sort((a, b) => {
-        return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-      });
-
-    // set default selected group
-    if (groups.value?.length) {
-      selectedGroup.value = groups.value[0];
-    }
-  } catch (e) {
-    console.error(e);
+    console.error("Failed to fetch links", e);
   }
 };
 
@@ -109,25 +95,20 @@ const handleSaveInBatch = async () => {
   }
 };
 
-const handleSaveGroupInBatch = async () => {
-  try {
-    const promises = groups.value?.map((group: LinkGroup, index) => {
-      if (group.spec) {
-        group.spec.priority = index;
-      }
-      return apiClient.put(
-        `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`,
-        group
-      );
-    });
-    if (promises) {
-      await Promise.all(promises);
-    }
-  } catch (e) {
-    console.error(e);
-  } finally {
-    await handleFetchLinkGroups();
+const onLinkSaved = async (link: Link) => {
+  const groupToUpdate = cloneDeep(selectedGroup.value);
+
+  if (groupToUpdate) {
+    groupToUpdate.spec.links.push(link.metadata.name);
+
+    await apiClient.put(
+      `/apis/core.halo.run/v1alpha1/linkgroups/${groupToUpdate.metadata.name}`,
+      groupToUpdate
+    );
   }
+
+  await groupListRef.value.handleFetchGroups();
+  await handleFetchLinks();
 };
 
 const handleDelete = (link: Link) => {
@@ -160,12 +141,6 @@ const handleDeleteInBatch = () => {
         await handleFetchLinks();
       }
     },
-  });
-};
-
-const handleGetLinksByGroup = (group: LinkGroup) => {
-  return links.value?.filter((link) => {
-    return link.spec?.groupName === group.metadata.name;
   });
 };
 
@@ -240,17 +215,13 @@ const handleCheckAllChange = (e: Event) => {
 watch(selectedLinks, (newValue) => {
   checkedAll.value = newValue.length === links.value?.length;
 });
-
-onMounted(() => {
-  handleFetchLinks();
-  handleFetchLinkGroups();
-});
 </script>
 <template>
   <LinkEditingModal
     v-model:visible="editingModal"
     :link="selectedLink"
     @close="handleFetchLinks"
+    @saved="onLinkSaved"
   />
   <VPageHeader title="友情链接">
     <template #actions>
@@ -270,58 +241,11 @@ onMounted(() => {
   <div class="links-p-4">
     <div class="links-flex links-flex-row links-gap-2">
       <div class="links-w-80">
-        <VCard :bodyClass="['!p-0']" title="分组">
-          <Draggable
-            v-model="groups"
-            class="links-divide-y links-divide-gray-100 links-bg-white"
-            group="group"
-            item-key="metadata.name"
-            tag="div"
-            @change="handleSaveGroupInBatch"
-          >
-            <template #item="{ element }">
-              <div
-                :class="{
-                  'links-bg-gray-50':
-                    selectedGroup?.metadata.name === element.metadata.name,
-                }"
-                class="links-relative links-flex links-items-center links-p-4"
-                @click="selectedGroup = element"
-              >
-                <div>
-                  <IconList class="drag-element links-cursor-move" />
-                </div>
-                <span
-                  class="links-ml-3 links-flex links-flex-1 links-cursor-pointer links-flex-col"
-                >
-                  <span class="links-block links-text-sm links-font-medium">
-                    {{ element.spec?.displayName }}
-                  </span>
-                  <span class="links-block links-text-sm links-text-gray-400">
-                    {{ handleGetLinksByGroup(element).length }} 个
-                  </span>
-                </span>
-                <div
-                  v-permission="['plugin:links:manage']"
-                  class="links-self-center"
-                >
-                  <IconSettings
-                    class="links-cursor-pointer links-transition-all hover:links-text-blue-600"
-                  />
-                </div>
-              </div>
-            </template>
-          </Draggable>
-
-          <template #footer>
-            <VButton
-              v-permission="['plugin:links:manage']"
-              block
-              type="secondary"
-              >新增分组
-            </VButton>
-          </template>
-        </VCard>
+        <GroupList
+          ref="groupListRef"
+          v-model:selected-group="selectedGroup"
+          @select="handleFetchLinks"
+        />
       </div>
       <div class="links-flex-1">
         <VCard :body-class="['!p-0']">

@@ -21,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: "update:visible", value: boolean): void;
   (event: "close"): void;
+  (event: "saved", link: Link): void;
 }>();
 
 const formSchema = [
@@ -110,15 +111,17 @@ const handleSaveLink = async () => {
 
     editingFormState.value.saving = true;
     if (isUpdateForm.value) {
-      await apiClient.put(
+      const { data } = await apiClient.put<Link>(
         `/apis/core.halo.run/v1alpha1/links/${editingFormState.value.link.metadata.name}`,
         editingFormState.value.link
       );
+      emit("saved", data);
     } else {
-      await apiClient.post(
+      const { data } = await apiClient.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
         editingFormState.value.link
       );
+      emit("saved", data);
     }
     handleVisibleChange(false);
   } catch (e) {

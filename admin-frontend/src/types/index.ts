@@ -14,6 +14,7 @@ export interface Metadata {
 export interface LinkGroupSpec {
   displayName: string;
   priority?: number;
+  links: string[];
 }
 
 export interface LinkSpec {
@@ -21,19 +22,18 @@ export interface LinkSpec {
   displayName: string;
   logo?: string;
   description?: string;
-  groupName?: string;
   priority?: number;
 }
 
 export interface Link {
-  spec?: LinkSpec;
+  spec: LinkSpec;
   apiVersion: string;
   kind: string;
   metadata: Metadata;
 }
 
 export interface LinkGroup {
-  spec?: LinkGroupSpec;
+  spec: LinkGroupSpec;
   apiVersion: string;
   kind: string;
   metadata: Metadata;
