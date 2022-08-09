@@ -11,7 +11,7 @@
     "prettier": "prettier --write './src/**/*.{vue,js,jsx,ts,tsx,css,scss,json,yml,yaml,html}'"
   },
   "dependencies": {
-    "@halo-dev/admin-shared": "*",
+    "@halo-dev/admin-shared": "^0.0.0-alpha.3",
     "@halo-dev/components": "*",
     "@vueuse/components": "^8.9.4",
     "@vueuse/core": "^8.9.4",

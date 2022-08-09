@@ -1,6 +1,6 @@
 import "./styles/tailwind.css";
 import type { PagesPublicState } from "@halo-dev/admin-shared";
-import { BasicLayout, definePlugin } from "@halo-dev/admin-shared";
+import { definePlugin } from "@halo-dev/admin-shared";
 import LinkList from "@/views/LinkList.vue";
 import type { Ref } from "vue";
 
@@ -9,19 +9,14 @@ export default definePlugin({
   components: [],
   routes: [
     {
-      path: "/pages/functional/links",
-      component: BasicLayout,
-      children: [
-        {
-          path: "",
-          name: "Links",
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          component: LinkList,
+      parentName: "BasePages",
+      route: {
+        path: "functional/links",
+        name: "Links",
+        component: LinkList,
+        meta: {
+          permissions: ["plugin:links:view"],
         },
-      ],
-      meta: {
-        permissions: ["plugin:links:view"],
       },
     },
   ],
