@@ -1,8 +1,8 @@
 lockfileVersion: 5.4
 
 specifiers:
-  '@halo-dev/admin-shared': '*'
-  '@halo-dev/components': '*'
+  '@halo-dev/admin-shared': ^0.0.0-alpha.4
+  '@halo-dev/components': ^0.0.0-alpha.3
   '@rushstack/eslint-patch': ^1.1.4
   '@types/jsdom': ^16.2.15
   '@types/lodash.clonedeep': ^4.5.7
@@ -41,8 +41,8 @@ specifiers:
   yaml: ^2.1.1
 
 dependencies:
-  '@halo-dev/admin-shared': 0.0.0-alpha.3_45jhv7el6g2ztux7wgm2ofrf4e
-  '@halo-dev/components': 0.0.0-alpha.2_45jhv7el6g2ztux7wgm2ofrf4e
+  '@halo-dev/admin-shared': 0.0.0-alpha.4_45jhv7el6g2ztux7wgm2ofrf4e
+  '@halo-dev/components': 0.0.0-alpha.3_45jhv7el6g2ztux7wgm2ofrf4e
   '@vueuse/components': 8.9.4_vue@3.2.37
   '@vueuse/core': 8.9.4_vue@3.2.37
   '@vueuse/router': 9.1.0_45jhv7el6g2ztux7wgm2ofrf4e
@@ -376,6 +376,69 @@ packages:
       '@babel/helper-validator-identifier': 7.18.6
       to-fast-properties: 2.0.0
 
+  /@codemirror/autocomplete/6.1.0:
+    resolution: {integrity: sha512-wtO4O5WDyXhhCd4q4utDIDZxnQfmJ++3dGBCG9LMtI79+92OcA1DVk/n7BEupKmjIr8AzvptDz7YQ9ud6OkU+A==}
+    dependencies:
+      '@codemirror/language': 6.2.1
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+      '@lezer/common': 1.0.0
+    dev: false
+
+  /@codemirror/commands/6.0.1:
+    resolution: {integrity: sha512-iNHDByicYqQjs0Wo1MKGfqNbMYMyhS9WV6EwMVwsHXImlFemgEUC+c5X22bXKBStN3qnwg4fArNZM+gkv22baQ==}
+    dependencies:
+      '@codemirror/language': 6.2.1
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+      '@lezer/common': 1.0.0
+    dev: false
+
+  /@codemirror/language/6.2.1:
+    resolution: {integrity: sha512-MC3svxuvIj0MRpFlGHxLS6vPyIdbTr2KKPEW46kCoCXw2ktb4NTkpkPBI/lSP/FoNXLCBJ0mrnUi1OoZxtpW1Q==}
+    dependencies:
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+      '@lezer/common': 1.0.0
+      '@lezer/highlight': 1.0.0
+      '@lezer/lr': 1.2.2
+      style-mod: 4.0.0
+    dev: false
+
+  /@codemirror/legacy-modes/6.1.0:
+    resolution: {integrity: sha512-V/PgGpndkZeTn3Hdlg/gd8MLFdyvTCIX+iwJzjUw5iNziWiNsAY8X0jvf7m3gSfxnKkNzmid6l0g4rYSpiDaCw==}
+    dependencies:
+      '@codemirror/language': 6.2.1
+    dev: false
+
+  /@codemirror/lint/6.0.0:
+    resolution: {integrity: sha512-nUUXcJW1Xp54kNs+a1ToPLK8MadO0rMTnJB8Zk4Z8gBdrN0kqV7uvUraU/T2yqg+grDNR38Vmy/MrhQN/RgwiA==}
+    dependencies:
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+      crelt: 1.0.5
+    dev: false
+
+  /@codemirror/search/6.0.1:
+    resolution: {integrity: sha512-uOinkOrM+daMduCgMPomDfKLr7drGHB4jHl3Vq6xY2WRlL7MkNsBE0b+XHYa/Mee2npsJOgwvkW4n1lMFeBW2Q==}
+    dependencies:
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+      crelt: 1.0.5
+    dev: false
+
+  /@codemirror/state/6.1.1:
+    resolution: {integrity: sha512-2s+aXsxmAwnR3Rd+JDHPG/1lw0YsA9PEwl7Re88gHJHGfxyfEzKBmsN4rr53RyPIR4lzbbhJX0DCq0WlqlBIRw==}
+    dev: false
+
+  /@codemirror/view/6.2.0:
+    resolution: {integrity: sha512-3emW1symh+GoteFMBPsltjmF790U/trouLILATh3JodbF/z98HvcQh2g3+H6dfNIHx16uNonsAF4mNzVr1TJNA==}
+    dependencies:
+      '@codemirror/state': 6.1.1
+      style-mod: 4.0.0
+      w3c-keyname: 2.2.6
+    dev: false
+
   /@eslint/eslintrc/1.3.0:
     resolution: {integrity: sha512-UWW0TMTmk2d7hLcWD1/e2g5HDM/HQ3csaLSqXCfqwh4uNDuNqlaKWXmEsL4Cs41Z0KnILNvwbHAah3C2yt06kw==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
@@ -393,14 +456,14 @@ packages:
       - supports-color
     dev: true
 
-  /@halo-dev/admin-shared/0.0.0-alpha.3_45jhv7el6g2ztux7wgm2ofrf4e:
-    resolution: {integrity: sha512-rizOLAzAcmcedZN9gwnhGFmKKf7p4byik7m68sqFFBGmFma0nxUtMf9YMjAEky85bCeeZApyVLB80Mxu1KGU9A==}
+  /@halo-dev/admin-shared/0.0.0-alpha.4_45jhv7el6g2ztux7wgm2ofrf4e:
+    resolution: {integrity: sha512-Jaynaz3O4BemvVPG/8oHAPNkyTtGE2D0kdGVKOFTGR9hiuF/uLPv2GSzvlUe0zp03oGVdMYYtJvyh9ZVgHD67Q==}
     peerDependencies:
       vue: ^3.2.37
       vue-router: ^4.0.16
     dependencies:
-      '@halo-dev/api-client': 0.0.3
-      '@halo-dev/components': 0.0.0-alpha.2_45jhv7el6g2ztux7wgm2ofrf4e
+      '@halo-dev/api-client': 0.0.10
+      '@halo-dev/components': 0.0.0-alpha.3_45jhv7el6g2ztux7wgm2ofrf4e
       axios: 0.27.2
       vue: 3.2.37
       vue-router: 4.1.3_vue@3.2.37
@@ -408,16 +471,22 @@ packages:
       - debug
     dev: false
 
-  /@halo-dev/api-client/0.0.3:
-    resolution: {integrity: sha512-ybtVcjeeFqOldPIKRrm3socfGtbSR5GL+MXVmkSJwD2fCwT9OiXEvs3cgceWceIZI0Ug7AEKwxbcO+ZfOmDlYA==}
+  /@halo-dev/api-client/0.0.10:
+    resolution: {integrity: sha512-DKQKkEAKMR/rbopI6jbjbzLiYUZeY6dOcgqGoDGG8MAcwkWOI6iWaZnuR5z+X8vd51XjiPhnekAphfcO6PaWEQ==}
     dev: false
 
-  /@halo-dev/components/0.0.0-alpha.2_45jhv7el6g2ztux7wgm2ofrf4e:
-    resolution: {integrity: sha512-0dfzvWLR83wv8AI59vrukExRS4xRtbKKEN9jOxuO83Lr/rlKuc36bQzUbWruHSI9Ceu+LflnPdbOWrjwWRZYKg==}
+  /@halo-dev/components/0.0.0-alpha.3_45jhv7el6g2ztux7wgm2ofrf4e:
+    resolution: {integrity: sha512-T7DxKcT7Zfw5+ALMOqF7IRf0kV21JbnOS6NL4+SiAwMv0N7iVGNfZX2234U1TnOVQ4hX66wh7bo92D20be++UA==}
     peerDependencies:
       vue: ^3.2.37
       vue-router: ^4.0.16
     dependencies:
+      '@codemirror/commands': 6.0.1
+      '@codemirror/language': 6.2.1
+      '@codemirror/legacy-modes': 6.1.0
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+      codemirror: 6.0.1
       vue: 3.2.37
       vue-router: 4.1.3_vue@3.2.37
     dev: false
@@ -478,6 +547,22 @@ packages:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
+
+  /@lezer/common/1.0.0:
+    resolution: {integrity: sha512-ohydQe+Hb+w4oMDvXzs8uuJd2NoA3D8YDcLiuDsLqH+yflDTPEpgCsWI3/6rH5C3BAedtH1/R51dxENldQceEA==}
+    dev: false
+
+  /@lezer/highlight/1.0.0:
+    resolution: {integrity: sha512-nsCnNtim90UKsB5YxoX65v3GEIw3iCHw9RM2DtdgkiqAbKh9pCdvi8AWNwkYf10Lu6fxNhXPpkpHbW6mihhvJA==}
+    dependencies:
+      '@lezer/common': 1.0.0
+    dev: false
+
+  /@lezer/lr/1.2.2:
+    resolution: {integrity: sha512-Df2R6Q7mieAVKYOD5ifo9j5SUoT6EHp10FvHU0v4cQ3MoPsifi6mb8eEycI0uNTdtPSCZLqDqT8G1mNvEqSB1Q==}
+    dependencies:
+      '@lezer/common': 1.0.0
+    dev: false
 
   /@nodelib/fs.scandir/2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -1245,6 +1330,18 @@ packages:
       fsevents: 2.3.2
     dev: true
 
+  /codemirror/6.0.1:
+    resolution: {integrity: sha512-J8j+nZ+CdWmIeFIGXEFbFPtpiYacFMDR8GlHK3IyHQJMCaVRfGx9NT+Hxivv1ckLWPvNdZqndbr/7lVhrf/Svg==}
+    dependencies:
+      '@codemirror/autocomplete': 6.1.0
+      '@codemirror/commands': 6.0.1
+      '@codemirror/language': 6.2.1
+      '@codemirror/lint': 6.0.0
+      '@codemirror/search': 6.0.1
+      '@codemirror/state': 6.1.1
+      '@codemirror/view': 6.2.0
+    dev: false
+
   /color-convert/1.9.3:
     resolution: {integrity: sha512-QfAUtd+vFdAtFQcC8CCyYt1fYWxSqAiK2cSD6zDB8N3cpsEBAvRxp9zOGg6G/SHHJYAT88/az/IuDGALsNVbGg==}
     dependencies:
@@ -1281,6 +1378,10 @@ packages:
     dependencies:
       safe-buffer: 5.1.2
     dev: true
+
+  /crelt/1.0.5:
+    resolution: {integrity: sha512-+BO9wPPi+DWTDcNYhr/W90myha8ptzftZT+LwcmUbbok0rcP/fequmFYCw8NMoH7pkAZQzU78b3kYrlua5a9eA==}
+    dev: false
 
   /cross-spawn/6.0.5:
     resolution: {integrity: sha512-eTVLrBSt7fjbDygz805pMnstIs2VTBNkRm0qxZd+M7A5XDdxVRWO5MxGBXZhjY4cqLYLdtrGqRf8mBPmzwSpWQ==}
@@ -3095,6 +3196,10 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
+  /style-mod/4.0.0:
+    resolution: {integrity: sha512-OPhtyEjyyN9x3nhPsu76f52yUGXiZcgvsrFVtvTkyGRQJ0XK+GPc6ov1z+lRpbeabka+MYEQxOYRnt5nF30aMw==}
+    dev: false
+
   /supports-color/5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
     engines: {node: '>=4'}
@@ -3473,6 +3578,10 @@ packages:
     dependencies:
       browser-process-hrtime: 1.0.0
     dev: true
+
+  /w3c-keyname/2.2.6:
+    resolution: {integrity: sha512-f+fciywl1SJEniZHD6H+kUO8gOnwIr7f4ijKA6+ZvJFjeGi1r4PDLl53Ayud9O/rk64RqgoQine0feoeOU0kXg==}
+    dev: false
 
   /w3c-xmlserializer/3.0.0:
     resolution: {integrity: sha512-3WFqGEgSXIyGhOmAFtlicJNMjEps8b1MG31NCA0/vOF9+nKMUW1ckhi9cnNHmf88Rzw5V+dwIwsm2C7X8k9aQg==}
