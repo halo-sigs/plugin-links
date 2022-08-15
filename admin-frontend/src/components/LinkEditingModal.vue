@@ -1,22 +1,28 @@
 <script lang="ts" name="LinkCreationModal" setup>
 import {
+  IconCodeBoxLine,
+  IconEye,
   IconSave,
   VButton,
-  VModal,
   VCodemirror,
-  IconEye,
-  IconCodeBoxLine,
+  VModal,
 } from "@halo-dev/components";
-import { computed, ref, watch } from "vue";
+import { computed, defineProps, ref, watch } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
 import YAML from "yaml";
 
-const props = defineProps<{
-  visible: boolean;
-  link: Link | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    visible: boolean;
+    link: Link | null;
+  }>(),
+  {
+    visible: false,
+    link: null,
+  }
+);
 
 const emit = defineEmits<{
   (event: "update:visible", value: boolean): void;

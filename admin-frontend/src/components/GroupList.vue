@@ -1,29 +1,31 @@
 <script lang="ts" setup>
 import {
-  VCard,
   IconList,
   IconSettings,
-  VButton,
-  VSpace,
   useDialog,
+  VButton,
+  VCard,
+  VSpace,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
-import type { PropType } from "vue";
-import Draggable from "vuedraggable";
-import { onMounted, ref } from "vue";
-import apiClient from "@/utils/api-client";
 import { LinkGroupList } from "@/types";
+import { onMounted, ref } from "vue";
+import Draggable from "vuedraggable";
+import apiClient from "@/utils/api-client";
 import { useRouteQuery } from "@vueuse/router";
 
-const props = defineProps({
-  selectedGroup: {
-    type: Object as PropType<LinkGroup | null>,
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    selectedGroup: LinkGroup | null;
+  }>(),
+  { selectedGroup: null }
+);
 
-const emit = defineEmits(["select", "update:selectedGroup"]);
+const emit = defineEmits<{
+  (event: "select", group: LinkGroup): void;
+  (event: "update:selectedGroup", group: LinkGroup): void;
+}>();
 
 const groupQuery = useRouteQuery("group");
 const dialog = useDialog();

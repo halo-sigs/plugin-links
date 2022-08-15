@@ -1,25 +1,27 @@
 <script lang="ts" setup>
 import { VButton, VModal, VSpace } from "@halo-dev/components";
 import { v4 as uuid } from "uuid";
-import type { PropType } from "vue";
 import { computed, ref, watch } from "vue";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
 import { useMagicKeys } from "@vueuse/core";
 import type { LinkGroup } from "@/types";
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    default: false,
-  },
-  group: {
-    type: Object as PropType<LinkGroup | null>,
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    visible: boolean;
+    group: LinkGroup | null;
+  }>(),
+  {
+    visible: false,
+    group: null,
+  }
+);
 
-const emit = defineEmits(["update:visible", "close"]);
+const emit = defineEmits<{
+  (event: "update:visible", visible: boolean): void;
+  (event: "close"): void;
+}>();
 
 const initialFormState: LinkGroup = {
   apiVersion: "core.halo.run/v1alpha1",
