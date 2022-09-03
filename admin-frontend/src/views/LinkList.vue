@@ -45,7 +45,7 @@ const handleFetchLinks = async () => {
       "/apis/core.halo.run/v1alpha1/links",
       {
         params: {
-          fieldSelector: [`name=(${selectedGroup.value.spec.links.join(",")})`],
+          fieldSelector: `name=(${selectedGroup.value.spec.links.join(",")})`,
         },
       }
     );
@@ -273,12 +273,6 @@ watch(selectedLinks, (newValue) => {
         <VButton size="sm" type="default" @click="handleImportFromYaml">
           导入
         </VButton>
-        <VButton type="secondary" @click="editingModal = true">
-          <template #icon>
-            <IconAddCircle class="links-h-full links-w-full" />
-          </template>
-          新增链接
-        </VButton>
       </VSpace>
     </template>
   </VPageHeader>
@@ -340,12 +334,8 @@ watch(selectedLinks, (newValue) => {
                   v-permission="['plugin:links:manage']"
                   class="links-mt-4 links-flex sm:links-mt-0"
                 >
-                  <VButton
-                    :loading="batchSaving"
-                    size="sm"
-                    @click="handleSaveInBatch"
-                  >
-                    保存排序
+                  <VButton size="xs" @click="editingModal = true">
+                    新增
                   </VButton>
                 </div>
               </div>
@@ -360,6 +350,7 @@ watch(selectedLinks, (newValue) => {
             tag="ul"
             @end="drag = false"
             @start="drag = true"
+            @change="handleSaveInBatch"
           >
             <template #item="{ element: link }">
               <li>
