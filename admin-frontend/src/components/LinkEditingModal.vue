@@ -170,6 +170,8 @@ const handleRawModeChange = () => {
         <IconCodeBoxLine v-if="!rawMode" />
         <IconEye v-else />
       </div>
+
+      <slot name="append-actions" />
     </template>
 
     <VCodemirror v-show="rawMode" v-model="raw" height="50vh" language="yaml" />

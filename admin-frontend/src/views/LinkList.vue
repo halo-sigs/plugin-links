@@ -4,6 +4,8 @@ import Draggable from "vuedraggable";
 import {
   IconAddCircle,
   IconSettings,
+  IconArrowLeft,
+  IconArrowRight,
   IconList,
   useDialog,
   VButton,
@@ -22,7 +24,7 @@ import cloneDeep from "lodash.clonedeep";
 import { formatDatetime } from "@/utils/date";
 
 const drag = ref(false);
-const links = ref<Link[]>();
+const links = ref<Link[]>([] as Link[]);
 const selectedLink = ref<Link | undefined>();
 const selectedLinks = ref<string[]>([]);
 const selectedGroup = ref<LinkGroup | null>(null);
@@ -61,6 +63,34 @@ const handleFetchLinks = async () => {
       });
   } catch (e) {
     console.error("Failed to fetch links", e);
+  }
+};
+
+const handleSelectPrevious = () => {
+  const currentIndex = links.value.findIndex(
+    (link) => link.metadata.name === selectedLink.value?.metadata.name
+  );
+
+  if (currentIndex > 0) {
+    selectedLink.value = links.value[currentIndex - 1];
+    return;
+  }
+
+  if (currentIndex <= 0) {
+    selectedLink.value = undefined;
+  }
+};
+
+const handleSelectNext = () => {
+  if (!selectedLink.value) {
+    selectedLink.value = links.value[0];
+    return;
+  }
+  const currentIndex = links.value.findIndex(
+    (link) => link.metadata.name === selectedLink.value?.metadata.name
+  );
+  if (currentIndex !== links.value.length - 1) {
+    selectedLink.value = links.value[currentIndex + 1];
   }
 };
 
@@ -227,8 +257,17 @@ watch(selectedLinks, (newValue) => {
     :link="selectedLink"
     @close="handleFetchLinks"
     @saved="onLinkSaved"
-  />
-  <VPageHeader title="友情链接">
+  >
+    <template #append-actions>
+      <div class="modal-header-action" @click="handleSelectPrevious">
+        <IconArrowLeft />
+      </div>
+      <div class="modal-header-action" @click="handleSelectNext">
+        <IconArrowRight />
+      </div>
+    </template>
+  </LinkEditingModal>
+  <VPageHeader title="链接">
     <template #actions>
       <VSpace v-permission="['plugin:links:manage']">
         <VButton size="sm" type="default" @click="handleImportFromYaml">
