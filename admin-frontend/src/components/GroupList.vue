@@ -9,7 +9,7 @@ import {
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
-import { LinkGroupList } from "@/types";
+import type { LinkGroupList } from "@/types";
 import { onMounted, ref } from "vue";
 import Draggable from "vuedraggable";
 import apiClient from "@/utils/api-client";
@@ -150,7 +150,7 @@ defineExpose({
     :group="selectedGroup"
     @close="handleFetchGroups"
   />
-  <VCard :bodyClass="['!p-0']" title="分组">
+  <VCard :body-class="['!p-0']" title="分组">
     <Draggable
       v-model="groups"
       class="links-divide-y links-divide-gray-100 links-bg-white"

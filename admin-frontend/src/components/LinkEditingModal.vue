@@ -1,4 +1,4 @@
-<script lang="ts" name="LinkCreationModal" setup>
+<script lang="ts" setup>
 import {
   IconCodeBoxLine,
   IconEye,
@@ -12,15 +12,17 @@ import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
 import YAML from "yaml";
+import { v4 as uuid } from "uuid";
+import { reset, submitForm } from "@formkit/core";
 
 const props = withDefaults(
   defineProps<{
     visible: boolean;
-    link: Link | null;
+    link?: Link;
   }>(),
   {
     visible: false,
-    link: null,
+    link: undefined,
   }
 );
 
@@ -55,123 +57,127 @@ const formSchema = [
   },
 ];
 
-interface LinkEditingFormState {
-  link: Link;
-  saving: boolean;
-  rawMode: boolean;
-  raw: string;
-}
-
-const initialFormState: LinkEditingFormState = {
-  link: {
-    metadata: {
-      name: Math.random().toString(),
-    },
-    spec: {
-      displayName: "",
-      url: "",
-      logo: "",
-    },
-    kind: "Link",
-    apiVersion: "core.halo.run/v1alpha1",
+const initialFormState: Link = {
+  metadata: {
+    name: uuid(),
   },
-  saving: false,
-  rawMode: false,
-  raw: "",
+  spec: {
+    displayName: "",
+    url: "",
+    logo: "",
+  },
+  kind: "Link",
+  apiVersion: "core.halo.run/v1alpha1",
 };
 
-const editingFormState = ref<LinkEditingFormState>(cloneDeep(initialFormState));
+const formState = ref<Link>(cloneDeep(initialFormState));
+const saving = ref<boolean>(false);
+const rawMode = ref<boolean>(false);
+const raw = ref("");
 
-const isUpdateForm = computed(() => {
-  return !!editingFormState.value.link.metadata.creationTimestamp;
+const isUpdateMode = computed(() => {
+  return !!formState.value.metadata.creationTimestamp;
 });
 
-const editingTitle = computed(() => {
-  return isUpdateForm.value ? "编辑链接" : "添加链接";
+const modalTitle = computed(() => {
+  return isUpdateMode.value ? "编辑链接" : "添加链接";
 });
 
 const modalWidth = computed(() => {
-  return editingFormState.value.rawMode ? 750 : 650;
+  return rawMode.value ? 750 : 650;
 });
 
-watch(props, (newVal) => {
-  if (newVal.visible && props.link) {
-    editingFormState.value.link = cloneDeep(props.link);
-    return;
-  }
-  editingFormState.value = cloneDeep(initialFormState);
-});
-
-const handleVisibleChange = (visible: boolean) => {
+const onVisibleChange = (visible: boolean) => {
   emit("update:visible", visible);
   if (!visible) {
     emit("close");
   }
 };
 
+const handleResetForm = () => {
+  formState.value = cloneDeep(initialFormState);
+  formState.value.metadata.name = uuid();
+  reset("link-form");
+};
+
+watch(
+  () => props.visible,
+  (visible) => {
+    if (!visible) {
+      handleResetForm();
+    }
+  }
+);
+
+watch(
+  () => props.link,
+  (link) => {
+    if (link) {
+      formState.value = cloneDeep(link);
+    } else {
+      handleResetForm();
+    }
+  }
+);
+
 const handleSaveLink = async () => {
   try {
-    if (editingFormState.value.rawMode) {
-      editingFormState.value.link = YAML.parse(editingFormState.value.raw);
+    if (rawMode.value) {
+      formState.value = YAML.parse(raw.value);
     }
 
-    editingFormState.value.saving = true;
-    if (isUpdateForm.value) {
+    saving.value = true;
+    if (isUpdateMode.value) {
       const { data } = await apiClient.put<Link>(
-        `/apis/core.halo.run/v1alpha1/links/${editingFormState.value.link.metadata.name}`,
-        editingFormState.value.link
+        `/apis/core.halo.run/v1alpha1/links/${formState.value.metadata.name}`,
+        formState.value
       );
       emit("saved", data);
     } else {
       const { data } = await apiClient.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
-        editingFormState.value.link
+        formState.value
       );
       emit("saved", data);
     }
-    handleVisibleChange(false);
+    onVisibleChange(false);
   } catch (e) {
     console.error(e);
   } finally {
-    editingFormState.value.saving = false;
+    saving.value = false;
   }
 };
 
 const handleRawModeChange = () => {
-  editingFormState.value.rawMode = !editingFormState.value.rawMode;
+  rawMode.value = !rawMode.value;
 
-  if (editingFormState.value.rawMode) {
-    editingFormState.value.raw = YAML.stringify(editingFormState.value.link);
+  if (rawMode.value) {
+    raw.value = YAML.stringify(formState.value);
   } else {
-    editingFormState.value.link = YAML.parse(editingFormState.value.raw);
+    formState.value = YAML.parse(raw.value);
   }
 };
 </script>
 <template>
   <VModal
-    :title="editingTitle"
+    :title="modalTitle"
     :visible="visible"
     :width="modalWidth"
-    @update:visible="handleVisibleChange"
+    @update:visible="onVisibleChange"
   >
     <template #actions>
       <div class="modal-header-action" @click="handleRawModeChange">
-        <IconCodeBoxLine v-if="!editingFormState.rawMode" />
+        <IconCodeBoxLine v-if="!rawMode" />
         <IconEye v-else />
       </div>
     </template>
 
-    <VCodemirror
-      v-show="editingFormState.rawMode"
-      v-model="editingFormState.raw"
-      height="50vh"
-      language="yaml"
-    />
+    <VCodemirror v-show="rawMode" v-model="raw" height="50vh" language="yaml" />
 
-    <div v-show="!editingFormState.rawMode">
+    <div v-show="!rawMode">
       <FormKit
         id="link-form"
-        v-model="editingFormState.link.spec"
+        v-model="formState.spec"
         :actions="false"
         type="form"
         @submit="handleSaveLink"
@@ -181,9 +187,9 @@ const handleRawModeChange = () => {
     </div>
     <template #footer>
       <VButton
-        :loading="editingFormState.saving"
+        :loading="saving"
         type="secondary"
-        @click="$formkit.submit('link-form')"
+        @click="submitForm('link-form')"
       >
         <template #icon>
           <IconSave class="links-h-full links-w-full" />
