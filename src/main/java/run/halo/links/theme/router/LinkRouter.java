@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -15,7 +16,7 @@ import reactor.core.scheduler.Schedulers;
 import run.halo.links.Link;
 import run.halo.links.theme.finders.LinkFinder;
 
-@Component
+@Configuration
 public class LinkRouter {
 
     private final LinkFinder linkFinder;
