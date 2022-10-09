@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     outDir: fileURLToPath(
-      new URL("../src/main/resources/admin", import.meta.url)
+      new URL("../src/main/resources/console", import.meta.url)
     ),
     emptyOutDir: true,
     lib: {
@@ -41,7 +41,7 @@ export default defineConfig({
           "@vueuse/core": "VueUse",
           "@vueuse/components": "VueUse",
           "@vueuse/router": "VueUse",
-          "@halo-dev/shared": "HaloAdminShared",
+          "@halo-dev/console-shared": "HaloConsoleShared",
           "@halo-dev/components": "HaloComponents",
         },
         // https://github.com/vitejs/vite/issues/9318

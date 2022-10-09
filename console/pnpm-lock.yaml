@@ -2,8 +2,8 @@ lockfileVersion: 5.4
 
 specifiers:
   '@formkit/core': 1.0.0-beta.10
-  '@halo-dev/admin-shared': ^0.0.0-alpha.5
   '@halo-dev/components': ^0.0.0-alpha.4
+  '@halo-dev/console-shared': ^0.0.0-alpha.5
   '@rushstack/eslint-patch': ^1.2.0
   '@types/jsdom': ^16.2.15
   '@types/lodash.clonedeep': ^4.5.7
@@ -43,8 +43,8 @@ specifiers:
 
 dependencies:
   '@formkit/core': 1.0.0-beta.10
-  '@halo-dev/admin-shared': 0.0.0-alpha.5_u55wpvgoaskkfdnhr4v2vlugdi
   '@halo-dev/components': 0.0.0-alpha.4_u55wpvgoaskkfdnhr4v2vlugdi
+  '@halo-dev/console-shared': 0.0.0-alpha.5_u55wpvgoaskkfdnhr4v2vlugdi
   '@vueuse/core': 8.9.4_vue@3.2.39
   '@vueuse/router': 8.9.4_u55wpvgoaskkfdnhr4v2vlugdi
   axios: 0.27.2
@@ -556,17 +556,6 @@ packages:
     resolution: {integrity: sha512-uMx2HKdyeFGNFuHckKuyW3ABYzrhgeoH2GO+gX94+hay4heWHpB65ZIdvEvCSBSxR83qfJ2k32USbW3AJlSQHg==}
     dev: false
 
-  /@halo-dev/admin-shared/0.0.0-alpha.5_u55wpvgoaskkfdnhr4v2vlugdi:
-    resolution: {integrity: sha512-FDgqO+Z/Smben8Miyq7+nNSyMtsNb/t0oHJEnAiUmsadj8jTHJOjAcq83ciKGqTt7qR7zxP5J1iOejdJrxaapA==}
-    peerDependencies:
-      vue: ^3.2.37
-      vue-router: ^4.0.16
-    dependencies:
-      '@halo-dev/components': 0.0.0-alpha.4_u55wpvgoaskkfdnhr4v2vlugdi
-      vue: 3.2.39
-      vue-router: 4.1.5_vue@3.2.39
-    dev: false
-
   /@halo-dev/components/0.0.0-alpha.4_u55wpvgoaskkfdnhr4v2vlugdi:
     resolution: {integrity: sha512-1MK1I4WkumQ5PuS6IcfBWkikGXY+uh3WU+1beZT2mocXA2nLxOPF3tdxTI6Lp4Q8xMRTzuYhP2/guom4PYNZMA==}
     peerDependencies:
@@ -579,6 +568,17 @@ packages:
       '@codemirror/state': 6.1.1
       '@codemirror/view': 6.2.5
       codemirror: 6.0.1
+      vue: 3.2.39
+      vue-router: 4.1.5_vue@3.2.39
+    dev: false
+
+  /@halo-dev/console-shared/0.0.0-alpha.5_u55wpvgoaskkfdnhr4v2vlugdi:
+    resolution: {integrity: sha512-4i4OjzLTD80It1nStkEhxrO7CnLxhYEB/a/cWDMDmhcZPz7SCtNMWdFle8FzRxl2KpP5b+xojLCqjQEWxCrw6Q==}
+    peerDependencies:
+      vue: ^3.2.37
+      vue-router: ^4.0.16
+    dependencies:
+      '@halo-dev/components': 0.0.0-alpha.4_u55wpvgoaskkfdnhr4v2vlugdi
       vue: 3.2.39
       vue-router: 4.1.5_vue@3.2.39
     dev: false

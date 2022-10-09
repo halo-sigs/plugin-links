@@ -47,7 +47,7 @@ test {
 }
 
 node {
-    nodeProjectDir = file("${project.projectDir}/admin-frontend")
+    nodeProjectDir = file("${project.projectDir}/console")
 }
 
 task pnpmInstall(type: NpxTask) {
