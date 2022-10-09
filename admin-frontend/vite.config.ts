@@ -28,6 +28,9 @@ export default defineConfig({
       external: [
         "vue",
         "vue-router",
+        "@vueuse/core",
+        "@vueuse/components",
+        "@vueuse/router",
         "@halo-dev/shared",
         "@halo-dev/components",
       ],
@@ -35,6 +38,9 @@ export default defineConfig({
         globals: {
           vue: "Vue",
           "vue-router": "VueRouter",
+          "@vueuse/core": "VueUse",
+          "@vueuse/components": "VueUse",
+          "@vueuse/router": "VueUse",
           "@halo-dev/shared": "HaloAdminShared",
           "@halo-dev/components": "HaloComponents",
         },

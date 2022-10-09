@@ -2,17 +2,18 @@
 import { ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import {
-  IconAddCircle,
-  IconSettings,
+  IconList,
   IconArrowLeft,
   IconArrowRight,
-  IconList,
   useDialog,
   VButton,
   VCard,
   VPageHeader,
   VPagination,
   VSpace,
+  VEntity,
+  VEntityField,
+  VAvatar,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
@@ -27,7 +28,7 @@ const drag = ref(false);
 const links = ref<Link[]>([] as Link[]);
 const selectedLink = ref<Link | undefined>();
 const selectedLinks = ref<string[]>([]);
-const selectedGroup = ref<LinkGroup | null>(null);
+const selectedGroup = ref<LinkGroup>();
 const editingModal = ref(false);
 const batchSaving = ref(false);
 const checkedAll = ref(false);
@@ -216,6 +217,10 @@ const handleImportFromYaml = async () => {
   await res.open();
 
   try {
+    if (!res.data.value) {
+      return;
+    }
+
     const parsed = yaml.parse(res.data.value);
     if (Array.isArray(parsed)) {
       const promises = parsed.map((link) => {
@@ -259,12 +264,12 @@ watch(selectedLinks, (newValue) => {
     @saved="onLinkSaved"
   >
     <template #append-actions>
-      <div class="modal-header-action" @click="handleSelectPrevious">
+      <span @click="handleSelectPrevious">
         <IconArrowLeft />
-      </div>
-      <div class="modal-header-action" @click="handleSelectNext">
+      </span>
+      <span @click="handleSelectNext">
         <IconArrowRight />
-      </div>
+      </span>
     </template>
   </LinkEditingModal>
   <VPageHeader title="链接">
@@ -354,106 +359,79 @@ watch(selectedLinks, (newValue) => {
           >
             <template #item="{ element: link }">
               <li>
-                <div
-                  :class="{
-                    'links-bg-gray-100': selectedLinks.includes(
-                      link.metadata.name
-                    ),
-                  }"
-                  class="links-relative links-block links-px-4 links-py-3 links-transition-all hover:links-bg-gray-50"
+                <VEntity
+                  :is-selected="selectedLinks.includes(link.metadata.name)"
+                  class="links-group"
                 >
-                  <div
-                    v-show="selectedLinks.includes(link.metadata.name)"
-                    class="links-bg-themeable-primary links-absolute links-inset-y-0 links-left-0 links-w-0.5"
-                  ></div>
-                  <div
-                    class="links-relative links-flex links-flex-row links-items-center"
-                  >
+                  <template #prepend>
                     <div
-                      class="links-mr-4 links-hidden links-items-center sm:links-flex"
+                      class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
                     >
-                      <input
-                        v-model="selectedLinks"
-                        :value="link.metadata.name"
-                        class="links-h-4 links-w-4 links-cursor-pointer links-rounded links-border-gray-300 links-text-indigo-600"
-                        name="link-checkbox"
-                        type="checkbox"
-                      />
+                      <IconList class="h-3.5 w-3.5" />
                     </div>
-                    <div v-if="link.spec.logo" class="links-mr-4">
-                      <div
-                        class="links-inline-flex links-h-12 links-w-12 links-items-center links-justify-center links-overflow-hidden links-rounded links-border links-bg-white hover:links-shadow-sm"
-                      >
-                        <img
-                          class="links-h-full links-w-full links-object-cover"
-                          :src="link.spec.logo"
-                          :alt="link.spec.displayName"
-                        />
-                      </div>
-                    </div>
-                    <div class="links-flex-1">
-                      <div class="links-flex links-flex-row links-items-center">
-                        <div class="drag-element links-mr-2 links-cursor-move">
-                          <IconList class="links-h-4 links-w-4" />
-                        </div>
-                        <span
-                          class="links-truncate links-text-sm links-font-medium links-text-gray-900"
-                        >
-                          {{ link.spec.displayName }}
-                        </span>
-                      </div>
-                      <div class="links-mt-2 links-flex">
-                        <VSpace align="start" direction="column" spacing="xs">
-                          <span class="links-text-xs links-text-gray-500">
-                            {{ link.spec.description }}
-                          </span>
-                        </VSpace>
-                      </div>
-                    </div>
-                    <div class="links-flex">
-                      <div
-                        class="links-inline-flex links-flex-col links-items-end links-gap-4 sm:links-flex-row sm:links-items-center sm:links-gap-6"
-                      >
-                        <time
-                          class="links-text-sm links-text-gray-500"
-                          datetime="2020-01-07"
-                        >
-                          {{ formatDatetime(link.metadata.creationTimestamp) }}
-                        </time>
+                  </template>
 
-                        <span v-permission="['plugin:links:manage']">
-                          <FloatingDropdown>
-                            <IconSettings
-                              class="links-cursor-pointer links-transition-all hover:links-text-blue-600"
-                            />
-                            <template #popper>
-                              <div class="links-w-48 links-p-2">
-                                <VSpace class="links-w-full" direction="column">
-                                  <VButton
-                                    v-close-popper
-                                    block
-                                    type="secondary"
-                                    @click="handleOpenCreateModal(link)"
-                                  >
-                                    编辑
-                                  </VButton>
-                                  <VButton
-                                    v-close-popper
-                                    block
-                                    type="danger"
-                                    @click="handleDelete(link)"
-                                  >
-                                    删除
-                                  </VButton>
-                                </VSpace>
-                              </div>
-                            </template>
-                          </FloatingDropdown>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  <template #checkbox>
+                    <input
+                      v-model="selectedLinks"
+                      :value="link.metadata.name"
+                      class="links-h-4 links-w-4 links-rounded links-border-gray-300 links-text-indigo-600"
+                      name="post-checkbox"
+                      type="checkbox"
+                    />
+                  </template>
+
+                  <template #start>
+                    <VEntityField>
+                      <template #description>
+                        <VAvatar
+                          :alt="link.spec.displayName"
+                          :src="link.spec.logo"
+                          size="md"
+                        ></VAvatar>
+                      </template>
+                    </VEntityField>
+                    <VEntityField
+                      :title="link.spec.displayName"
+                      :description="link.spec.description"
+                    />
+                  </template>
+
+                  <template #end>
+                    <VEntityField v-if="link.metadata.deletionTimestamp">
+                      <template #description>
+                        <VStatusDot
+                          v-tooltip="`删除中`"
+                          state="warning"
+                          animate
+                        />
+                      </template>
+                    </VEntityField>
+                    <VEntityField
+                      :description="
+                        formatDatetime(link.metadata.creationTimestamp)
+                      "
+                    />
+                  </template>
+                  <template #dropdownItems>
+                    <VButton
+                      v-close-popper
+                      block
+                      type="secondary"
+                      @click="handleOpenCreateModal(link)"
+                    >
+                      编辑
+                    </VButton>
+                    <VButton
+                      v-close-popper
+                      block
+                      type="danger"
+                      @click="handleDelete(link)"
+                    >
+                      删除
+                    </VButton>
+                  </template>
+                </VEntity>
               </li>
             </template>
           </Draggable>

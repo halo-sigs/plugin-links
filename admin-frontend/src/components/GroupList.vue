@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import {
-  IconList,
-  IconSettings,
   useDialog,
   VButton,
   VCard,
-  VSpace,
+  VEntity,
+  IconList,
+  VEntityField,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
@@ -17,14 +17,14 @@ import { useRouteQuery } from "@vueuse/router";
 
 const props = withDefaults(
   defineProps<{
-    selectedGroup: LinkGroup | null;
+    selectedGroup?: LinkGroup;
   }>(),
-  { selectedGroup: null }
+  { selectedGroup: undefined }
 );
 
 const emit = defineEmits<{
-  (event: "select", group: LinkGroup): void;
-  (event: "update:selectedGroup", group: LinkGroup): void;
+  (event: "select", group?: LinkGroup): void;
+  (event: "update:selectedGroup", group?: LinkGroup): void;
 }>();
 
 const groupQuery = useRouteQuery("group");
@@ -68,7 +68,7 @@ const handleSelect = (group: LinkGroup) => {
   groupQuery.value = group.metadata.name;
 };
 
-const handleOpenEditingModal = (group: LinkGroup | null) => {
+const handleOpenEditingModal = (group?: LinkGroup) => {
   emit("update:selectedGroup", group);
   emit("select", group);
   groupEditingModal.value = true;
@@ -153,72 +153,56 @@ defineExpose({
   <VCard :body-class="['!p-0']" title="分组">
     <Draggable
       v-model="groups"
-      class="links-divide-y links-divide-gray-100 links-bg-white"
+      class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
       group="group"
       handle=".drag-element"
       item-key="metadata.name"
-      tag="div"
+      tag="ul"
       @change="handleSaveInBatch"
     >
-      <template #item="{ element }">
-        <div
-          :class="{
-            'links-bg-gray-50':
-              selectedGroup?.metadata.name === element.metadata.name,
-          }"
-          class="links-relative links-flex links-items-center links-p-4"
-          @click="handleSelect(element)"
-        >
-          <div>
-            <IconList class="drag-element links-cursor-move" />
-          </div>
-          <span
-            class="links-ml-3 links-flex links-flex-1 links-cursor-pointer links-flex-col"
+      <template #item="{ element: group }">
+        <li @click="handleSelect(group)">
+          <VEntity
+            :is-selected="selectedGroup?.metadata.name === group.metadata.name"
+            class="links-group"
           >
-            <span class="links-block links-text-sm links-font-medium">
-              {{ element.spec?.displayName }}
-            </span>
-            <span class="links-block links-text-sm links-text-gray-400">
-              {{ element.spec.links?.length }} 个
-            </span>
-          </span>
-          <FloatingTooltip
-            v-if="element.metadata.deletionTimestamp"
-            class="links-mr-4 links-hidden links-items-center sm:links-flex"
-          >
-            <div
-              class="links-inline-flex links-h-1.5 links-w-1.5 links-rounded-full links-bg-red-600"
-            >
-              <span
-                class="links-inline-block links-h-1.5 links-w-1.5 links-animate-ping links-rounded-full links-bg-red-600"
-              ></span>
-            </div>
-            <template #popper> 删除中</template>
-          </FloatingTooltip>
-          <div v-permission="['plugin:links:manage']" class="links-self-center">
-            <FloatingDropdown>
-              <IconSettings
-                class="links-cursor-pointer links-transition-all hover:links-text-blue-600"
-              />
-              <template #popper>
-                <div class="links-w-48 links-p-2">
-                  <VSpace class="links-w-full" direction="column">
-                    <VButton
-                      block
-                      type="secondary"
-                      @click="handleOpenEditingModal(element)"
-                    >
-                      修改
-                    </VButton>
-                    <VButton block type="danger" @click="handleDelete(element)">
-                      删除
-                    </VButton>
-                  </VSpace>
-                </div>
-              </template>
-            </FloatingDropdown>
-          </div>
-        </div>
+            <template #prepend>
+              <div
+                class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
+              >
+                <IconList class="h-3.5 w-3.5" />
+              </div>
+            </template>
+
+            <template #start>
+              <VEntityField
+                :title="group.spec?.displayName"
+                :description="`${group.spec.links?.length || 0} 个链接`"
+              ></VEntityField>
+            </template>
+
+            <template #end>
+              <VEntityField v-if="group.metadata.deletionTimestamp">
+                <template #description>
+                  <VStatusDot v-tooltip="`删除中`" state="warning" animate />
+                </template>
+              </VEntityField>
+            </template>
+
+            <template #dropdownItems>
+              <VButton
+                block
+                type="secondary"
+                @click="handleOpenEditingModal(group)"
+              >
+                修改
+              </VButton>
+              <VButton block type="danger" @click="handleDelete(group)">
+                删除
+              </VButton>
+            </template>
+          </VEntity>
+        </li>
       </template>
     </Draggable>
 
@@ -227,7 +211,7 @@ defineExpose({
         v-permission="['plugin:links:manage']"
         block
         type="secondary"
-        @click="handleOpenEditingModal(null)"
+        @click="handleOpenEditingModal(undefined)"
       >
         新增分组
       </VButton>

@@ -7,7 +7,6 @@ plugins {
 }
 
 group 'run.halo.links'
-version '1.0-SNAPSHOT'
 sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {

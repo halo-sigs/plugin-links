@@ -30,7 +30,7 @@ export default definePlugin({
   extensionPoints: {
     PAGES: (state: Ref<PagesPublicState>) => {
       state.value.functionalPages.push({
-        name: "友情链接",
+        name: "链接",
         url: "/links",
         path: "/pages/functional/links",
         permissions: ["plugin:links:view"],
