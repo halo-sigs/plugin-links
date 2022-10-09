@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     outDir: fileURLToPath(
-      new URL("../src/main/resources/admin", import.meta.url)
+      new URL("../src/main/resources/console", import.meta.url)
     ),
     emptyOutDir: true,
     lib: {
