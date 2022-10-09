@@ -41,7 +41,7 @@ export default defineConfig({
           "@vueuse/core": "VueUse",
           "@vueuse/components": "VueUse",
           "@vueuse/router": "VueUse",
-          "@halo-dev/shared": "HaloAdminShared",
+          "@halo-dev/console-shared": "HaloConsoleShared",
           "@halo-dev/components": "HaloComponents",
         },
         // https://github.com/vitejs/vite/issues/9318
