@@ -14,9 +14,9 @@ public class LinkPlugin extends BasePlugin {
 
     private final SchemeManager schemeManager;
 
-    public LinkPlugin(PluginWrapper wrapper) {
+    public LinkPlugin(PluginWrapper wrapper, SchemeManager schemeManager) {
         super(wrapper);
-        schemeManager = getApplicationContext().getBean(SchemeManager.class);
+        this.schemeManager = schemeManager;
     }
 
     @Override
