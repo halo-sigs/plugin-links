@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import {
-  useDialog,
   VButton,
   VCard,
   VEntity,
   IconList,
   VEntityField,
+  VStatusDot,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
@@ -28,7 +28,6 @@ const emit = defineEmits<{
 }>();
 
 const groupQuery = useRouteQuery("group");
-const dialog = useDialog();
 
 const groups = ref<LinkGroup[]>([] as LinkGroup[]);
 const groupEditingModal = ref(false);
@@ -96,7 +95,7 @@ const handleSaveInBatch = async () => {
 };
 
 const handleDelete = async (group: LinkGroup) => {
-  dialog.warning({
+  Dialog.warning({
     title: "确定要删除该分组吗？",
     description: "将同时删除该分组下的所有链接，该操作不可恢复。",
     confirmType: "danger",

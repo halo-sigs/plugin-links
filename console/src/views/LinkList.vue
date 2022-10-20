@@ -5,7 +5,6 @@ import {
   IconList,
   IconArrowLeft,
   IconArrowRight,
-  useDialog,
   VButton,
   VCard,
   VPageHeader,
@@ -14,6 +13,7 @@ import {
   VEntity,
   VEntityField,
   VAvatar,
+  VStatusDot,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
@@ -33,8 +33,6 @@ const editingModal = ref(false);
 const batchSaving = ref(false);
 const checkedAll = ref(false);
 const groupListRef = ref();
-
-const dialog = useDialog();
 
 const handleFetchLinks = async () => {
   try {
@@ -140,7 +138,7 @@ const onLinkSaved = async (link: Link) => {
 };
 
 const handleDelete = (link: Link) => {
-  dialog.warning({
+  Dialog.warning({
     title: "是否确认删除当前的链接？",
     description: "删除之后将无法恢复。",
     confirmType: "danger",
@@ -159,7 +157,7 @@ const handleDelete = (link: Link) => {
 };
 
 const handleDeleteInBatch = () => {
-  dialog.warning({
+  Dialog.warning({
     title: "是否确认删除所选的链接？",
     description: "删除之后将无法恢复。",
     confirmType: "danger",

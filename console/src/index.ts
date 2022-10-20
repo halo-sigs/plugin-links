@@ -10,20 +10,14 @@ export default definePlugin({
   components: [],
   routes: [
     {
-      parentName: "BasePages",
+      parentName: "Root",
       route: {
-        path: "functional/links",
-        component: BasicLayout,
-        children: [
-          {
-            path: "",
-            name: "Links",
-            component: LinkList,
-            meta: {
-              permissions: ["plugin:links:view"],
-            },
-          },
-        ],
+        path: "/pages/functional/links",
+        name: "Links",
+        component: LinkList,
+        meta: {
+          permissions: ["plugin:links:view"],
+        },
       },
     },
   ],
