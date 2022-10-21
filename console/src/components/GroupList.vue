@@ -6,6 +6,7 @@ import {
   IconList,
   VEntityField,
   VStatusDot,
+  Dialog,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";

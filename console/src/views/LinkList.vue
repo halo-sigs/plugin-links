@@ -14,6 +14,7 @@ import {
   VEntityField,
   VAvatar,
   VStatusDot,
+  Dialog,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
