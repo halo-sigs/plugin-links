@@ -5,7 +5,7 @@ metadata:
   name: PluginLinks
 spec:
   # 'version' is a valid semantic version string (see semver.org).
-  version: 1.0.0-alpha.3
+  version: 1.0.0-alpha.4
   requires: ">=2.0.0"
   author: halo-dev
   logo: https://halo.run/logo
