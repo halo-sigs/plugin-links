@@ -6,12 +6,3 @@ spec:
   displayName: 默认分组
   priority: 0
   links: [ "halo" ]
----
-apiVersion: core.halo.run/v1alpha1
-kind: LinkGroup
-metadata:
-  name: developers
-spec:
-  displayName: 开发者
-  priority: 0
-  links: [ "guqing", "ryanwang", "johnniang" ]

@@ -1,17 +1,9 @@
 <script lang="ts" setup>
-import {
-  IconCodeBoxLine,
-  IconEye,
-  IconSave,
-  VButton,
-  VCodemirror,
-  VModal,
-} from "@halo-dev/components";
+import { IconSave, VButton, VModal } from "@halo-dev/components";
 import { computed, defineProps, ref, watch } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import YAML from "yaml";
 import { v4 as uuid } from "uuid";
 import { reset, submitForm } from "@formkit/core";
 
@@ -72,8 +64,6 @@ const initialFormState: Link = {
 
 const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
-const rawMode = ref<boolean>(false);
-const raw = ref("");
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
@@ -81,10 +71,6 @@ const isUpdateMode = computed(() => {
 
 const modalTitle = computed(() => {
   return isUpdateMode.value ? "编辑链接" : "添加链接";
-});
-
-const modalWidth = computed(() => {
-  return rawMode.value ? 750 : 650;
 });
 
 const onVisibleChange = (visible: boolean) => {
@@ -122,10 +108,6 @@ watch(
 
 const handleSaveLink = async () => {
   try {
-    if (rawMode.value) {
-      formState.value = YAML.parse(raw.value);
-    }
-
     saving.value = true;
     if (isUpdateMode.value) {
       const { data } = await apiClient.put<Link>(
@@ -147,46 +129,27 @@ const handleSaveLink = async () => {
     saving.value = false;
   }
 };
-
-const handleRawModeChange = () => {
-  rawMode.value = !rawMode.value;
-
-  if (rawMode.value) {
-    raw.value = YAML.stringify(formState.value);
-  } else {
-    formState.value = YAML.parse(raw.value);
-  }
-};
 </script>
 <template>
   <VModal
     :title="modalTitle"
     :visible="visible"
-    :width="modalWidth"
+    :width="650"
     @update:visible="onVisibleChange"
   >
     <template #actions>
-      <span @click="handleRawModeChange">
-        <IconCodeBoxLine v-if="!rawMode" />
-        <IconEye v-else />
-      </span>
-
       <slot name="append-actions" />
     </template>
 
-    <VCodemirror v-show="rawMode" v-model="raw" height="50vh" language="yaml" />
-
-    <div v-show="!rawMode">
-      <FormKit
-        id="link-form"
-        v-model="formState.spec"
-        :actions="false"
-        type="form"
-        @submit="handleSaveLink"
-      >
-        <FormKitSchema :schema="formSchema" />
-      </FormKit>
-    </div>
+    <FormKit
+      id="link-form"
+      v-model="formState.spec"
+      :actions="false"
+      type="form"
+      @submit="handleSaveLink"
+    >
+      <FormKitSchema :schema="formSchema" />
+    </FormKit>
     <template #footer>
       <VButton
         :loading="saving"

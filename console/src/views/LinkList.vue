@@ -15,6 +15,8 @@ import {
   VAvatar,
   VStatusDot,
   Dialog,
+  VEmpty,
+  IconAddCircle,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
@@ -27,6 +29,7 @@ import { formatDatetime } from "@/utils/date";
 
 const drag = ref(false);
 const links = ref<Link[]>([] as Link[]);
+const loading = ref(false);
 const selectedLink = ref<Link | undefined>();
 const selectedLinks = ref<string[]>([]);
 const selectedGroup = ref<LinkGroup>();
@@ -37,6 +40,7 @@ const groupListRef = ref();
 
 const handleFetchLinks = async () => {
   try {
+    loading.value = true;
     if (!selectedGroup.value?.spec?.links) {
       return;
     }
@@ -63,6 +67,8 @@ const handleFetchLinks = async () => {
       });
   } catch (e) {
     console.error("Failed to fetch links", e);
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -345,6 +351,27 @@ watch(selectedLinks, (newValue) => {
               </div>
             </div>
           </template>
+          <VEmpty
+            v-if="!links.length && !loading"
+            message="你可以尝试刷新或者新建链接"
+            title="当前没有链接"
+          >
+            <template #actions>
+              <VSpace>
+                <VButton @click="handleFetchLinks"> 刷新</VButton>
+                <VButton
+                  v-permission="['system:menus:manage']"
+                  type="primary"
+                  @click="editingModal = true"
+                >
+                  <template #icon>
+                    <IconAddCircle class="h-full w-full" />
+                  </template>
+                  新增链接
+                </VButton>
+              </VSpace>
+            </template>
+          </VEmpty>
           <Draggable
             v-model="links"
             class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"

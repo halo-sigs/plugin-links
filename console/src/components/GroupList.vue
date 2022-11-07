@@ -31,10 +31,12 @@ const emit = defineEmits<{
 const groupQuery = useRouteQuery("group");
 
 const groups = ref<LinkGroup[]>([] as LinkGroup[]);
+const loading = ref(false);
 const groupEditingModal = ref(false);
 
 const handleFetchGroups = async () => {
   try {
+    loading.value = true;
     const { data } = await apiClient.get<LinkGroupList>(
       "/apis/core.halo.run/v1alpha1/linkgroups"
     );
@@ -59,6 +61,8 @@ const handleFetchGroups = async () => {
     }
   } catch (e) {
     console.error("Failed to fetch link groups", e);
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -151,6 +155,17 @@ defineExpose({
     @close="handleFetchGroups"
   />
   <VCard :body-class="['!p-0']" title="分组">
+    <VEmpty
+      v-if="!groups.length && !loading"
+      message="你可以尝试刷新或者新建分组"
+      title="当前没有分组"
+    >
+      <template #actions>
+        <VSpace>
+          <VButton size="sm" @click="handleFetchGroups"> 刷新</VButton>
+        </VSpace>
+      </template>
+    </VEmpty>
     <Draggable
       v-model="groups"
       class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
@@ -191,13 +206,19 @@ defineExpose({
 
             <template #dropdownItems>
               <VButton
+                v-close-popper
                 block
                 type="secondary"
                 @click="handleOpenEditingModal(group)"
               >
                 修改
               </VButton>
-              <VButton block type="danger" @click="handleDelete(group)">
+              <VButton
+                v-close-popper
+                block
+                type="danger"
+                @click="handleDelete(group)"
+              >
                 删除
               </VButton>
             </template>
