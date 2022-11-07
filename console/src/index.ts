@@ -1,6 +1,5 @@
 import "./styles/tailwind.css";
 import type { PagesPublicState } from "@halo-dev/console-shared";
-import { BasicLayout } from "@halo-dev/console-shared";
 import { definePlugin } from "@halo-dev/console-shared";
 import LinkList from "@/views/LinkList.vue";
 import type { Ref } from "vue";
