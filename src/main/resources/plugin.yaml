@@ -6,7 +6,7 @@ spec:
   version: 1.0.0-alpha.4
   requires: ">=2.0.0"
   author: halo-dev
-  logo: https://halo.run/logo
+  logo: logo.png
   homepage: https://github.com/halo-sigs/plugin-links
   displayName: "友情链接"
   description: "友情链接管理模块"
