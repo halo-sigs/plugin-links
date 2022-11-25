@@ -1,0 +1,18 @@
+.fade-enter-active {
+  @apply links-duration-200 links-ease-out;
+}
+.fade-enter-from {
+  @apply links-opacity-0;
+}
+.fade-enter-to {
+  @apply links-opacity-100;
+}
+.fade-leave-active {
+  @apply links-duration-200 links-ease-in;
+}
+.fade-leave-from {
+  @apply links-opacity-100;
+}
+.fade-leave-to {
+  @apply links-opacity-0;
+}

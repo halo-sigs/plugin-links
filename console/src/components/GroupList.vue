@@ -7,6 +7,8 @@ import {
   VEntityField,
   VStatusDot,
   Dialog,
+  VEmpty,
+  VLoading,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
@@ -34,12 +36,16 @@ const groups = ref<LinkGroup[]>([] as LinkGroup[]);
 const loading = ref(false);
 const groupEditingModal = ref(false);
 
-const handleFetchGroups = async () => {
+const handleFetchGroups = async (options?: { mute?: boolean }) => {
   try {
-    loading.value = true;
+    if (!options?.mute) {
+      loading.value = true;
+    }
+
     const { data } = await apiClient.get<LinkGroupList>(
       "/apis/core.halo.run/v1alpha1/linkgroups"
     );
+
     groups.value = data.items
       .map((group) => {
         if (group.spec) {
@@ -95,7 +101,7 @@ const handleSaveInBatch = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchGroups();
+    await handleFetchGroups({ mute: true });
   }
 };
 
@@ -152,90 +158,95 @@ defineExpose({
   <GroupEditingModal
     v-model:visible="groupEditingModal"
     :group="selectedGroup"
-    @close="handleFetchGroups"
+    @close="handleFetchGroups({ mute: true })"
   />
   <VCard :body-class="['!p-0']" title="分组">
-    <VEmpty
-      v-if="!groups.length && !loading"
-      message="你可以尝试刷新或者新建分组"
-      title="当前没有分组"
-    >
-      <template #actions>
-        <VSpace>
-          <VButton size="sm" @click="handleFetchGroups"> 刷新</VButton>
-        </VSpace>
-      </template>
-    </VEmpty>
-    <Draggable
-      v-model="groups"
-      class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
-      group="group"
-      handle=".drag-element"
-      item-key="metadata.name"
-      tag="ul"
-      @change="handleSaveInBatch"
-    >
-      <template #item="{ element: group }">
-        <li @click="handleSelect(group)">
-          <VEntity
-            :is-selected="selectedGroup?.metadata.name === group.metadata.name"
-            class="links-group"
-          >
-            <template #prepend>
-              <div
-                class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
-              >
-                <IconList class="h-3.5 w-3.5" />
-              </div>
-            </template>
-
-            <template #start>
-              <VEntityField
-                :title="group.spec?.displayName"
-                :description="`${group.spec.links?.length || 0} 个链接`"
-              ></VEntityField>
-            </template>
-
-            <template #end>
-              <VEntityField v-if="group.metadata.deletionTimestamp">
-                <template #description>
-                  <VStatusDot v-tooltip="`删除中`" state="warning" animate />
-                </template>
-              </VEntityField>
-            </template>
-
-            <template #dropdownItems>
-              <VButton
-                v-close-popper
-                block
-                type="secondary"
-                @click="handleOpenEditingModal(group)"
-              >
-                修改
-              </VButton>
-              <VButton
-                v-close-popper
-                block
-                type="danger"
-                @click="handleDelete(group)"
-              >
-                删除
-              </VButton>
-            </template>
-          </VEntity>
-        </li>
-      </template>
-    </Draggable>
-
-    <template #footer>
-      <VButton
-        v-permission="['plugin:links:manage']"
-        block
-        type="secondary"
-        @click="handleOpenEditingModal(undefined)"
+    <VLoading v-if="loading" />
+    <Transition v-else-if="!groups.length" appear name="fade">
+      <VEmpty message="你可以尝试刷新或者新建分组" title="当前没有分组">
+        <template #actions>
+          <VSpace>
+            <VButton size="sm" @click="handleFetchGroups"> 刷新</VButton>
+          </VSpace>
+        </template>
+      </VEmpty>
+    </Transition>
+    <Transition v-else appear name="fade">
+      <Draggable
+        v-model="groups"
+        class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
+        group="group"
+        handle=".drag-element"
+        item-key="metadata.name"
+        tag="ul"
+        @change="handleSaveInBatch"
       >
-        新增分组
-      </VButton>
+        <template #item="{ element: group }">
+          <li @click="handleSelect(group)">
+            <VEntity
+              :is-selected="
+                selectedGroup?.metadata.name === group.metadata.name
+              "
+              class="links-group"
+            >
+              <template #prepend>
+                <div
+                  class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
+                >
+                  <IconList class="h-3.5 w-3.5" />
+                </div>
+              </template>
+
+              <template #start>
+                <VEntityField
+                  :title="group.spec?.displayName"
+                  :description="`${group.spec.links?.length || 0} 个链接`"
+                ></VEntityField>
+              </template>
+
+              <template #end>
+                <VEntityField v-if="group.metadata.deletionTimestamp">
+                  <template #description>
+                    <VStatusDot v-tooltip="`删除中`" state="warning" animate />
+                  </template>
+                </VEntityField>
+              </template>
+
+              <template #dropdownItems>
+                <VButton
+                  v-close-popper
+                  block
+                  type="secondary"
+                  @click="handleOpenEditingModal(group)"
+                >
+                  修改
+                </VButton>
+                <VButton
+                  v-close-popper
+                  block
+                  type="danger"
+                  @click="handleDelete(group)"
+                >
+                  删除
+                </VButton>
+              </template>
+            </VEntity>
+          </li>
+        </template>
+      </Draggable>
+    </Transition>
+
+    <template v-if="!loading" #footer>
+      <Transition appear name="fade">
+        <VButton
+          v-permission="['plugin:links:manage']"
+          block
+          type="secondary"
+          @click="handleOpenEditingModal(undefined)"
+        >
+          新增分组
+        </VButton>
+      </Transition>
     </template>
   </VCard>
 </template>
