@@ -3,7 +3,7 @@ kind: Plugin
 metadata:
   name: PluginLinks
 spec:
-  version: 1.0.0-alpha.4
+  version: 1.0.0-alpha.5
   requires: ">=2.0.0"
   author: halo-dev
   logo: logo.png
