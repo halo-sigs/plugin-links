@@ -6,7 +6,7 @@ metadata:
     halo.run/role-template: "true"
   annotations:
     rbac.authorization.halo.run/module: "Link Management"
-    rbac.authorization.halo.run/display-name: "友情链接查看"
+    rbac.authorization.halo.run/display-name: "链接查看"
     rbac.authorization.halo.run/ui-permissions: |
       ["plugin:links:view"]
 rules:
@@ -22,7 +22,7 @@ metadata:
     halo.run/role-template: "true"
   annotations:
     rbac.authorization.halo.run/module: "Link Management"
-    rbac.authorization.halo.run/display-name: "友情链接管理"
+    rbac.authorization.halo.run/display-name: "链接管理"
     rbac.authorization.halo.run/ui-permissions: |
       ["plugin:links:manage"]
     rbac.authorization.halo.run/dependencies: |
