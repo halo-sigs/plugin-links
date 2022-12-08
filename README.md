@@ -67,6 +67,8 @@ halo:
 
 #### 变量
 
+groups
+
 ##### 变量类型
 
 List<[#LinkGroupVo](#linkgroupvo)>
