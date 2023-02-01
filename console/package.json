@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@formkit/core": "1.0.0-beta.12",
-    "@halo-dev/components": "^1.0.0",
-    "@halo-dev/console-shared": "^2.0.0",
+    "@halo-dev/components": "^1.1.0",
+    "@halo-dev/console-shared": "^2.2.0",
     "@vueuse/core": "^9.6.0",
     "@vueuse/router": "^9.6.0",
     "axios": "^0.27.2",
