@@ -1,35 +1,28 @@
 import "./styles/tailwind.css";
 import "./styles/index.css";
-import type { PagesPublicState } from "@halo-dev/console-shared";
 import { definePlugin } from "@halo-dev/console-shared";
 import LinkList from "@/views/LinkList.vue";
+import { markRaw } from "vue";
+import RiLinksLine from '~icons/ri/links-line'
 
 export default definePlugin({
-  name: "PluginLinks",
   components: {},
   routes: [
     {
       parentName: "Root",
       route: {
-        path: "/pages/functional/links",
+        path: "/links",
         name: "Links",
         component: LinkList,
         meta: {
           permissions: ["plugin:links:view"],
+          menu: {
+            name: "链接",
+            group: "content",
+            icon: markRaw(RiLinksLine),
+          },
         },
       },
     },
   ],
-  extensionPoints: {
-    "page:functional:create": () => {
-      return [
-        {
-          name: "链接",
-          url: "/links",
-          path: "/pages/functional/links",
-          permissions: ["plugin:links:view"],
-        },
-      ];
-    },
-  },
 });
