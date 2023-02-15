@@ -30,7 +30,19 @@ import { formatDatetime } from "@/utils/date";
 import Fuse from "fuse.js";
 
 const drag = ref(false);
-const links = ref<Link[]>([] as Link[]);
+
+const links = ref<LinkList>({
+  page: 1,
+  size: 20,
+  total: 0,
+  items: [],
+  first: true,
+  last: false,
+  hasNext: false,
+  hasPrevious: false,
+  totalPages: 0,
+});
+
 const loading = ref(false);
 const selectedLink = ref<Link | undefined>();
 const selectedLinks = ref<string[]>([]);
@@ -39,10 +51,14 @@ const editingModal = ref(false);
 const checkedAll = ref(false);
 const groupListRef = ref();
 
-const handleFetchLinks = async (options?: { mute?: boolean }) => {
+const handleFetchLinks = async (options?: { mute?: boolean; page?: 1 }) => {
   try {
     if (!options?.mute) {
       loading.value = true;
+    }
+
+    if (options?.page) {
+      links.value.page = options.page;
     }
 
     if (!selectedGroup.value?.spec?.links) {
@@ -53,22 +69,26 @@ const handleFetchLinks = async (options?: { mute?: boolean }) => {
       "/apis/core.halo.run/v1alpha1/links",
       {
         params: {
+          page: links.value.page,
+          size: links.value.size,
           fieldSelector: `name=(${selectedGroup.value.spec.links.join(",")})`,
         },
       }
     );
 
-    // sort by priority
-    links.value = data.items
-      .map((link) => {
-        if (link.spec) {
-          link.spec.priority = link.spec.priority || 0;
-        }
-        return link;
-      })
-      .sort((a, b) => {
-        return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-      });
+    links.value = {
+      ...data,
+      items: data.items
+        .map((link) => {
+          if (link.spec) {
+            link.spec.priority = link.spec.priority || 0;
+          }
+          return link;
+        })
+        .sort((a, b) => {
+          return (a.spec?.priority || 0) - (b.spec?.priority || 0);
+        }),
+    };
   } catch (e) {
     console.error("Failed to fetch links", e);
   } finally {
@@ -76,13 +96,25 @@ const handleFetchLinks = async (options?: { mute?: boolean }) => {
   }
 };
 
+const handlePaginationChange = ({
+  page,
+  size,
+}: {
+  page: number;
+  size: number;
+}) => {
+  links.value.page = page;
+  links.value.size = size;
+  handleFetchLinks();
+};
+
 const handleSelectPrevious = () => {
-  const currentIndex = links.value.findIndex(
+  const currentIndex = links.value.items.findIndex(
     (link) => link.metadata.name === selectedLink.value?.metadata.name
   );
 
   if (currentIndex > 0) {
-    selectedLink.value = links.value[currentIndex - 1];
+    selectedLink.value = links.value.items[currentIndex - 1];
     return;
   }
 
@@ -93,14 +125,14 @@ const handleSelectPrevious = () => {
 
 const handleSelectNext = () => {
   if (!selectedLink.value) {
-    selectedLink.value = links.value[0];
+    selectedLink.value = links.value.items[0];
     return;
   }
-  const currentIndex = links.value.findIndex(
+  const currentIndex = links.value.items.findIndex(
     (link) => link.metadata.name === selectedLink.value?.metadata.name
   );
-  if (currentIndex !== links.value.length - 1) {
-    selectedLink.value = links.value[currentIndex + 1];
+  if (currentIndex !== links.value.items.length - 1) {
+    selectedLink.value = links.value.items[currentIndex + 1];
   }
 };
 
@@ -111,7 +143,7 @@ const handleOpenCreateModal = (link: Link) => {
 
 const handleSaveInBatch = async () => {
   try {
-    const promises = links.value?.map((link: Link, index) => {
+    const promises = links.value.items.map((link: Link, index) => {
       if (link.spec) {
         link.spec.priority = index;
       }
@@ -188,11 +220,11 @@ const handleDeleteInBatch = () => {
 };
 
 const handleExportSelectedLinks = async () => {
-  if (!links.value?.length) {
+  if (!links.value.items.length) {
     return;
   }
-  const yamlString = links.value
-    ?.map((link) => {
+  const yamlString = links.value.items
+    .map((link) => {
       if (selectedLinks.value.includes(link.metadata.name)) {
         return yaml.stringify(link);
       }
@@ -251,7 +283,7 @@ const handleCheckAllChange = (e: Event) => {
   checkedAll.value = checked;
   if (checkedAll.value) {
     selectedLinks.value =
-      links.value?.map((link) => {
+      links.value.items.map((link) => {
         return link.metadata.name;
       }) || [];
   } else {
@@ -260,7 +292,7 @@ const handleCheckAllChange = (e: Event) => {
 };
 
 watch(selectedLinks, (newValue) => {
-  checkedAll.value = newValue.length === links.value?.length;
+  checkedAll.value = newValue.length === links.value.items.length;
 });
 
 // search
@@ -270,7 +302,7 @@ let fuse: Fuse<Link> | undefined = undefined;
 watch(
   () => links.value,
   () => {
-    fuse = new Fuse(links.value, {
+    fuse = new Fuse(links.value.items, {
       keys: [
         "spec.displayName",
         "metadata.name",
@@ -285,13 +317,13 @@ watch(
 const searchResults = computed({
   get() {
     if (!fuse || !keyword.value) {
-      return links.value;
+      return links.value.items;
     }
 
     return fuse?.search(keyword.value).map((item) => item.item);
   },
   set(value) {
-    links.value = value;
+    links.value.items = value;
   },
 });
 </script>
@@ -506,7 +538,13 @@ const searchResults = computed({
               <div
                 class="links-flex links-flex-1 links-items-center links-justify-end"
               >
-                <VPagination :page="1" :size="10" :total="20" />
+                <VPagination
+                  :page="links.page"
+                  :size="links.size"
+                  :total="links.total"
+                  :size-options="[20, 30, 50, 100]"
+                  @change="handlePaginationChange"
+                />
               </div>
             </div>
           </template>
@@ -515,4 +553,3 @@ const searchResults = computed({
     </div>
   </div>
 </template>
-<style lang="scss" scoped></style>

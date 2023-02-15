@@ -48,6 +48,7 @@ export interface LinkList {
   last: boolean;
   hasNext: boolean;
   hasPrevious: boolean;
+  totalPages: number;
 }
 
 export interface LinkGroupList {
@@ -59,4 +60,5 @@ export interface LinkGroupList {
   last: boolean;
   hasNext: boolean;
   hasPrevious: boolean;
+  totalPages: number;
 }
