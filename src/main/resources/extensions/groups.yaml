@@ -1,8 +1,0 @@
-apiVersion: core.halo.run/v1alpha1
-kind: LinkGroup
-metadata:
-  name: default
-spec:
-  displayName: 默认分组
-  priority: 0
-  links: [ "halo" ]
