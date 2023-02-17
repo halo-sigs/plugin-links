@@ -11,7 +11,7 @@ metadata:
       ["plugin:links:view"]
 rules:
   - apiGroups: [ "core.halo.run" ]
-    resources: [ "links" ]
+    resources: [ "links", "linkgroups" ]
     verbs: [ "get", "list" ]
 ---
 apiVersion: v1alpha1
@@ -29,5 +29,5 @@ metadata:
       ["role-template-link-view"]
 rules:
   - apiGroups: [ "core.halo.run" ]
-    resources: [ "links" ]
+    resources: [ "links", "linkgroups" ]
     verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
