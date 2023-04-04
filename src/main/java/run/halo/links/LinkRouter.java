@@ -4,6 +4,7 @@ import static java.util.Comparator.comparing;
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+import static run.halo.app.extension.router.QueryParamBuildUtil.buildParametersFromType;
 import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToPredicate;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -29,6 +30,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import run.halo.app.core.extension.endpoint.PluginEndpoint;
 import run.halo.app.core.extension.endpoint.SortResolver;
 import run.halo.app.extension.Extension;
 import run.halo.app.extension.ListResult;
@@ -66,14 +68,17 @@ public class LinkRouter {
     RouterFunction<ServerResponse> nested() {
         return SpringdocRouteBuilder.route()
             .GET("/groups/{name}/links", this::listLinkByGroup,
-                builder -> builder.operationId("listLinkByGroup")
-                    .description("Lists link by group name")
-                    .tag(tag)
-                    .parameter(parameterBuilder().name("name")
-                        .in(ParameterIn.PATH)
-                        .required(true)
-                        .implementation(String.class)
-                    )
+                builder -> {
+                    builder.operationId("listLinkByGroup")
+                        .description("Lists link by group name")
+                        .tag(tag)
+                        .parameter(parameterBuilder().name("name")
+                            .in(ParameterIn.PATH)
+                            .required(true)
+                            .implementation(String.class)
+                        );
+                    buildParametersFromType(builder, LinkQuery.class);
+                }
             ).build();
     }
 
@@ -124,11 +129,12 @@ public class LinkRouter {
                 if (StringUtils.isBlank(keyword)) {
                     return true;
                 }
-                var displayName = link.getSpec().getDisplayName();
                 String keywordToSearch = keyword.trim().toLowerCase();
-                return displayName.toLowerCase().contains(keywordToSearch)
-                    || link.getSpec().getDescription().contains(keywordToSearch)
-                    || link.getSpec().getUrl().contains(keywordToSearch);
+                return StringUtils.containsAnyIgnoreCase(link.getSpec().getDisplayName(),
+                    keywordToSearch)
+                    || StringUtils.containsAnyIgnoreCase(link.getSpec().getDescription(),
+                    keywordToSearch)
+                    || StringUtils.containsAnyIgnoreCase(link.getSpec().getUrl(), keywordToSearch);
             };
             Predicate<Extension> labelAndFieldSelectorToPredicate =
                 labelAndFieldSelectorToPredicate(getLabelSelector(), getFieldSelector());
