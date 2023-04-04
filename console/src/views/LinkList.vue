@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import {
   IconList,
@@ -24,13 +24,15 @@ import {
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
 import apiClient from "@/utils/api-client";
-import type { Link, LinkList } from "@/types";
+import type { Link } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
 import { formatDatetime } from "@/utils/date";
 import Fuse from "fuse.js";
-import { useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useQueryClient } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
+import { useLinkFetch } from "@/composables/use-link";
+import { getNode } from "@formkit/core";
 
 const queryClient = useQueryClient();
 
@@ -40,41 +42,27 @@ const selectedLinks = ref<string[]>([]);
 const editingModal = ref(false);
 const checkedAll = ref(false);
 
-const page = ref(1);
-const size = ref(20);
-const total = ref(0);
 const groupQuery = useRouteQuery<string>("group");
 
-const {
-  data: links,
-  isLoading,
-  refetch,
-} = useQuery({
-  queryKey: ["links", page, size, groupQuery],
-  queryFn: async () => {
-    const { data } = await apiClient.get<LinkList>(
-      "/apis/core.halo.run/v1alpha1/links",
-      {
-        params: {
-          page: page.value,
-          size: size.value,
-          group: groupQuery.value,
-        },
-      }
-    );
+const page = ref(1);
+const size = ref(20);
+const keyword = ref("");
 
-    total.value = data.total;
+const { links, isLoading, total, refetch } = useLinkFetch(
+  page,
+  size,
+  keyword,
+  groupQuery
+);
 
-    return data.items;
-  },
-  refetchOnWindowFocus: false,
-  refetchInterval(data) {
-    const deletingLinks = data?.filter(
-      (link) => !!link.metadata.deletionTimestamp
-    );
-    return deletingLinks?.length ? 1000 : false;
-  },
-});
+watch(
+  () => groupQuery.value,
+  () => {
+    page.value = 1;
+  }
+);
+
+function onKeywordChange() {}
 
 const handleSelectPrevious = () => {
   if (!links.value) {
@@ -136,7 +124,7 @@ const handleSaveInBatch = async () => {
   }
 };
 
-const onLinkSaved = async (link: Link) => {
+const onLinkSaved = async () => {
   queryClient.invalidateQueries({ queryKey: ["link-groups"] });
   await refetch();
 };
@@ -154,7 +142,7 @@ const handleDelete = (link: Link) => {
       } catch (e) {
         console.error(e);
       } finally {
-        refetch();
+        queryClient.invalidateQueries({ queryKey: ["links"] });
       }
     },
   });
@@ -173,10 +161,13 @@ const handleDeleteInBatch = () => {
         if (promises) {
           await Promise.all(promises);
         }
+
+        selectedLinks.value.length = 0;
+        checkedAll.value = false;
       } catch (e) {
         console.error(e);
       } finally {
-        await refetch();
+        queryClient.invalidateQueries({ queryKey: ["links"] });
       }
     },
   });
@@ -237,7 +228,7 @@ const handleImportFromYaml = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await refetch();
+    queryClient.invalidateQueries({ queryKey: ["links"] });
   }
 };
 
@@ -256,38 +247,6 @@ const handleCheckAllChange = (e: Event) => {
 
 watch(selectedLinks, (newValue) => {
   checkedAll.value = newValue.length === links.value?.length;
-});
-
-// search
-const keyword = ref("");
-let fuse: Fuse<Link> | undefined = undefined;
-
-watch(
-  () => links.value,
-  () => {
-    fuse = new Fuse(links.value || [], {
-      keys: [
-        "spec.displayName",
-        "metadata.name",
-        "spec.description",
-        "spec.url",
-      ],
-      useExtendedSearch: true,
-    });
-  }
-);
-
-const searchResults = computed({
-  get() {
-    if (!fuse || !keyword.value) {
-      return links.value;
-    }
-
-    return fuse?.search(keyword.value).map((item) => item.item);
-  },
-  set(value) {
-    links.value = value;
-  },
 });
 </script>
 <template>
@@ -344,10 +303,17 @@ const searchResults = computed({
                 >
                   <FormKit
                     v-if="!selectedLinks.length"
-                    v-model="keyword"
-                    placeholder="输入关键词搜索"
-                    type="text"
-                  ></FormKit>
+                    type="form"
+                    @submit="onKeywordChange"
+                  >
+                    <FormKit
+                      outer-class="!p-0"
+                      placeholder="输入关键词搜索"
+                      type="text"
+                      name="keyword"
+                      :model-value="keyword"
+                    ></FormKit>
+                  </FormKit>
                   <VSpace v-else>
                     <VButton type="danger" @click="handleDeleteInBatch">
                       删除
@@ -374,7 +340,7 @@ const searchResults = computed({
             </div>
           </template>
           <VLoading v-if="isLoading" />
-          <Transition v-else-if="!searchResults?.length" appear name="fade">
+          <Transition v-else-if="!links?.length" appear name="fade">
             <VEmpty message="你可以尝试刷新或者新建链接" title="当前没有链接">
               <template #actions>
                 <VSpace>
@@ -395,7 +361,7 @@ const searchResults = computed({
           </Transition>
           <Transition v-else appear name="fade">
             <Draggable
-              v-model="searchResults"
+              v-model="links"
               class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
               group="link"
               handle=".drag-element"

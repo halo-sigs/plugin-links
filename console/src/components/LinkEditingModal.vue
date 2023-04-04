@@ -5,6 +5,7 @@ import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
 import { reset, submitForm } from "@formkit/core";
+import { useRouteQuery } from "@vueuse/router";
 
 const props = withDefaults(
   defineProps<{
@@ -32,6 +33,7 @@ const initialFormState: Link = {
     displayName: "",
     url: "",
     logo: "",
+    groupName: "",
   },
   kind: "Link",
   apiVersion: "core.halo.run/v1alpha1",
@@ -39,6 +41,8 @@ const initialFormState: Link = {
 
 const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
+
+const groupQuery = useRouteQuery<string>("group");
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
@@ -90,6 +94,7 @@ const handleSaveLink = async () => {
       );
       emit("saved", data);
     } else {
+      formState.value.spec.groupName = groupQuery.value;
       const { data } = await apiClient.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
         formState.value

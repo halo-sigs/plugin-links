@@ -20,7 +20,7 @@ import apiClient from "@/utils/api-client";
 import { useRouteQuery } from "@vueuse/router";
 import { useQuery } from "@tanstack/vue-query";
 
-const groupQuery = useRouteQuery("group");
+const groupQuery = useRouteQuery<string>("group");
 
 const groupEditingModal = ref(false);
 const selectedGroup = ref<LinkGroup>();
@@ -48,10 +48,11 @@ const {
       });
   },
   refetchOnWindowFocus: false,
-  onSuccess(data) {
-    if (!groupQuery.value) {
-      groupQuery.value = data[0].metadata.name;
-    }
+  refetchInterval(data) {
+    const deletingGroups = data?.filter((group) => {
+      return !!group.metadata.deletionTimestamp;
+    });
+    return deletingGroups?.length ? 1000 : false;
   },
 });
 
@@ -133,6 +134,16 @@ const handleDelete = async (group: LinkGroup) => {
         tag="ul"
         @change="handleSaveInBatch"
       >
+        <template #header>
+          <li @click="groupQuery = ''">
+            <VEntity class="links-group" :is-selected="!groupQuery">
+              <template #start>
+                <VEntityField title="全部" :description="`${0} 个链接`">
+                </VEntityField>
+              </template>
+            </VEntity>
+          </li>
+        </template>
         <template #item="{ element: group }">
           <li @click="groupQuery = group.metadata.name">
             <VEntity
