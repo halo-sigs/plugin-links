@@ -13,6 +13,10 @@ rules:
   - apiGroups: [ "core.halo.run" ]
     resources: [ "links", "linkgroups" ]
     verbs: [ "get", "list" ]
+  - apiGroups: [ "api.plugin.halo.run" ]
+    resources: [ "plugins/groups" ]
+    resourceNames: [ "PluginLinks" ]
+    verbs: [ "get", "list" ]
 ---
 apiVersion: v1alpha1
 kind: Role

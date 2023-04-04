@@ -2,12 +2,11 @@ package run.halo.links;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.LinkedHashSet;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import run.halo.app.extension.AbstractExtension;
 import run.halo.app.extension.GVK;
-
-import java.util.LinkedHashSet;
 
 /**
  * @author guqing
