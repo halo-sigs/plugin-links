@@ -13,48 +13,30 @@ import {
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
-import type { LinkGroupList } from "@/types";
 import { ref } from "vue";
 import Draggable from "vuedraggable";
 import apiClient from "@/utils/api-client";
 import { useRouteQuery } from "@vueuse/router";
-import { useQuery } from "@tanstack/vue-query";
+import { useLinkGroupFetch, useLinkFetch } from "@/composables/use-link";
 
 const groupQuery = useRouteQuery<string>("group");
 
 const groupEditingModal = ref(false);
 const selectedGroup = ref<LinkGroup>();
 
-const {
-  data: groups,
-  isLoading,
-  refetch,
-} = useQuery({
-  queryKey: ["link-groups"],
-  queryFn: async () => {
-    const { data } = await apiClient.get<LinkGroupList>(
-      "/apis/core.halo.run/v1alpha1/linkgroups"
-    );
+const { groups, isLoading, refetch } = useLinkGroupFetch();
+const { links } = useLinkFetch(ref(0), ref(0));
 
-    return data.items
-      .map((group) => {
-        if (group.spec) {
-          group.spec.priority = group.spec.priority || 0;
-        }
-        return group;
-      })
-      .sort((a, b) => {
-        return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-      });
-  },
-  refetchOnWindowFocus: false,
-  refetchInterval(data) {
-    const deletingGroups = data?.filter((group) => {
-      return !!group.metadata.deletionTimestamp;
-    });
-    return deletingGroups?.length ? 1000 : false;
-  },
-});
+function getLinks(group?: LinkGroup) {
+  if (!group) {
+    return links.value;
+  }
+  return (
+    links.value?.filter((link) => {
+      link.spec.groupName === group.metadata.name;
+    }) || []
+  );
+}
 
 const handleOpenEditingModal = (group?: LinkGroup) => {
   selectedGroup.value = group;
@@ -138,7 +120,10 @@ const handleDelete = async (group: LinkGroup) => {
           <li @click="groupQuery = ''">
             <VEntity class="links-group" :is-selected="!groupQuery">
               <template #start>
-                <VEntityField title="全部" :description="`${0} 个链接`">
+                <VEntityField
+                  title="全部"
+                  :description="`${getLinks()?.length || 0} 个链接`"
+                >
                 </VEntityField>
               </template>
             </VEntity>
@@ -161,7 +146,7 @@ const handleDelete = async (group: LinkGroup) => {
               <template #start>
                 <VEntityField
                   :title="group.spec?.displayName"
-                  :description="`${group.spec.links?.length || 0} 个链接`"
+                  :description="`${getLinks(group)?.length || 0} 个链接`"
                 ></VEntityField>
               </template>
 

@@ -28,11 +28,9 @@ import type { Link } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
 import { formatDatetime } from "@/utils/date";
-import Fuse from "fuse.js";
 import { useQueryClient } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
-import { useLinkFetch } from "@/composables/use-link";
-import { getNode } from "@formkit/core";
+import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
 
 const queryClient = useQueryClient();
 
@@ -62,7 +60,10 @@ watch(
   }
 );
 
-function onKeywordChange() {}
+function onKeywordChange(data: { keyword: string }) {
+  keyword.value = data.keyword;
+  page.value = 1;
+}
 
 const handleSelectPrevious = () => {
   if (!links.value) {
@@ -125,8 +126,7 @@ const handleSaveInBatch = async () => {
 };
 
 const onLinkSaved = async () => {
-  queryClient.invalidateQueries({ queryKey: ["link-groups"] });
-  await refetch();
+  queryClient.invalidateQueries({ queryKey: ["link-groups", "links"] });
 };
 
 const handleDelete = (link: Link) => {
@@ -248,6 +248,13 @@ const handleCheckAllChange = (e: Event) => {
 watch(selectedLinks, (newValue) => {
   checkedAll.value = newValue.length === links.value?.length;
 });
+
+// groups
+const { groups } = useLinkGroupFetch();
+
+function getGroup(groupName: string) {
+  return groups.value?.find((group) => group.metadata.name === groupName);
+}
 </script>
 <template>
   <LinkEditingModal
@@ -413,6 +420,12 @@ watch(selectedLinks, (newValue) => {
                     </template>
 
                     <template #end>
+                      <VEntityField
+                        v-if="getGroup(link.spec.groupName) && !groupQuery"
+                        :description="
+                          getGroup(link.spec.groupName)?.spec.displayName
+                        "
+                      />
                       <VEntityField v-if="link.metadata.deletionTimestamp">
                         <template #description>
                           <VStatusDot

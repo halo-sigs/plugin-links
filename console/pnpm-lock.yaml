@@ -23,7 +23,6 @@ specifiers:
   dayjs: ^1.11.7
   eslint: ^8.37.0
   eslint-plugin-vue: ^8.7.1
-  fuse.js: ^6.6.2
   jsdom: ^19.0.0
   lodash.clonedeep: ^4.5.0
   npm-run-all: ^4.1.5
@@ -52,7 +51,6 @@ dependencies:
   '@vueuse/router': 9.6.0_xsxatmlnmmg5bcuv3xdnj6fj7y
   axios: 0.27.2
   dayjs: 1.11.7
-  fuse.js: 6.6.2
   lodash.clonedeep: 4.5.0
   vue: 3.2.45
   vue-router: 4.1.6_vue@3.2.45
@@ -2742,11 +2740,6 @@ packages:
   /functions-have-names/1.2.3:
     resolution: {integrity: sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==}
     dev: true
-
-  /fuse.js/6.6.2:
-    resolution: {integrity: sha512-cJaJkxCCxC8qIIcPBF9yGxY0W/tVZS3uEISDxhYIdtk8OL93pe+6Zj7LjCqVV4dzbqcriOZ+kQ/NE4RXZHsIGA==}
-    engines: {node: '>=10'}
-    dev: false
 
   /gensync/1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
