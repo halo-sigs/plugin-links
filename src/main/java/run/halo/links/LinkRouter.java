@@ -67,32 +67,24 @@ public class LinkRouter {
 
     RouterFunction<ServerResponse> nested() {
         return SpringdocRouteBuilder.route()
-            .GET("/groups/{name}/links", this::listLinkByGroup,
+            .GET("/links", this::listLinkByGroup,
                 builder -> {
-                    builder.operationId("listLinkByGroup")
-                        .description("Lists link by group name")
-                        .tag(tag)
-                        .parameter(parameterBuilder().name("name")
-                            .in(ParameterIn.PATH)
-                            .required(true)
-                            .implementation(String.class)
-                        );
+                    builder.operationId("listLinks")
+                        .description("Lists link by query parameters")
+                        .tag(tag);
                     buildParametersFromType(builder, LinkQuery.class);
                 }
             ).build();
     }
 
     Mono<ServerResponse> listLinkByGroup(ServerRequest request) {
-        String name = request.pathVariable("name");
         LinkQuery linkQuery = new LinkQuery(request.exchange());
-        return listLink(name, linkQuery)
+        return listLink(linkQuery)
             .flatMap(links -> ServerResponse.ok().bodyValue(links));
     }
 
-    private Mono<ListResult<Link>> listLink(String groupName, LinkQuery query) {
-        return client.list(Link.class,
-            link -> Objects.equals(groupName, link.getSpec().getGroupName())
-                && query.toPredicate().test(link),
+    private Mono<ListResult<Link>> listLink(LinkQuery query) {
+        return client.list(Link.class, query.toPredicate(),
             query.toComparator(),
             query.getPage(),
             query.getSize()
@@ -110,6 +102,11 @@ public class LinkRouter {
         @Schema(description = "Keyword to search links under the group")
         public String getKeyword() {
             return queryParams.getFirst("keyword");
+        }
+
+        @Schema(description = "Link group name")
+        public String getGroupName() {
+            return queryParams.getFirst("groupName");
         }
 
         @ArraySchema(uniqueItems = true,
@@ -136,9 +133,16 @@ public class LinkRouter {
                     keywordToSearch)
                     || StringUtils.containsAnyIgnoreCase(link.getSpec().getUrl(), keywordToSearch);
             };
+            Predicate<Link> groupPredicate = link -> {
+                var groupName = getGroupName();
+                if (StringUtils.isBlank(groupName)) {
+                    return true;
+                }
+                return StringUtils.equals(groupName, link.getSpec().getGroupName());
+            };
             Predicate<Extension> labelAndFieldSelectorToPredicate =
                 labelAndFieldSelectorToPredicate(getLabelSelector(), getFieldSelector());
-            return keywordPredicate.and(labelAndFieldSelectorToPredicate);
+            return groupPredicate.and(keywordPredicate).and(labelAndFieldSelectorToPredicate);
         }
 
         public Comparator<Link> toComparator() {
