@@ -14,6 +14,7 @@ import run.halo.links.LinkGroup;
 @Value
 @Builder
 public class LinkGroupVo {
+    public static final String UNGROUPED = "ungrouped";
 
     MetadataOperator metadata;
 

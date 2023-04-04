@@ -32,7 +32,7 @@ public class LinkRouter {
     }
 
     private Mono<List<LinkGroupVo>> linkGroups() {
-        return Mono.defer(() -> Mono.just(linkFinder.groupBy()))
-            .publishOn(Schedulers.boundedElastic());
+        return linkFinder.groupBy()
+            .collectList();
     }
 }

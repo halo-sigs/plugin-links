@@ -8,9 +8,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.lang.Nullable;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.comparator.Comparators;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.GroupedFlux;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.theme.finders.Finder;
 import run.halo.links.Link;
@@ -34,50 +37,34 @@ public class LinkFinderImpl implements LinkFinder {
     }
 
     @Override
-    public List<LinkVo> listBy(String groupName) {
-        return client.fetch(LinkGroup.class, groupName)
-            .mapNotNull(group -> group.getSpec().getLinks())
-            .flatMapMany(linkNames -> Flux.fromIterable(linkNames)
-                .flatMap(linkName -> client.fetch(Link.class, linkName)))
-            .map(LinkVo::from)
-            .collectList()
-            .block();
+    public Flux<LinkVo> listBy(String groupName) {
+        return listAll(link -> StringUtils.equals(link.getSpec().getGroupName(), groupName)
+            && link.getMetadata().getDeletionTimestamp() != null)
+            .map(LinkVo::from);
     }
 
     @Override
-    public List<LinkGroupVo> groupBy() {
-        Map<String, Link> nameLink = listAll(null)
-            .stream()
-            .collect(Collectors.toMap(link -> link.getMetadata().getName(), link -> link));
+    public Flux<LinkGroupVo> groupBy() {
+        Flux<Link> linkFlux = listAll(null);
         return listAllGroups()
-            .stream()
-            .map(group -> {
-                LinkedHashSet<String> linkNames = group.getSpec().getLinks();
-                if (linkNames == null) {
-                    return group;
-                }
-                List<LinkVo> links = linkNames.stream()
-                    .filter(nameLink::containsKey)
-                    .map(nameLink::get)
-                    .sorted(defaultLinkComparator())
-                    .map(LinkVo::from)
-                    .toList();
-                return group.withLinks(links);
-            })
-            .toList();
+            .flatMap(group -> linkFlux
+                .filter(link -> StringUtils.equals(link.getSpec().getGroupName(),
+                    group.getMetadata().getName())
+                )
+                .map(LinkVo::from)
+                .collectList()
+                .map(group::withLinks)
+                .defaultIfEmpty(group)
+            );
     }
 
-    List<Link> listAll(@Nullable Predicate<Link> predicate) {
-        return client.list(Link.class, predicate, defaultLinkComparator())
-            .collectList()
-            .block();
+    Flux<Link> listAll(@Nullable Predicate<Link> predicate) {
+        return client.list(Link.class, predicate, defaultLinkComparator());
     }
 
-    List<LinkGroupVo> listAllGroups() {
+    Flux<LinkGroupVo> listAllGroups() {
         return client.list(LinkGroup.class, null, defaultGroupComparator())
-            .map(LinkGroupVo::from)
-            .collectList()
-            .block();
+            .map(LinkGroupVo::from);
     }
 
     static Comparator<LinkGroup> defaultGroupComparator() {
