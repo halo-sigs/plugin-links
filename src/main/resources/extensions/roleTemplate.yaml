@@ -14,7 +14,7 @@ rules:
     resources: [ "links", "linkgroups" ]
     verbs: [ "get", "list" ]
   - apiGroups: [ "api.plugin.halo.run" ]
-    resources: [ "plugins/groups" ]
+    resources: [ "plugins/links" ]
     resourceNames: [ "PluginLinks" ]
     verbs: [ "get", "list" ]
 ---
