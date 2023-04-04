@@ -18,17 +18,18 @@ export function useLinkFetch(
   } = useQuery({
     queryKey: ["links", page, size, group, keyword],
     queryFn: async () => {
-      const url = group?.value
-        ? `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/groups/${group.value}/links`
-        : "/apis/core.halo.run/v1alpha1/links";
-
-      const { data } = await apiClient.get<LinkList>(url, {
-        params: {
-          page: page.value,
-          size: size.value,
-          keyword: keyword?.value,
-        },
-      });
+      const { data } = await apiClient.get<LinkList>(
+        "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links",
+        {
+          params: {
+            page: page.value,
+            size: size.value,
+            keyword: keyword?.value,
+            groupName: group?.value,
+            sort: "priority,asc",
+          },
+        }
+      );
 
       total.value = data.total;
 

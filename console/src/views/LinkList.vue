@@ -20,17 +20,20 @@ import {
   VLoading,
   VDropdown,
   VDropdownItem,
+  VDropdownDivider,
+  Toast,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
 import apiClient from "@/utils/api-client";
-import type { Link } from "@/types";
+import type { Link, LinkGroup } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
 import { formatDatetime } from "@/utils/date";
 import { useQueryClient } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
 import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
+import cloneDeep from "lodash.clonedeep";
 
 const queryClient = useQueryClient();
 
@@ -52,11 +55,21 @@ const { links, isLoading, total, refetch } = useLinkFetch(
   keyword,
   groupQuery
 );
+const draggableLinks = ref<Link[]>();
+
+watch(
+  () => links.value,
+  () => {
+    draggableLinks.value = cloneDeep(links.value);
+  }
+);
 
 watch(
   () => groupQuery.value,
   () => {
     page.value = 1;
+    selectedLinks.value.length = 0;
+    checkedAll.value = false;
   }
 );
 
@@ -106,7 +119,7 @@ const handleOpenCreateModal = (link: Link) => {
 
 const handleSaveInBatch = async () => {
   try {
-    const promises = links.value?.map((link: Link, index) => {
+    const promises = draggableLinks.value?.map((link: Link, index) => {
       if (link.spec) {
         link.spec.priority = index;
       }
@@ -255,6 +268,47 @@ const { groups } = useLinkGroupFetch();
 function getGroup(groupName: string) {
   return groups.value?.find((group) => group.metadata.name === groupName);
 }
+
+async function handleMoveInBatch(group: LinkGroup) {
+  const requests = links.value?.map((link) => {
+    return apiClient.put<Link>(
+      `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+      {
+        ...link,
+        spec: {
+          ...link.spec,
+          groupName: group.metadata.name,
+        },
+      }
+    );
+  });
+
+  if (requests) await Promise.all(requests);
+
+  refetch();
+
+  selectedLinks.value.length = 0;
+  checkedAll.value = false;
+
+  Toast.success("移动成功");
+}
+
+async function handleMove(link: Link, group: LinkGroup) {
+  await apiClient.put<Link>(
+    `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+    {
+      ...link,
+      spec: {
+        ...link.spec,
+        groupName: group.metadata.name,
+      },
+    }
+  );
+
+  Toast.success("移动成功");
+
+  refetch();
+}
 </script>
 <template>
   <LinkEditingModal
@@ -331,6 +385,24 @@ function getGroup(groupName: string) {
                         <VDropdownItem @click="handleExportSelectedLinks">
                           导出
                         </VDropdownItem>
+                        <VDropdownDivider />
+                        <VDropdown placement="right" :triggers="['click']">
+                          <VDropdownItem> 移动 </VDropdownItem>
+                          <template #popper>
+                            <template
+                              v-for="group in groups"
+                              :key="group.metadata.name"
+                            >
+                              <VDropdownItem
+                                v-if="group.metadata.name !== groupQuery"
+                                v-close-popper.all
+                                @click="handleMoveInBatch(group)"
+                              >
+                                {{ group.spec.displayName }}
+                              </VDropdownItem>
+                            </template>
+                          </template>
+                        </VDropdown>
                       </template>
                     </VDropdown>
                   </VSpace>
@@ -368,7 +440,7 @@ function getGroup(groupName: string) {
           </Transition>
           <Transition v-else appear name="fade">
             <Draggable
-              v-model="links"
+              v-model="draggableLinks"
               class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
               group="link"
               handle=".drag-element"
@@ -384,7 +456,7 @@ function getGroup(groupName: string) {
                     :is-selected="selectedLinks.includes(link.metadata.name)"
                     class="links-group"
                   >
-                    <template v-if="!keyword" #prepend>
+                    <template v-if="!keyword && groupQuery" #prepend>
                       <div
                         class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
                       >
@@ -415,13 +487,13 @@ function getGroup(groupName: string) {
                       </VEntityField>
                       <VEntityField
                         :title="link.spec.displayName"
-                        :description="link.spec.description"
+                        :description="link.spec.url"
                       />
                     </template>
 
                     <template #end>
                       <VEntityField
-                        v-if="getGroup(link.spec.groupName) && !groupQuery"
+                        v-if="getGroup(link.spec.groupName)"
                         :description="
                           getGroup(link.spec.groupName)?.spec.displayName
                         "
@@ -445,6 +517,23 @@ function getGroup(groupName: string) {
                       <VDropdownItem @click="handleOpenCreateModal(link)">
                         编辑
                       </VDropdownItem>
+                      <VDropdown placement="left" :triggers="['click']">
+                        <VDropdownItem> 移动 </VDropdownItem>
+                        <template #popper>
+                          <template
+                            v-for="group in groups"
+                            :key="group.metadata.name"
+                          >
+                            <VDropdownItem
+                              v-if="group.metadata.name !== groupQuery"
+                              v-close-popper.all
+                              @click="handleMove(link, group)"
+                            >
+                              {{ group.spec.displayName }}
+                            </VDropdownItem>
+                          </template>
+                        </template>
+                      </VDropdown>
                       <VDropdownItem type="danger" @click="handleDelete(link)">
                         删除
                       </VDropdownItem>

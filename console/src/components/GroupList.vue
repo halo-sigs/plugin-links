@@ -7,17 +7,17 @@ import {
   VEntityField,
   VStatusDot,
   Dialog,
-  VEmpty,
   VLoading,
   VDropdownItem,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
-import type { LinkGroup } from "@/types";
-import { ref } from "vue";
+import type { LinkGroup, LinkList } from "@/types";
+import { ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import apiClient from "@/utils/api-client";
 import { useRouteQuery } from "@vueuse/router";
-import { useLinkGroupFetch, useLinkFetch } from "@/composables/use-link";
+import { useLinkGroupFetch } from "@/composables/use-link";
+import cloneDeep from "lodash.clonedeep";
 
 const groupQuery = useRouteQuery<string>("group");
 
@@ -25,18 +25,14 @@ const groupEditingModal = ref(false);
 const selectedGroup = ref<LinkGroup>();
 
 const { groups, isLoading, refetch } = useLinkGroupFetch();
-const { links } = useLinkFetch(ref(0), ref(0));
+const draggableGroups = ref<LinkGroup[]>();
 
-function getLinks(group?: LinkGroup) {
-  if (!group) {
-    return links.value;
+watch(
+  () => groups.value,
+  () => {
+    draggableGroups.value = cloneDeep(groups.value);
   }
-  return (
-    links.value?.filter((link) => {
-      link.spec.groupName === group.metadata.name;
-    }) || []
-  );
-}
+);
 
 const handleOpenEditingModal = (group?: LinkGroup) => {
   selectedGroup.value = group;
@@ -45,7 +41,7 @@ const handleOpenEditingModal = (group?: LinkGroup) => {
 
 const handleSaveInBatch = async () => {
   try {
-    const promises = groups.value?.map((group: LinkGroup, index) => {
+    const promises = draggableGroups.value?.map((group: LinkGroup, index) => {
       if (group.spec) {
         group.spec.priority = index;
       }
@@ -75,13 +71,28 @@ const handleDelete = async (group: LinkGroup) => {
           `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`
         );
 
-        const deleteItemsPromises = group.spec?.links.map((item) =>
-          apiClient.delete(`/apis/core.halo.run/v1alpha1/links/${item}`)
+        const { data } = await apiClient.get<LinkList>(
+          `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links`,
+          {
+            params: {
+              page: 0,
+              size: 0,
+              groupName: group.metadata.name,
+            },
+          }
         );
 
-        if (deleteItemsPromises) {
-          await Promise.all(deleteItemsPromises);
+        const deleteLinkPromises = data.items.map((link) =>
+          apiClient.delete(
+            `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
+          )
+        );
+
+        if (deleteLinkPromises) {
+          await Promise.all(deleteLinkPromises);
         }
+
+        groupQuery.value = "";
       } catch (e) {
         console.error("Failed to delete link group", e);
       } finally {
@@ -99,16 +110,9 @@ const handleDelete = async (group: LinkGroup) => {
   />
   <VCard :body-class="['!p-0']" title="分组">
     <VLoading v-if="isLoading" />
-    <Transition v-else-if="!groups?.length" appear name="fade">
-      <VEmpty message="你可以尝试刷新或者新建分组" title="当前没有分组">
-        <template #actions>
-          <VButton size="sm" @click="refetch"> 刷新</VButton>
-        </template>
-      </VEmpty>
-    </Transition>
     <Transition v-else appear name="fade">
       <Draggable
-        v-model="groups"
+        v-model="draggableGroups"
         class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
         group="group"
         handle=".drag-element"
@@ -120,11 +124,7 @@ const handleDelete = async (group: LinkGroup) => {
           <li @click="groupQuery = ''">
             <VEntity class="links-group" :is-selected="!groupQuery">
               <template #start>
-                <VEntityField
-                  title="全部"
-                  :description="`${getLinks()?.length || 0} 个链接`"
-                >
-                </VEntityField>
+                <VEntityField title="全部"> </VEntityField>
               </template>
             </VEntity>
           </li>
@@ -144,10 +144,7 @@ const handleDelete = async (group: LinkGroup) => {
               </template>
 
               <template #start>
-                <VEntityField
-                  :title="group.spec?.displayName"
-                  :description="`${getLinks(group)?.length || 0} 个链接`"
-                ></VEntityField>
+                <VEntityField :title="group.spec?.displayName"></VEntityField>
               </template>
 
               <template #end>
