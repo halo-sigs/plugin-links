@@ -8,6 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.comparator.Comparators;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.theme.finders.Finder;
 import run.halo.links.Link;
@@ -49,7 +51,27 @@ public class LinkFinderImpl implements LinkFinder {
                 .collectList()
                 .map(group::withLinks)
                 .defaultIfEmpty(group)
+            )
+            .mergeWith(Mono.defer(() -> ungrouped()
+                .map(LinkGroupVo::from)
+                .flatMap(linkGroup -> linkFlux.filter(
+                        link -> StringUtils.isBlank(link.getSpec().getGroupName()))
+                    .map(LinkVo::from)
+                    .collectList()
+                    .map(linkGroup::withLinks)
+                    .defaultIfEmpty(linkGroup)
+                ))
             );
+    }
+
+    Mono<LinkGroup> ungrouped() {
+        LinkGroup linkGroup = new LinkGroup();
+        linkGroup.setMetadata(new Metadata());
+        linkGroup.getMetadata().setName("ungrouped");
+        linkGroup.setSpec(new LinkGroup.LinkGroupSpec());
+        linkGroup.getSpec().setDisplayName("");
+        linkGroup.getSpec().setPriority(0);
+        return Mono.just(linkGroup);
     }
 
     Flux<Link> listAll(@Nullable Predicate<Link> predicate) {
