@@ -31,6 +31,9 @@ watch(
   () => groups.value,
   () => {
     draggableGroups.value = cloneDeep(groups.value);
+  },
+  {
+    immediate: true,
   }
 );
 
@@ -39,7 +42,7 @@ const handleOpenEditingModal = (group?: LinkGroup) => {
   groupEditingModal.value = true;
 };
 
-const handleSaveInBatch = async () => {
+const onPriorityChange = async () => {
   try {
     const promises = draggableGroups.value?.map((group: LinkGroup, index) => {
       if (group.spec) {
@@ -101,12 +104,17 @@ const handleDelete = async (group: LinkGroup) => {
     },
   });
 };
+
+function onEditingModalClose() {
+  selectedGroup.value = undefined;
+  refetch();
+}
 </script>
 <template>
   <GroupEditingModal
     v-model:visible="groupEditingModal"
     :group="selectedGroup"
-    @close="refetch"
+    @close="onEditingModalClose"
   />
   <VCard :body-class="['!p-0']" title="分组">
     <VLoading v-if="isLoading" />
@@ -118,7 +126,7 @@ const handleDelete = async (group: LinkGroup) => {
         handle=".drag-element"
         item-key="metadata.name"
         tag="ul"
-        @change="handleSaveInBatch"
+        @change="onPriorityChange"
       >
         <template #header>
           <li @click="groupQuery = ''">

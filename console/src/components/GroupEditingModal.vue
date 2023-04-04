@@ -3,17 +3,16 @@ import { VButton, VModal, VSpace } from "@halo-dev/components";
 import { computed, ref, watch } from "vue";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import { useMagicKeys } from "@vueuse/core";
 import type { LinkGroup } from "@/types";
 
 const props = withDefaults(
   defineProps<{
     visible: boolean;
-    group: LinkGroup | null;
+    group?: LinkGroup;
   }>(),
   {
     visible: false,
-    group: null,
+    group: undefined,
   }
 );
 
@@ -36,7 +35,7 @@ const initialFormState: LinkGroup = {
   },
 };
 
-const formState = ref<LinkGroup>(initialFormState);
+const formState = ref<LinkGroup>(cloneDeep(initialFormState));
 const saving = ref(false);
 
 const isUpdateMode = computed(() => {
@@ -72,25 +71,29 @@ const onVisibleChange = (visible: boolean) => {
   }
 };
 
-watch(props, (newVal) => {
-  const { Command_Enter } = useMagicKeys();
-  let keyboardWatcher;
-  if (newVal.visible) {
-    keyboardWatcher = watch(Command_Enter, (v) => {
-      if (v) {
-        // TODO
-      }
-    });
-  } else {
-    keyboardWatcher?.unwatch();
-  }
-
-  if (newVal.visible && props.group) {
-    formState.value = cloneDeep(props.group);
-    return;
-  }
+const handleResetForm = () => {
   formState.value = cloneDeep(initialFormState);
-});
+};
+
+watch(
+  () => props.visible,
+  (visible) => {
+    if (!visible) {
+      handleResetForm();
+    }
+  }
+);
+
+watch(
+  () => props.group,
+  (group) => {
+    if (group) {
+      formState.value = cloneDeep(group);
+    } else {
+      handleResetForm();
+    }
+  }
+);
 </script>
 <template>
   <VModal
@@ -101,12 +104,14 @@ watch(props, (newVal) => {
   >
     <FormKit
       id="link-group-form"
-      :classes="{ form: 'w-full' }"
+      v-model="formState.spec"
+      name="link-group-form"
       type="form"
+      :config="{ validationVisibility: 'submit' }"
       @submit="handleCreateGroup"
     >
       <FormKit
-        v-model="formState.spec.displayName"
+        name="displayName"
         help="可根据此名称查询链接"
         label="分组名称"
         type="text"

@@ -61,6 +61,9 @@ watch(
   () => links.value,
   () => {
     draggableLinks.value = cloneDeep(links.value);
+  },
+  {
+    immediate: true,
   }
 );
 
@@ -117,7 +120,7 @@ const handleOpenCreateModal = (link: Link) => {
   editingModal.value = true;
 };
 
-const handleSaveInBatch = async () => {
+const onPriorityChange = async () => {
   try {
     const promises = draggableLinks.value?.map((link: Link, index) => {
       if (link.spec) {
@@ -138,8 +141,9 @@ const handleSaveInBatch = async () => {
   }
 };
 
-const onLinkSaved = async () => {
-  queryClient.invalidateQueries({ queryKey: ["link-groups", "links"] });
+const onEditingModalClose = async () => {
+  selectedLink.value = undefined;
+  refetch();
 };
 
 const handleDelete = (link: Link) => {
@@ -314,8 +318,7 @@ async function handleMove(link: Link, group: LinkGroup) {
   <LinkEditingModal
     v-model:visible="editingModal"
     :link="selectedLink"
-    @close="refetch"
-    @saved="onLinkSaved"
+    @close="onEditingModalClose"
   >
     <template #append-actions>
       <span @click="handleSelectPrevious">
@@ -338,7 +341,7 @@ async function handleMove(link: Link, group: LinkGroup) {
   <div class="links-p-4">
     <div class="links-flex links-flex-row links-gap-2">
       <div class="links-w-96">
-        <GroupList @select="refetch()" />
+        <GroupList />
       </div>
       <div class="links-flex-1">
         <VCard :body-class="['!p-0']">
@@ -448,7 +451,7 @@ async function handleMove(link: Link, group: LinkGroup) {
               tag="ul"
               @end="drag = false"
               @start="drag = true"
-              @change="handleSaveInBatch"
+              @change="onPriorityChange"
             >
               <template #item="{ element: link }">
                 <li>
@@ -485,10 +488,17 @@ async function handleMove(link: Link, group: LinkGroup) {
                           ></VAvatar>
                         </template>
                       </VEntityField>
-                      <VEntityField
-                        :title="link.spec.displayName"
-                        :description="link.spec.url"
-                      />
+                      <VEntityField :title="link.spec.displayName">
+                        <template #description>
+                          <a
+                            :href="link.spec.url"
+                            class="links-truncate links-text-xs links-text-gray-500 hover:links-text-gray-900"
+                            target="_blank"
+                          >
+                            {{ link.spec.url }}
+                          </a>
+                        </template>
+                      </VEntityField>
                     </template>
 
                     <template #end>

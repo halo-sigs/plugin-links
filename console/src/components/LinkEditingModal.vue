@@ -4,7 +4,6 @@ import { computed, ref, watch } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import { reset, submitForm } from "@formkit/core";
 import { useRouteQuery } from "@vueuse/router";
 
 const props = withDefaults(
@@ -21,7 +20,6 @@ const props = withDefaults(
 const emit = defineEmits<{
   (event: "update:visible", value: boolean): void;
   (event: "close"): void;
-  (event: "saved", link: Link): void;
 }>();
 
 const initialFormState: Link = {
@@ -61,7 +59,6 @@ const onVisibleChange = (visible: boolean) => {
 
 const handleResetForm = () => {
   formState.value = cloneDeep(initialFormState);
-  reset("link-form");
 };
 
 watch(
@@ -88,18 +85,16 @@ const handleSaveLink = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
-      const { data } = await apiClient.put<Link>(
+      await apiClient.put<Link>(
         `/apis/core.halo.run/v1alpha1/links/${formState.value.metadata.name}`,
         formState.value
       );
-      emit("saved", data);
     } else {
       formState.value.spec.groupName = groupQuery.value;
-      const { data } = await apiClient.post<Link>(
+      await apiClient.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
         formState.value
       );
-      emit("saved", data);
     }
     onVisibleChange(false);
   } catch (e) {
@@ -123,8 +118,9 @@ const handleSaveLink = async () => {
     <FormKit
       id="link-form"
       v-model="formState.spec"
-      :actions="false"
+      name="link-form"
       type="form"
+      :config="{ validationVisibility: 'submit' }"
       @submit="handleSaveLink"
     >
       <FormKit
@@ -146,7 +142,7 @@ const handleSaveLink = async () => {
       <VButton
         :loading="saving"
         type="secondary"
-        @click="submitForm('link-form')"
+        @click="$formkit.submit('link-form')"
       >
         <template #icon>
           <IconSave class="links-h-full links-w-full" />
