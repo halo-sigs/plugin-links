@@ -18,103 +18,75 @@ import {
   VEmpty,
   IconAddCircle,
   VLoading,
+  VDropdown,
+  VDropdownItem,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
 import apiClient from "@/utils/api-client";
-import type { Link, LinkGroup, LinkList } from "@/types";
+import type { Link, LinkList } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
-import cloneDeep from "lodash.clonedeep";
 import { formatDatetime } from "@/utils/date";
 import Fuse from "fuse.js";
+import { useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useRouteQuery } from "@vueuse/router";
+
+const queryClient = useQueryClient();
 
 const drag = ref(false);
-
-const links = ref<LinkList>({
-  page: 1,
-  size: 20,
-  total: 0,
-  items: [],
-  first: true,
-  last: false,
-  hasNext: false,
-  hasPrevious: false,
-  totalPages: 0,
-});
-
-const loading = ref(false);
 const selectedLink = ref<Link | undefined>();
 const selectedLinks = ref<string[]>([]);
-const selectedGroup = ref<LinkGroup>();
 const editingModal = ref(false);
 const checkedAll = ref(false);
-const groupListRef = ref();
 
-const handleFetchLinks = async (options?: { mute?: boolean; page?: 1 }) => {
-  try {
-    if (!options?.mute) {
-      loading.value = true;
-    }
+const page = ref(1);
+const size = ref(20);
+const total = ref(0);
+const groupQuery = useRouteQuery<string>("group");
 
-    if (options?.page) {
-      links.value.page = options.page;
-    }
-
-    if (!selectedGroup.value?.spec?.links) {
-      return;
-    }
-
+const {
+  data: links,
+  isLoading,
+  refetch,
+} = useQuery({
+  queryKey: ["links", page, size, groupQuery],
+  queryFn: async () => {
     const { data } = await apiClient.get<LinkList>(
       "/apis/core.halo.run/v1alpha1/links",
       {
         params: {
-          page: links.value.page,
-          size: links.value.size,
-          fieldSelector: `name=(${selectedGroup.value.spec.links.join(",")})`,
+          page: page.value,
+          size: size.value,
+          group: groupQuery.value,
         },
       }
     );
 
-    links.value = {
-      ...data,
-      items: data.items
-        .map((link) => {
-          if (link.spec) {
-            link.spec.priority = link.spec.priority || 0;
-          }
-          return link;
-        })
-        .sort((a, b) => {
-          return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-        }),
-    };
-  } catch (e) {
-    console.error("Failed to fetch links", e);
-  } finally {
-    loading.value = false;
-  }
-};
+    total.value = data.total;
 
-const handlePaginationChange = ({
-  page,
-  size,
-}: {
-  page: number;
-  size: number;
-}) => {
-  links.value.page = page;
-  links.value.size = size;
-  handleFetchLinks();
-};
+    return data.items;
+  },
+  refetchOnWindowFocus: false,
+  refetchInterval(data) {
+    const deletingLinks = data?.filter(
+      (link) => !!link.metadata.deletionTimestamp
+    );
+    return deletingLinks?.length ? 1000 : false;
+  },
+});
 
 const handleSelectPrevious = () => {
-  const currentIndex = links.value.items.findIndex(
+  if (!links.value) {
+    return;
+  }
+
+  const currentIndex = links.value.findIndex(
     (link) => link.metadata.name === selectedLink.value?.metadata.name
   );
 
   if (currentIndex > 0) {
-    selectedLink.value = links.value.items[currentIndex - 1];
+    selectedLink.value = links.value[currentIndex - 1];
     return;
   }
 
@@ -124,15 +96,17 @@ const handleSelectPrevious = () => {
 };
 
 const handleSelectNext = () => {
+  if (!links.value) return;
+
   if (!selectedLink.value) {
-    selectedLink.value = links.value.items[0];
+    selectedLink.value = links.value[0];
     return;
   }
-  const currentIndex = links.value.items.findIndex(
+  const currentIndex = links.value.findIndex(
     (link) => link.metadata.name === selectedLink.value?.metadata.name
   );
-  if (currentIndex !== links.value.items.length - 1) {
-    selectedLink.value = links.value.items[currentIndex + 1];
+  if (currentIndex !== links.value.length - 1) {
+    selectedLink.value = links.value[currentIndex + 1];
   }
 };
 
@@ -143,7 +117,7 @@ const handleOpenCreateModal = (link: Link) => {
 
 const handleSaveInBatch = async () => {
   try {
-    const promises = links.value.items.map((link: Link, index) => {
+    const promises = links.value?.map((link: Link, index) => {
       if (link.spec) {
         link.spec.priority = index;
       }
@@ -158,24 +132,13 @@ const handleSaveInBatch = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchLinks({ mute: true });
+    await refetch();
   }
 };
 
 const onLinkSaved = async (link: Link) => {
-  const groupToUpdate = cloneDeep(selectedGroup.value);
-
-  if (groupToUpdate) {
-    groupToUpdate.spec.links.push(link.metadata.name);
-
-    await apiClient.put(
-      `/apis/core.halo.run/v1alpha1/linkgroups/${groupToUpdate.metadata.name}`,
-      groupToUpdate
-    );
-  }
-
-  await groupListRef.value.handleFetchGroups();
-  await handleFetchLinks();
+  queryClient.invalidateQueries({ queryKey: ["link-groups"] });
+  await refetch();
 };
 
 const handleDelete = (link: Link) => {
@@ -191,7 +154,7 @@ const handleDelete = (link: Link) => {
       } catch (e) {
         console.error(e);
       } finally {
-        handleFetchLinks();
+        refetch();
       }
     },
   });
@@ -213,17 +176,17 @@ const handleDeleteInBatch = () => {
       } catch (e) {
         console.error(e);
       } finally {
-        await handleFetchLinks();
+        await refetch();
       }
     },
   });
 };
 
 const handleExportSelectedLinks = async () => {
-  if (!links.value.items.length) {
+  if (!links.value?.length) {
     return;
   }
-  const yamlString = links.value.items
+  const yamlString = links.value
     .map((link) => {
       if (selectedLinks.value.includes(link.metadata.name)) {
         return yaml.stringify(link);
@@ -274,7 +237,7 @@ const handleImportFromYaml = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchLinks();
+    await refetch();
   }
 };
 
@@ -283,7 +246,7 @@ const handleCheckAllChange = (e: Event) => {
   checkedAll.value = checked;
   if (checkedAll.value) {
     selectedLinks.value =
-      links.value.items.map((link) => {
+      links.value?.map((link) => {
         return link.metadata.name;
       }) || [];
   } else {
@@ -292,7 +255,7 @@ const handleCheckAllChange = (e: Event) => {
 };
 
 watch(selectedLinks, (newValue) => {
-  checkedAll.value = newValue.length === links.value.items.length;
+  checkedAll.value = newValue.length === links.value?.length;
 });
 
 // search
@@ -302,7 +265,7 @@ let fuse: Fuse<Link> | undefined = undefined;
 watch(
   () => links.value,
   () => {
-    fuse = new Fuse(links.value.items, {
+    fuse = new Fuse(links.value || [], {
       keys: [
         "spec.displayName",
         "metadata.name",
@@ -317,13 +280,13 @@ watch(
 const searchResults = computed({
   get() {
     if (!fuse || !keyword.value) {
-      return links.value.items;
+      return links.value;
     }
 
     return fuse?.search(keyword.value).map((item) => item.item);
   },
   set(value) {
-    links.value.items = value;
+    links.value = value;
   },
 });
 </script>
@@ -331,7 +294,7 @@ const searchResults = computed({
   <LinkEditingModal
     v-model:visible="editingModal"
     :link="selectedLink"
-    @close="handleFetchLinks({ mute: true })"
+    @close="refetch"
     @saved="onLinkSaved"
   >
     <template #append-actions>
@@ -355,11 +318,7 @@ const searchResults = computed({
   <div class="links-p-4">
     <div class="links-flex links-flex-row links-gap-2">
       <div class="links-w-96">
-        <GroupList
-          ref="groupListRef"
-          v-model:selected-group="selectedGroup"
-          @select="handleFetchLinks()"
-        />
+        <GroupList @select="refetch()" />
       </div>
       <div class="links-flex-1">
         <VCard :body-class="['!p-0']">
@@ -393,18 +352,14 @@ const searchResults = computed({
                     <VButton type="danger" @click="handleDeleteInBatch">
                       删除
                     </VButton>
-                    <FloatingDropdown>
+                    <VDropdown>
                       <VButton type="default">更多</VButton>
                       <template #popper>
-                        <div class="links-w-48 links-p-2">
-                          <VSpace class="links-w-full" direction="column">
-                            <VButton block @click="handleExportSelectedLinks">
-                              导出
-                            </VButton>
-                          </VSpace>
-                        </div>
+                        <VDropdownItem @click="handleExportSelectedLinks">
+                          导出
+                        </VDropdownItem>
                       </template>
-                    </FloatingDropdown>
+                    </VDropdown>
                   </VSpace>
                 </div>
                 <div
@@ -418,12 +373,12 @@ const searchResults = computed({
               </div>
             </div>
           </template>
-          <VLoading v-if="loading" />
-          <Transition v-else-if="!searchResults.length" appear name="fade">
+          <VLoading v-if="isLoading" />
+          <Transition v-else-if="!searchResults?.length" appear name="fade">
             <VEmpty message="你可以尝试刷新或者新建链接" title="当前没有链接">
               <template #actions>
                 <VSpace>
-                  <VButton @click="handleFetchLinks"> 刷新</VButton>
+                  <VButton @click="refetch"> 刷新</VButton>
                   <VButton
                     v-permission="['system:menus:manage']"
                     type="primary"
@@ -508,22 +463,12 @@ const searchResults = computed({
                       />
                     </template>
                     <template #dropdownItems>
-                      <VButton
-                        v-close-popper
-                        block
-                        type="secondary"
-                        @click="handleOpenCreateModal(link)"
-                      >
+                      <VDropdownItem @click="handleOpenCreateModal(link)">
                         编辑
-                      </VButton>
-                      <VButton
-                        v-close-popper
-                        block
-                        type="danger"
-                        @click="handleDelete(link)"
-                      >
+                      </VDropdownItem>
+                      <VDropdownItem type="danger" @click="handleDelete(link)">
                         删除
-                      </VButton>
+                      </VDropdownItem>
                     </template>
                   </VEntity>
                 </li>
@@ -539,11 +484,10 @@ const searchResults = computed({
                 class="links-flex links-flex-1 links-items-center links-justify-end"
               >
                 <VPagination
-                  :page="links.page"
-                  :size="links.size"
-                  :total="links.total"
+                  v-model:page="page"
+                  v-model:size="size"
+                  :total="total"
                   :size-options="[20, 30, 50, 100]"
-                  @change="handlePaginationChange"
                 />
               </div>
             </div>

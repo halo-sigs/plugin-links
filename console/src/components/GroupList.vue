@@ -9,44 +9,34 @@ import {
   Dialog,
   VEmpty,
   VLoading,
+  VDropdownItem,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup } from "@/types";
 import type { LinkGroupList } from "@/types";
-import { onMounted, ref } from "vue";
+import { ref } from "vue";
 import Draggable from "vuedraggable";
 import apiClient from "@/utils/api-client";
 import { useRouteQuery } from "@vueuse/router";
-
-const props = withDefaults(
-  defineProps<{
-    selectedGroup?: LinkGroup;
-  }>(),
-  { selectedGroup: undefined }
-);
-
-const emit = defineEmits<{
-  (event: "select", group?: LinkGroup): void;
-  (event: "update:selectedGroup", group?: LinkGroup): void;
-}>();
+import { useQuery } from "@tanstack/vue-query";
 
 const groupQuery = useRouteQuery("group");
 
-const groups = ref<LinkGroup[]>([] as LinkGroup[]);
-const loading = ref(false);
 const groupEditingModal = ref(false);
+const selectedGroup = ref<LinkGroup>();
 
-const handleFetchGroups = async (options?: { mute?: boolean }) => {
-  try {
-    if (!options?.mute) {
-      loading.value = true;
-    }
-
+const {
+  data: groups,
+  isLoading,
+  refetch,
+} = useQuery({
+  queryKey: ["link-groups"],
+  queryFn: async () => {
     const { data } = await apiClient.get<LinkGroupList>(
       "/apis/core.halo.run/v1alpha1/linkgroups"
     );
 
-    groups.value = data.items
+    return data.items
       .map((group) => {
         if (group.spec) {
           group.spec.priority = group.spec.priority || 0;
@@ -56,31 +46,17 @@ const handleFetchGroups = async (options?: { mute?: boolean }) => {
       .sort((a, b) => {
         return (a.spec?.priority || 0) - (b.spec?.priority || 0);
       });
-
-    if (props.selectedGroup) {
-      const updatedGroup = groups.value.find(
-        (group) => group.metadata.name === props.selectedGroup?.metadata.name
-      );
-      if (updatedGroup) {
-        emit("update:selectedGroup", updatedGroup);
-      }
+  },
+  refetchOnWindowFocus: false,
+  onSuccess(data) {
+    if (!groupQuery.value) {
+      groupQuery.value = data[0].metadata.name;
     }
-  } catch (e) {
-    console.error("Failed to fetch link groups", e);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleSelect = (group: LinkGroup) => {
-  emit("update:selectedGroup", group);
-  emit("select", group);
-  groupQuery.value = group.metadata.name;
-};
+  },
+});
 
 const handleOpenEditingModal = (group?: LinkGroup) => {
-  emit("update:selectedGroup", group);
-  emit("select", group);
+  selectedGroup.value = group;
   groupEditingModal.value = true;
 };
 
@@ -101,7 +77,7 @@ const handleSaveInBatch = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchGroups({ mute: true });
+    await refetch();
   }
 };
 
@@ -126,48 +102,24 @@ const handleDelete = async (group: LinkGroup) => {
       } catch (e) {
         console.error("Failed to delete link group", e);
       } finally {
-        await handleFetchGroups();
+        await refetch();
       }
     },
   });
 };
-
-onMounted(async () => {
-  await handleFetchGroups();
-
-  if (groupQuery.value) {
-    const group = groups.value.find(
-      (m) => m.metadata.name === groupQuery.value
-    );
-    if (group) {
-      handleSelect(group);
-    }
-    return;
-  }
-
-  if (groups.value.length > 0) {
-    handleSelect(groups.value[0]);
-  }
-});
-
-defineExpose({
-  handleFetchGroups,
-});
 </script>
 <template>
   <GroupEditingModal
     v-model:visible="groupEditingModal"
     :group="selectedGroup"
-    @close="handleFetchGroups({ mute: true })"
+    @close="refetch"
   />
   <VCard :body-class="['!p-0']" title="分组">
-    <VLoading v-if="loading" />
-    <Transition v-else-if="!groups.length" appear name="fade">
+    <VLoading v-if="isLoading" />
+    <Transition v-else-if="!groups?.length" appear name="fade">
       <VEmpty message="你可以尝试刷新或者新建分组" title="当前没有分组">
         <template #actions>
-          <VSpace>
-            <VButton size="sm" @click="handleFetchGroups"> 刷新</VButton>
-          </VSpace>
+          <VButton size="sm" @click="refetch"> 刷新</VButton>
         </template>
       </VEmpty>
     </Transition>
@@ -182,11 +134,9 @@ defineExpose({
         @change="handleSaveInBatch"
       >
         <template #item="{ element: group }">
-          <li @click="handleSelect(group)">
+          <li @click="groupQuery = group.metadata.name">
             <VEntity
-              :is-selected="
-                selectedGroup?.metadata.name === group.metadata.name
-              "
+              :is-selected="groupQuery === group.metadata.name"
               class="links-group"
             >
               <template #prepend>
@@ -213,22 +163,12 @@ defineExpose({
               </template>
 
               <template #dropdownItems>
-                <VButton
-                  v-close-popper
-                  block
-                  type="secondary"
-                  @click="handleOpenEditingModal(group)"
-                >
+                <VDropdownItem @click="handleOpenEditingModal(group)">
                   修改
-                </VButton>
-                <VButton
-                  v-close-popper
-                  block
-                  type="danger"
-                  @click="handleDelete(group)"
-                >
+                </VDropdownItem>
+                <VDropdownItem type="danger" @click="handleDelete(group)">
                   删除
-                </VButton>
+                </VDropdownItem>
               </template>
             </VEntity>
           </li>
@@ -236,7 +176,7 @@ defineExpose({
       </Draggable>
     </Transition>
 
-    <template v-if="!loading" #footer>
+    <template v-if="!isLoading" #footer>
       <Transition appear name="fade">
         <VButton
           v-permission="['plugin:links:manage']"

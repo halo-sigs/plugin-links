@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 import { IconSave, VButton, VModal } from "@halo-dev/components";
-import { computed, defineProps, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import { v4 as uuid } from "uuid";
 import { reset, submitForm } from "@formkit/core";
 
 const props = withDefaults(
@@ -24,34 +23,10 @@ const emit = defineEmits<{
   (event: "saved", link: Link): void;
 }>();
 
-const formSchema = [
-  {
-    $formkit: "text",
-    name: "displayName",
-    label: "网站名称",
-    validation: "required",
-  },
-  {
-    $formkit: "url",
-    name: "url",
-    label: "网站地址",
-    validation: "required",
-  },
-  {
-    $formkit: "text",
-    name: "logo",
-    label: "Logo",
-  },
-  {
-    $formkit: "textarea",
-    name: "description",
-    label: "描述",
-  },
-];
-
 const initialFormState: Link = {
   metadata: {
-    name: uuid(),
+    name: "",
+    generateName: "link-",
   },
   spec: {
     displayName: "",
@@ -82,7 +57,6 @@ const onVisibleChange = (visible: boolean) => {
 
 const handleResetForm = () => {
   formState.value = cloneDeep(initialFormState);
-  formState.value.metadata.name = uuid();
   reset("link-form");
 };
 
@@ -148,7 +122,20 @@ const handleSaveLink = async () => {
       type="form"
       @submit="handleSaveLink"
     >
-      <FormKitSchema :schema="formSchema" />
+      <FormKit
+        type="text"
+        name="displayName"
+        validation="required"
+        label="网站名称"
+      ></FormKit>
+      <FormKit
+        type="url"
+        name="url"
+        validation="required"
+        label="网站地址"
+      ></FormKit>
+      <FormKit type="text" name="logo" label="Logo"></FormKit>
+      <FormKit type="textarea" name="description" label="描述"></FormKit>
     </FormKit>
     <template #footer>
       <VButton

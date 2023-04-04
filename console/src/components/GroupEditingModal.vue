@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { VButton, VModal, VSpace } from "@halo-dev/components";
-import { v4 as uuid } from "uuid";
 import { computed, ref, watch } from "vue";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
@@ -27,7 +26,8 @@ const initialFormState: LinkGroup = {
   apiVersion: "core.halo.run/v1alpha1",
   kind: "LinkGroup",
   metadata: {
-    name: uuid(),
+    name: "",
+    generateName: "link-group-",
   },
   spec: {
     displayName: "",
