@@ -113,7 +113,6 @@ watch(
       >
         <FormKit
           name="displayName"
-          help="可根据此名称查询链接"
           label="分组名称"
           type="text"
           validation="required"
