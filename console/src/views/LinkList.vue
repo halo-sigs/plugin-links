@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import {
   IconList,
@@ -18,103 +18,80 @@ import {
   VEmpty,
   IconAddCircle,
   VLoading,
+  VDropdown,
+  VDropdownItem,
+  VDropdownDivider,
+  Toast,
 } from "@halo-dev/components";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
 import apiClient from "@/utils/api-client";
-import type { Link, LinkGroup, LinkList } from "@/types";
+import type { Link, LinkGroup } from "@/types";
 import yaml from "yaml";
 import { useFileSystemAccess } from "@vueuse/core";
-import cloneDeep from "lodash.clonedeep";
 import { formatDatetime } from "@/utils/date";
-import Fuse from "fuse.js";
+import { useQueryClient } from "@tanstack/vue-query";
+import { useRouteQuery } from "@vueuse/router";
+import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
+import cloneDeep from "lodash.clonedeep";
+
+const queryClient = useQueryClient();
 
 const drag = ref(false);
-
-const links = ref<LinkList>({
-  page: 1,
-  size: 20,
-  total: 0,
-  items: [],
-  first: true,
-  last: false,
-  hasNext: false,
-  hasPrevious: false,
-  totalPages: 0,
-});
-
-const loading = ref(false);
 const selectedLink = ref<Link | undefined>();
 const selectedLinks = ref<string[]>([]);
-const selectedGroup = ref<LinkGroup>();
 const editingModal = ref(false);
 const checkedAll = ref(false);
-const groupListRef = ref();
 
-const handleFetchLinks = async (options?: { mute?: boolean; page?: 1 }) => {
-  try {
-    if (!options?.mute) {
-      loading.value = true;
-    }
+const groupQuery = useRouteQuery<string>("group");
 
-    if (options?.page) {
-      links.value.page = options.page;
-    }
+const page = ref(1);
+const size = ref(20);
+const keyword = ref("");
 
-    if (!selectedGroup.value?.spec?.links) {
-      return;
-    }
-
-    const { data } = await apiClient.get<LinkList>(
-      "/apis/core.halo.run/v1alpha1/links",
-      {
-        params: {
-          page: links.value.page,
-          size: links.value.size,
-          fieldSelector: `name=(${selectedGroup.value.spec.links.join(",")})`,
-        },
-      }
-    );
-
-    links.value = {
-      ...data,
-      items: data.items
-        .map((link) => {
-          if (link.spec) {
-            link.spec.priority = link.spec.priority || 0;
-          }
-          return link;
-        })
-        .sort((a, b) => {
-          return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-        }),
-    };
-  } catch (e) {
-    console.error("Failed to fetch links", e);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handlePaginationChange = ({
+const { links, isLoading, total, refetch } = useLinkFetch(
   page,
   size,
-}: {
-  page: number;
-  size: number;
-}) => {
-  links.value.page = page;
-  links.value.size = size;
-  handleFetchLinks();
-};
+  keyword,
+  groupQuery
+);
+const draggableLinks = ref<Link[]>();
+
+watch(
+  () => links.value,
+  () => {
+    draggableLinks.value = cloneDeep(links.value);
+  },
+  {
+    immediate: true,
+  }
+);
+
+watch(
+  () => groupQuery.value,
+  () => {
+    page.value = 1;
+    selectedLinks.value.length = 0;
+    checkedAll.value = false;
+  }
+);
+
+function onKeywordChange(data: { keyword: string }) {
+  keyword.value = data.keyword;
+  page.value = 1;
+}
 
 const handleSelectPrevious = () => {
-  const currentIndex = links.value.items.findIndex(
+  if (!links.value) {
+    return;
+  }
+
+  const currentIndex = links.value.findIndex(
     (link) => link.metadata.name === selectedLink.value?.metadata.name
   );
 
   if (currentIndex > 0) {
-    selectedLink.value = links.value.items[currentIndex - 1];
+    selectedLink.value = links.value[currentIndex - 1];
     return;
   }
 
@@ -124,15 +101,17 @@ const handleSelectPrevious = () => {
 };
 
 const handleSelectNext = () => {
+  if (!links.value) return;
+
   if (!selectedLink.value) {
-    selectedLink.value = links.value.items[0];
+    selectedLink.value = links.value[0];
     return;
   }
-  const currentIndex = links.value.items.findIndex(
+  const currentIndex = links.value.findIndex(
     (link) => link.metadata.name === selectedLink.value?.metadata.name
   );
-  if (currentIndex !== links.value.items.length - 1) {
-    selectedLink.value = links.value.items[currentIndex + 1];
+  if (currentIndex !== links.value.length - 1) {
+    selectedLink.value = links.value[currentIndex + 1];
   }
 };
 
@@ -141,9 +120,9 @@ const handleOpenCreateModal = (link: Link) => {
   editingModal.value = true;
 };
 
-const handleSaveInBatch = async () => {
+const onPriorityChange = async () => {
   try {
-    const promises = links.value.items.map((link: Link, index) => {
+    const promises = draggableLinks.value?.map((link: Link, index) => {
       if (link.spec) {
         link.spec.priority = index;
       }
@@ -158,24 +137,13 @@ const handleSaveInBatch = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchLinks({ mute: true });
+    await refetch();
   }
 };
 
-const onLinkSaved = async (link: Link) => {
-  const groupToUpdate = cloneDeep(selectedGroup.value);
-
-  if (groupToUpdate) {
-    groupToUpdate.spec.links.push(link.metadata.name);
-
-    await apiClient.put(
-      `/apis/core.halo.run/v1alpha1/linkgroups/${groupToUpdate.metadata.name}`,
-      groupToUpdate
-    );
-  }
-
-  await groupListRef.value.handleFetchGroups();
-  await handleFetchLinks();
+const onEditingModalClose = async () => {
+  selectedLink.value = undefined;
+  refetch();
 };
 
 const handleDelete = (link: Link) => {
@@ -188,10 +156,12 @@ const handleDelete = (link: Link) => {
         apiClient.delete(
           `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
         );
+
+        Toast.success("删除成功");
       } catch (e) {
         console.error(e);
       } finally {
-        handleFetchLinks();
+        queryClient.invalidateQueries({ queryKey: ["links"] });
       }
     },
   });
@@ -210,20 +180,25 @@ const handleDeleteInBatch = () => {
         if (promises) {
           await Promise.all(promises);
         }
+
+        selectedLinks.value.length = 0;
+        checkedAll.value = false;
+
+        Toast.success("删除成功");
       } catch (e) {
         console.error(e);
       } finally {
-        await handleFetchLinks();
+        queryClient.invalidateQueries({ queryKey: ["links"] });
       }
     },
   });
 };
 
 const handleExportSelectedLinks = async () => {
-  if (!links.value.items.length) {
+  if (!links.value?.length) {
     return;
   }
-  const yamlString = links.value.items
+  const yamlString = links.value
     .map((link) => {
       if (selectedLinks.value.includes(link.metadata.name)) {
         return yaml.stringify(link);
@@ -274,7 +249,7 @@ const handleImportFromYaml = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchLinks();
+    queryClient.invalidateQueries({ queryKey: ["links"] });
   }
 };
 
@@ -283,7 +258,7 @@ const handleCheckAllChange = (e: Event) => {
   checkedAll.value = checked;
   if (checkedAll.value) {
     selectedLinks.value =
-      links.value.items.map((link) => {
+      links.value?.map((link) => {
         return link.metadata.name;
       }) || [];
   } else {
@@ -292,47 +267,62 @@ const handleCheckAllChange = (e: Event) => {
 };
 
 watch(selectedLinks, (newValue) => {
-  checkedAll.value = newValue.length === links.value.items.length;
+  checkedAll.value = newValue.length === links.value?.length;
 });
 
-// search
-const keyword = ref("");
-let fuse: Fuse<Link> | undefined = undefined;
+// groups
+const { groups } = useLinkGroupFetch();
 
-watch(
-  () => links.value,
-  () => {
-    fuse = new Fuse(links.value.items, {
-      keys: [
-        "spec.displayName",
-        "metadata.name",
-        "spec.description",
-        "spec.url",
-      ],
-      useExtendedSearch: true,
-    });
-  }
-);
+function getGroup(groupName: string) {
+  return groups.value?.find((group) => group.metadata.name === groupName);
+}
 
-const searchResults = computed({
-  get() {
-    if (!fuse || !keyword.value) {
-      return links.value.items;
+async function handleMoveInBatch(group: LinkGroup) {
+  const requests = links.value?.map((link) => {
+    return apiClient.put<Link>(
+      `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+      {
+        ...link,
+        spec: {
+          ...link.spec,
+          groupName: group.metadata.name,
+        },
+      }
+    );
+  });
+
+  if (requests) await Promise.all(requests);
+
+  refetch();
+
+  selectedLinks.value.length = 0;
+  checkedAll.value = false;
+
+  Toast.success("移动成功");
+}
+
+async function handleMove(link: Link, group: LinkGroup) {
+  await apiClient.put<Link>(
+    `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+    {
+      ...link,
+      spec: {
+        ...link.spec,
+        groupName: group.metadata.name,
+      },
     }
+  );
 
-    return fuse?.search(keyword.value).map((item) => item.item);
-  },
-  set(value) {
-    links.value.items = value;
-  },
-});
+  Toast.success("移动成功");
+
+  refetch();
+}
 </script>
 <template>
   <LinkEditingModal
     v-model:visible="editingModal"
     :link="selectedLink"
-    @close="handleFetchLinks({ mute: true })"
-    @saved="onLinkSaved"
+    @close="onEditingModalClose"
   >
     <template #append-actions>
       <span @click="handleSelectPrevious">
@@ -355,11 +345,7 @@ const searchResults = computed({
   <div class="links-p-4">
     <div class="links-flex links-flex-row links-gap-2">
       <div class="links-w-96">
-        <GroupList
-          ref="groupListRef"
-          v-model:selected-group="selectedGroup"
-          @select="handleFetchLinks()"
-        />
+        <GroupList />
       </div>
       <div class="links-flex-1">
         <VCard :body-class="['!p-0']">
@@ -385,26 +371,47 @@ const searchResults = computed({
                 >
                   <FormKit
                     v-if="!selectedLinks.length"
-                    v-model="keyword"
-                    placeholder="输入关键词搜索"
-                    type="text"
-                  ></FormKit>
+                    type="form"
+                    @submit="onKeywordChange"
+                  >
+                    <FormKit
+                      outer-class="!p-0"
+                      placeholder="输入关键词搜索"
+                      type="text"
+                      name="keyword"
+                      :model-value="keyword"
+                    ></FormKit>
+                  </FormKit>
                   <VSpace v-else>
                     <VButton type="danger" @click="handleDeleteInBatch">
                       删除
                     </VButton>
-                    <FloatingDropdown>
+                    <VDropdown>
                       <VButton type="default">更多</VButton>
                       <template #popper>
-                        <div class="links-w-48 links-p-2">
-                          <VSpace class="links-w-full" direction="column">
-                            <VButton block @click="handleExportSelectedLinks">
-                              导出
-                            </VButton>
-                          </VSpace>
-                        </div>
+                        <VDropdownItem @click="handleExportSelectedLinks">
+                          导出
+                        </VDropdownItem>
+                        <VDropdownDivider />
+                        <VDropdown placement="right" :triggers="['click']">
+                          <VDropdownItem> 移动 </VDropdownItem>
+                          <template #popper>
+                            <template
+                              v-for="group in groups"
+                              :key="group.metadata.name"
+                            >
+                              <VDropdownItem
+                                v-if="group.metadata.name !== groupQuery"
+                                v-close-popper.all
+                                @click="handleMoveInBatch(group)"
+                              >
+                                {{ group.spec.displayName }}
+                              </VDropdownItem>
+                            </template>
+                          </template>
+                        </VDropdown>
                       </template>
-                    </FloatingDropdown>
+                    </VDropdown>
                   </VSpace>
                 </div>
                 <div
@@ -412,18 +419,18 @@ const searchResults = computed({
                   class="links-mt-4 links-flex sm:links-mt-0"
                 >
                   <VButton size="xs" @click="editingModal = true">
-                    新增
+                    新建
                   </VButton>
                 </div>
               </div>
             </div>
           </template>
-          <VLoading v-if="loading" />
-          <Transition v-else-if="!searchResults.length" appear name="fade">
+          <VLoading v-if="isLoading" />
+          <Transition v-else-if="!links?.length" appear name="fade">
             <VEmpty message="你可以尝试刷新或者新建链接" title="当前没有链接">
               <template #actions>
                 <VSpace>
-                  <VButton @click="handleFetchLinks"> 刷新</VButton>
+                  <VButton @click="refetch"> 刷新</VButton>
                   <VButton
                     v-permission="['system:menus:manage']"
                     type="primary"
@@ -432,7 +439,7 @@ const searchResults = computed({
                     <template #icon>
                       <IconAddCircle class="h-full w-full" />
                     </template>
-                    新增链接
+                    新建
                   </VButton>
                 </VSpace>
               </template>
@@ -440,7 +447,7 @@ const searchResults = computed({
           </Transition>
           <Transition v-else appear name="fade">
             <Draggable
-              v-model="searchResults"
+              v-model="draggableLinks"
               class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
               group="link"
               handle=".drag-element"
@@ -448,7 +455,7 @@ const searchResults = computed({
               tag="ul"
               @end="drag = false"
               @start="drag = true"
-              @change="handleSaveInBatch"
+              @change="onPriorityChange"
             >
               <template #item="{ element: link }">
                 <li>
@@ -456,7 +463,7 @@ const searchResults = computed({
                     :is-selected="selectedLinks.includes(link.metadata.name)"
                     class="links-group"
                   >
-                    <template v-if="!keyword" #prepend>
+                    <template v-if="!keyword && groupQuery" #prepend>
                       <div
                         class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
                       >
@@ -485,13 +492,26 @@ const searchResults = computed({
                           ></VAvatar>
                         </template>
                       </VEntityField>
-                      <VEntityField
-                        :title="link.spec.displayName"
-                        :description="link.spec.description"
-                      />
+                      <VEntityField :title="link.spec.displayName">
+                        <template #description>
+                          <a
+                            :href="link.spec.url"
+                            class="links-truncate links-text-xs links-text-gray-500 hover:links-text-gray-900"
+                            target="_blank"
+                          >
+                            {{ link.spec.url }}
+                          </a>
+                        </template>
+                      </VEntityField>
                     </template>
 
                     <template #end>
+                      <VEntityField
+                        v-if="getGroup(link.spec.groupName)"
+                        :description="
+                          getGroup(link.spec.groupName)?.spec.displayName
+                        "
+                      />
                       <VEntityField v-if="link.metadata.deletionTimestamp">
                         <template #description>
                           <VStatusDot
@@ -508,22 +528,29 @@ const searchResults = computed({
                       />
                     </template>
                     <template #dropdownItems>
-                      <VButton
-                        v-close-popper
-                        block
-                        type="secondary"
-                        @click="handleOpenCreateModal(link)"
-                      >
+                      <VDropdownItem @click="handleOpenCreateModal(link)">
                         编辑
-                      </VButton>
-                      <VButton
-                        v-close-popper
-                        block
-                        type="danger"
-                        @click="handleDelete(link)"
-                      >
+                      </VDropdownItem>
+                      <VDropdown placement="left" :triggers="['click']">
+                        <VDropdownItem> 移动 </VDropdownItem>
+                        <template #popper>
+                          <template
+                            v-for="group in groups"
+                            :key="group.metadata.name"
+                          >
+                            <VDropdownItem
+                              v-if="group.metadata.name !== groupQuery"
+                              v-close-popper.all
+                              @click="handleMove(link, group)"
+                            >
+                              {{ group.spec.displayName }}
+                            </VDropdownItem>
+                          </template>
+                        </template>
+                      </VDropdown>
+                      <VDropdownItem type="danger" @click="handleDelete(link)">
                         删除
-                      </VButton>
+                      </VDropdownItem>
                     </template>
                   </VEntity>
                 </li>
@@ -539,11 +566,10 @@ const searchResults = computed({
                 class="links-flex links-flex-1 links-items-center links-justify-end"
               >
                 <VPagination
-                  :page="links.page"
-                  :size="links.size"
-                  :total="links.total"
+                  v-model:page="page"
+                  v-model:size="size"
+                  :total="total"
                   :size-options="[20, 30, 50, 100]"
-                  @change="handlePaginationChange"
                 />
               </div>
             </div>

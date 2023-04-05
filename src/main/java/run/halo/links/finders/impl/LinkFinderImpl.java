@@ -2,15 +2,14 @@ package run.halo.links.finders.impl;
 
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.comparator.Comparators;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.theme.finders.Finder;
 import run.halo.links.Link;
@@ -34,50 +33,54 @@ public class LinkFinderImpl implements LinkFinder {
     }
 
     @Override
-    public List<LinkVo> listBy(String groupName) {
-        return client.fetch(LinkGroup.class, groupName)
-            .mapNotNull(group -> group.getSpec().getLinks())
-            .flatMapMany(linkNames -> Flux.fromIterable(linkNames)
-                .flatMap(linkName -> client.fetch(Link.class, linkName)))
-            .map(LinkVo::from)
-            .collectList()
-            .block();
+    public Flux<LinkVo> listBy(String groupName) {
+        return listAll(link -> StringUtils.equals(link.getSpec().getGroupName(), groupName)
+            && link.getMetadata().getDeletionTimestamp() != null)
+            .map(LinkVo::from);
     }
 
     @Override
-    public List<LinkGroupVo> groupBy() {
-        Map<String, Link> nameLink = listAll(null)
-            .stream()
-            .collect(Collectors.toMap(link -> link.getMetadata().getName(), link -> link));
+    public Flux<LinkGroupVo> groupBy() {
+        Flux<Link> linkFlux = listAll(null);
         return listAllGroups()
-            .stream()
-            .map(group -> {
-                LinkedHashSet<String> linkNames = group.getSpec().getLinks();
-                if (linkNames == null) {
-                    return group;
-                }
-                List<LinkVo> links = linkNames.stream()
-                    .filter(nameLink::containsKey)
-                    .map(nameLink::get)
-                    .sorted(defaultLinkComparator())
+            .flatMap(group -> linkFlux
+                .filter(link -> StringUtils.equals(link.getSpec().getGroupName(),
+                    group.getMetadata().getName())
+                )
+                .map(LinkVo::from)
+                .collectList()
+                .map(group::withLinks)
+                .defaultIfEmpty(group)
+            )
+            .mergeWith(Mono.defer(() -> ungrouped()
+                .map(LinkGroupVo::from)
+                .flatMap(linkGroup -> linkFlux.filter(
+                        link -> StringUtils.isBlank(link.getSpec().getGroupName()))
                     .map(LinkVo::from)
-                    .toList();
-                return group.withLinks(links);
-            })
-            .toList();
+                    .collectList()
+                    .map(linkGroup::withLinks)
+                    .defaultIfEmpty(linkGroup)
+                ))
+            );
     }
 
-    List<Link> listAll(@Nullable Predicate<Link> predicate) {
-        return client.list(Link.class, predicate, defaultLinkComparator())
-            .collectList()
-            .block();
+    Mono<LinkGroup> ungrouped() {
+        LinkGroup linkGroup = new LinkGroup();
+        linkGroup.setMetadata(new Metadata());
+        linkGroup.getMetadata().setName("ungrouped");
+        linkGroup.setSpec(new LinkGroup.LinkGroupSpec());
+        linkGroup.getSpec().setDisplayName("");
+        linkGroup.getSpec().setPriority(0);
+        return Mono.just(linkGroup);
     }
 
-    List<LinkGroupVo> listAllGroups() {
+    Flux<Link> listAll(@Nullable Predicate<Link> predicate) {
+        return client.list(Link.class, predicate, defaultLinkComparator());
+    }
+
+    Flux<LinkGroupVo> listAllGroups() {
         return client.list(LinkGroup.class, null, defaultGroupComparator())
-            .map(LinkGroupVo::from)
-            .collectList()
-            .block();
+            .map(LinkGroupVo::from);
     }
 
     static Comparator<LinkGroup> defaultGroupComparator() {

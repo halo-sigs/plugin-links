@@ -1,11 +1,10 @@
 <script lang="ts" setup>
-import { IconSave, VButton, VModal } from "@halo-dev/components";
-import { computed, defineProps, ref, watch } from "vue";
+import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
+import { computed, ref, watch } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import { v4 as uuid } from "uuid";
-import { reset, submitForm } from "@formkit/core";
+import { useRouteQuery } from "@vueuse/router";
 
 const props = withDefaults(
   defineProps<{
@@ -21,42 +20,18 @@ const props = withDefaults(
 const emit = defineEmits<{
   (event: "update:visible", value: boolean): void;
   (event: "close"): void;
-  (event: "saved", link: Link): void;
 }>();
-
-const formSchema = [
-  {
-    $formkit: "text",
-    name: "displayName",
-    label: "网站名称",
-    validation: "required",
-  },
-  {
-    $formkit: "url",
-    name: "url",
-    label: "网站地址",
-    validation: "required",
-  },
-  {
-    $formkit: "text",
-    name: "logo",
-    label: "Logo",
-  },
-  {
-    $formkit: "textarea",
-    name: "description",
-    label: "描述",
-  },
-];
 
 const initialFormState: Link = {
   metadata: {
-    name: uuid(),
+    name: "",
+    generateName: "link-",
   },
   spec: {
     displayName: "",
     url: "",
     logo: "",
+    groupName: "",
   },
   kind: "Link",
   apiVersion: "core.halo.run/v1alpha1",
@@ -64,13 +39,16 @@ const initialFormState: Link = {
 
 const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
+const formVisible = ref(false);
+
+const groupQuery = useRouteQuery<string>("group");
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
 });
 
 const modalTitle = computed(() => {
-  return isUpdateMode.value ? "编辑链接" : "添加链接";
+  return isUpdateMode.value ? "编辑链接" : "新建链接";
 });
 
 const onVisibleChange = (visible: boolean) => {
@@ -82,15 +60,18 @@ const onVisibleChange = (visible: boolean) => {
 
 const handleResetForm = () => {
   formState.value = cloneDeep(initialFormState);
-  formState.value.metadata.name = uuid();
-  reset("link-form");
 };
 
 watch(
   () => props.visible,
   (visible) => {
-    if (!visible) {
-      handleResetForm();
+    if (visible) {
+      formVisible.value = true;
+    } else {
+      setTimeout(() => {
+        formVisible.value = false;
+        handleResetForm();
+      }, 200);
     }
   }
 );
@@ -100,8 +81,6 @@ watch(
   (link) => {
     if (link) {
       formState.value = cloneDeep(link);
-    } else {
-      handleResetForm();
     }
   }
 );
@@ -110,18 +89,20 @@ const handleSaveLink = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
-      const { data } = await apiClient.put<Link>(
+      await apiClient.put<Link>(
         `/apis/core.halo.run/v1alpha1/links/${formState.value.metadata.name}`,
         formState.value
       );
-      emit("saved", data);
     } else {
-      const { data } = await apiClient.post<Link>(
+      formState.value.spec.groupName = groupQuery.value;
+      await apiClient.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
         formState.value
       );
-      emit("saved", data);
     }
+
+    Toast.success("保存成功");
+
     onVisibleChange(false);
   } catch (e) {
     console.error(e);
@@ -141,26 +122,44 @@ const handleSaveLink = async () => {
       <slot name="append-actions" />
     </template>
 
-    <FormKit
-      id="link-form"
-      v-model="formState.spec"
-      :actions="false"
-      type="form"
-      @submit="handleSaveLink"
-    >
-      <FormKitSchema :schema="formSchema" />
-    </FormKit>
-    <template #footer>
-      <VButton
-        :loading="saving"
-        type="secondary"
-        @click="submitForm('link-form')"
+    <div>
+      <FormKit
+        v-if="formVisible"
+        id="link-form"
+        v-model="formState.spec"
+        name="link-form"
+        type="form"
+        :config="{ validationVisibility: 'submit' }"
+        @submit="handleSaveLink"
       >
-        <template #icon>
-          <IconSave class="links-h-full links-w-full" />
-        </template>
-        保存
-      </VButton>
+        <FormKit
+          type="text"
+          name="displayName"
+          validation="required"
+          label="网站名称"
+        ></FormKit>
+        <FormKit
+          type="url"
+          name="url"
+          validation="required"
+          label="网站地址"
+        ></FormKit>
+        <FormKit type="text" name="logo" label="Logo"></FormKit>
+        <FormKit type="textarea" name="description" label="描述"></FormKit>
+      </FormKit>
+    </div>
+
+    <template #footer>
+      <VSpace>
+        <VButton
+          :loading="saving"
+          type="secondary"
+          @click="$formkit.submit('link-form')"
+        >
+          提交
+        </VButton>
+        <VButton @click="onVisibleChange(false)">取消</VButton>
+      </VSpace>
     </template>
   </VModal>
 </template>

@@ -7,86 +7,45 @@ import {
   VEntityField,
   VStatusDot,
   Dialog,
-  VEmpty,
   VLoading,
+  VDropdownItem,
+  Toast,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
-import type { LinkGroup } from "@/types";
-import type { LinkGroupList } from "@/types";
-import { onMounted, ref } from "vue";
+import type { LinkGroup, LinkList } from "@/types";
+import { ref, watch } from "vue";
 import Draggable from "vuedraggable";
 import apiClient from "@/utils/api-client";
 import { useRouteQuery } from "@vueuse/router";
+import { useLinkGroupFetch } from "@/composables/use-link";
+import cloneDeep from "lodash.clonedeep";
 
-const props = withDefaults(
-  defineProps<{
-    selectedGroup?: LinkGroup;
-  }>(),
-  { selectedGroup: undefined }
+const groupQuery = useRouteQuery<string>("group");
+
+const groupEditingModal = ref(false);
+const selectedGroup = ref<LinkGroup>();
+
+const { groups, isLoading, refetch } = useLinkGroupFetch();
+const draggableGroups = ref<LinkGroup[]>();
+
+watch(
+  () => groups.value,
+  () => {
+    draggableGroups.value = cloneDeep(groups.value);
+  },
+  {
+    immediate: true,
+  }
 );
 
-const emit = defineEmits<{
-  (event: "select", group?: LinkGroup): void;
-  (event: "update:selectedGroup", group?: LinkGroup): void;
-}>();
-
-const groupQuery = useRouteQuery("group");
-
-const groups = ref<LinkGroup[]>([] as LinkGroup[]);
-const loading = ref(false);
-const groupEditingModal = ref(false);
-
-const handleFetchGroups = async (options?: { mute?: boolean }) => {
-  try {
-    if (!options?.mute) {
-      loading.value = true;
-    }
-
-    const { data } = await apiClient.get<LinkGroupList>(
-      "/apis/core.halo.run/v1alpha1/linkgroups"
-    );
-
-    groups.value = data.items
-      .map((group) => {
-        if (group.spec) {
-          group.spec.priority = group.spec.priority || 0;
-        }
-        return group;
-      })
-      .sort((a, b) => {
-        return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-      });
-
-    if (props.selectedGroup) {
-      const updatedGroup = groups.value.find(
-        (group) => group.metadata.name === props.selectedGroup?.metadata.name
-      );
-      if (updatedGroup) {
-        emit("update:selectedGroup", updatedGroup);
-      }
-    }
-  } catch (e) {
-    console.error("Failed to fetch link groups", e);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleSelect = (group: LinkGroup) => {
-  emit("update:selectedGroup", group);
-  emit("select", group);
-  groupQuery.value = group.metadata.name;
-};
-
 const handleOpenEditingModal = (group?: LinkGroup) => {
-  emit("update:selectedGroup", group);
-  emit("select", group);
+  selectedGroup.value = group;
   groupEditingModal.value = true;
 };
 
-const handleSaveInBatch = async () => {
+const onPriorityChange = async () => {
   try {
-    const promises = groups.value?.map((group: LinkGroup, index) => {
+    const promises = draggableGroups.value?.map((group: LinkGroup, index) => {
       if (group.spec) {
         group.spec.priority = index;
       }
@@ -101,7 +60,7 @@ const handleSaveInBatch = async () => {
   } catch (e) {
     console.error(e);
   } finally {
-    await handleFetchGroups({ mute: true });
+    await refetch();
   }
 };
 
@@ -116,77 +75,75 @@ const handleDelete = async (group: LinkGroup) => {
           `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`
         );
 
-        const deleteItemsPromises = group.spec?.links.map((item) =>
-          apiClient.delete(`/apis/core.halo.run/v1alpha1/links/${item}`)
+        const { data } = await apiClient.get<LinkList>(
+          `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links`,
+          {
+            params: {
+              page: 0,
+              size: 0,
+              groupName: group.metadata.name,
+            },
+          }
         );
 
-        if (deleteItemsPromises) {
-          await Promise.all(deleteItemsPromises);
+        const deleteLinkPromises = data.items.map((link) =>
+          apiClient.delete(
+            `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
+          )
+        );
+
+        if (deleteLinkPromises) {
+          await Promise.all(deleteLinkPromises);
         }
+
+        groupQuery.value = "";
+
+        Toast.success("删除成功");
       } catch (e) {
         console.error("Failed to delete link group", e);
       } finally {
-        await handleFetchGroups();
+        await refetch();
       }
     },
   });
 };
 
-onMounted(async () => {
-  await handleFetchGroups();
-
-  if (groupQuery.value) {
-    const group = groups.value.find(
-      (m) => m.metadata.name === groupQuery.value
-    );
-    if (group) {
-      handleSelect(group);
-    }
-    return;
-  }
-
-  if (groups.value.length > 0) {
-    handleSelect(groups.value[0]);
-  }
-});
-
-defineExpose({
-  handleFetchGroups,
-});
+function onEditingModalClose() {
+  selectedGroup.value = undefined;
+  refetch();
+}
 </script>
 <template>
   <GroupEditingModal
     v-model:visible="groupEditingModal"
     :group="selectedGroup"
-    @close="handleFetchGroups({ mute: true })"
+    @close="onEditingModalClose"
   />
   <VCard :body-class="['!p-0']" title="分组">
-    <VLoading v-if="loading" />
-    <Transition v-else-if="!groups.length" appear name="fade">
-      <VEmpty message="你可以尝试刷新或者新建分组" title="当前没有分组">
-        <template #actions>
-          <VSpace>
-            <VButton size="sm" @click="handleFetchGroups"> 刷新</VButton>
-          </VSpace>
-        </template>
-      </VEmpty>
-    </Transition>
+    <VLoading v-if="isLoading" />
     <Transition v-else appear name="fade">
       <Draggable
-        v-model="groups"
+        v-model="draggableGroups"
         class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
         group="group"
         handle=".drag-element"
         item-key="metadata.name"
         tag="ul"
-        @change="handleSaveInBatch"
+        @change="onPriorityChange"
       >
+        <template #header>
+          <li @click="groupQuery = ''">
+            <VEntity class="links-group" :is-selected="!groupQuery">
+              <template #start>
+                <VEntityField title="全部"> </VEntityField>
+              </template>
+            </VEntity>
+          </li>
+        </template>
         <template #item="{ element: group }">
-          <li @click="handleSelect(group)">
+          <li @click="groupQuery = group.metadata.name">
             <VEntity
-              :is-selected="
-                selectedGroup?.metadata.name === group.metadata.name
-              "
+              :is-selected="groupQuery === group.metadata.name"
               class="links-group"
             >
               <template #prepend>
@@ -198,10 +155,7 @@ defineExpose({
               </template>
 
               <template #start>
-                <VEntityField
-                  :title="group.spec?.displayName"
-                  :description="`${group.spec.links?.length || 0} 个链接`"
-                ></VEntityField>
+                <VEntityField :title="group.spec?.displayName"></VEntityField>
               </template>
 
               <template #end>
@@ -213,22 +167,12 @@ defineExpose({
               </template>
 
               <template #dropdownItems>
-                <VButton
-                  v-close-popper
-                  block
-                  type="secondary"
-                  @click="handleOpenEditingModal(group)"
-                >
+                <VDropdownItem @click="handleOpenEditingModal(group)">
                   修改
-                </VButton>
-                <VButton
-                  v-close-popper
-                  block
-                  type="danger"
-                  @click="handleDelete(group)"
-                >
+                </VDropdownItem>
+                <VDropdownItem type="danger" @click="handleDelete(group)">
                   删除
-                </VButton>
+                </VDropdownItem>
               </template>
             </VEntity>
           </li>
@@ -236,7 +180,7 @@ defineExpose({
       </Draggable>
     </Transition>
 
-    <template v-if="!loading" #footer>
+    <template v-if="!isLoading" #footer>
       <Transition appear name="fade">
         <VButton
           v-permission="['plugin:links:manage']"
@@ -244,7 +188,7 @@ defineExpose({
           type="secondary"
           @click="handleOpenEditingModal(undefined)"
         >
-          新增分组
+          新建
         </VButton>
       </Transition>
     </template>

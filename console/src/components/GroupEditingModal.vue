@@ -1,20 +1,18 @@
 <script lang="ts" setup>
-import { VButton, VModal, VSpace } from "@halo-dev/components";
-import { v4 as uuid } from "uuid";
+import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { computed, ref, watch } from "vue";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import { useMagicKeys } from "@vueuse/core";
 import type { LinkGroup } from "@/types";
 
 const props = withDefaults(
   defineProps<{
     visible: boolean;
-    group: LinkGroup | null;
+    group?: LinkGroup;
   }>(),
   {
     visible: false,
-    group: null,
+    group: undefined,
   }
 );
 
@@ -27,7 +25,8 @@ const initialFormState: LinkGroup = {
   apiVersion: "core.halo.run/v1alpha1",
   kind: "LinkGroup",
   metadata: {
-    name: uuid(),
+    name: "",
+    generateName: "link-group-",
   },
   spec: {
     displayName: "",
@@ -36,14 +35,19 @@ const initialFormState: LinkGroup = {
   },
 };
 
-const formState = ref<LinkGroup>(initialFormState);
+const formState = ref<LinkGroup>(cloneDeep(initialFormState));
 const saving = ref(false);
+const formVisible = ref(false);
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
 });
 
-const handleCreateGroup = async () => {
+const modalTitle = computed(() => {
+  return isUpdateMode.value ? "编辑分组" : "新建分组";
+});
+
+const handleCreateOrUpdateGroup = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
@@ -57,6 +61,9 @@ const handleCreateGroup = async () => {
         formState.value
       );
     }
+
+    Toast.success("保存成功");
+
     onVisibleChange(false);
   } catch (e) {
     console.error("Failed to create link group", e);
@@ -72,53 +79,56 @@ const onVisibleChange = (visible: boolean) => {
   }
 };
 
-watch(props, (newVal) => {
-  const { Command_Enter } = useMagicKeys();
-  let keyboardWatcher;
-  if (newVal.visible) {
-    keyboardWatcher = watch(Command_Enter, (v) => {
-      if (v) {
-        // TODO
-      }
-    });
-  } else {
-    keyboardWatcher?.unwatch();
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      if (props.group) formState.value = cloneDeep(props.group);
+      formVisible.value = true;
+    } else {
+      setTimeout(() => {
+        formVisible.value = false;
+        formState.value = cloneDeep(initialFormState);
+      }, 200);
+    }
   }
-
-  if (newVal.visible && props.group) {
-    formState.value = cloneDeep(props.group);
-    return;
-  }
-  formState.value = cloneDeep(initialFormState);
-});
+);
 </script>
 <template>
   <VModal
     :visible="visible"
     :width="500"
-    title="编辑分组"
+    :title="modalTitle"
     @update:visible="onVisibleChange"
   >
-    <FormKit
-      id="link-group-form"
-      :classes="{ form: 'w-full' }"
-      type="form"
-      @submit="handleCreateGroup"
-    >
+    <div>
       <FormKit
-        v-model="formState.spec.displayName"
-        help="可根据此名称查询链接"
-        label="分组名称"
-        type="text"
-        validation="required"
-      ></FormKit>
-    </FormKit>
+        v-if="formVisible"
+        id="link-group-form"
+        v-model="formState.spec"
+        name="link-group-form"
+        type="form"
+        :config="{ validationVisibility: 'submit' }"
+        @submit="handleCreateOrUpdateGroup"
+      >
+        <FormKit
+          name="displayName"
+          label="分组名称"
+          type="text"
+          validation="required"
+        ></FormKit>
+      </FormKit>
+    </div>
     <template #footer>
       <VSpace>
-        <VButton type="secondary" @click="$formkit.submit('link-group-form')">
-          提交 ⌘ + ↵
+        <VButton
+          :loading="saving"
+          type="secondary"
+          @click="$formkit.submit('link-group-form')"
+        >
+          提交
         </VButton>
-        <VButton @click="onVisibleChange(false)">取消 Esc</VButton>
+        <VButton @click="onVisibleChange(false)"> 取消</VButton>
       </VSpace>
     </template>
   </VModal>

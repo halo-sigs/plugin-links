@@ -32,5 +32,7 @@ public class Link extends AbstractExtension {
         private String description;
 
         private Integer priority;
+
+        private String groupName;
     }
 }

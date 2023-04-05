@@ -1,6 +1,6 @@
 package run.halo.links.finders;
 
-import java.util.List;
+import reactor.core.publisher.Flux;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
 
@@ -12,7 +12,7 @@ import run.halo.links.vo.LinkVo;
  */
 public interface LinkFinder {
 
-    List<LinkVo> listBy(String group);
+    Flux<LinkVo> listBy(String group);
 
-    List<LinkGroupVo> groupBy();
+    Flux<LinkGroupVo> groupBy();
 }

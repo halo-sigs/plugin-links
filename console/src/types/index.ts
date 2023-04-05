@@ -1,5 +1,6 @@
 export interface Metadata {
   name: string;
+  generateName?: string;
   labels?: {
     [key: string]: string;
   } | null;
@@ -14,6 +15,7 @@ export interface Metadata {
 export interface LinkGroupSpec {
   displayName: string;
   priority?: number;
+  // @deprecated
   links: string[];
 }
 
@@ -23,6 +25,7 @@ export interface LinkSpec {
   logo?: string;
   description?: string;
   priority?: number;
+  groupName?: string;
 }
 
 export interface Link {

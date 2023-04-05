@@ -3,7 +3,7 @@ import "./styles/index.css";
 import { definePlugin } from "@halo-dev/console-shared";
 import LinkList from "@/views/LinkList.vue";
 import { markRaw } from "vue";
-import RiLinksLine from '~icons/ri/links-line'
+import RiLinksLine from "~icons/ri/links-line";
 
 export default definePlugin({
   components: {},
