@@ -3,8 +3,8 @@ kind: Plugin
 metadata:
   name: PluginLinks
 spec:
-  version: 1.1.0
-  requires: ">=2.0.0"
+  version: 1.2.0
+  requires: ">=2.4.0"
   author:
     name: Halo OSS Team
     website: https://github.com/halo-dev
