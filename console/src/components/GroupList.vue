@@ -9,6 +9,7 @@ import {
   Dialog,
   VLoading,
   VDropdownItem,
+  Toast,
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup, LinkList } from "@/types";
@@ -96,6 +97,8 @@ const handleDelete = async (group: LinkGroup) => {
         }
 
         groupQuery.value = "";
+
+        Toast.success("删除成功");
       } catch (e) {
         console.error("Failed to delete link group", e);
       } finally {
@@ -185,7 +188,7 @@ function onEditingModalClose() {
           type="secondary"
           @click="handleOpenEditingModal(undefined)"
         >
-          新增分组
+          新建
         </VButton>
       </Transition>
     </template>

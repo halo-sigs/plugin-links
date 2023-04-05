@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { VButton, VModal, VSpace } from "@halo-dev/components";
+import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { computed, ref, watch } from "vue";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
@@ -37,12 +37,17 @@ const initialFormState: LinkGroup = {
 
 const formState = ref<LinkGroup>(cloneDeep(initialFormState));
 const saving = ref(false);
+const formVisible = ref(false);
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
 });
 
-const handleCreateGroup = async () => {
+const modalTitle = computed(() => {
+  return isUpdateMode.value ? "编辑分组" : "新建分组";
+});
+
+const handleCreateOrUpdateGroup = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
@@ -56,6 +61,9 @@ const handleCreateGroup = async () => {
         formState.value
       );
     }
+
+    Toast.success("保存成功");
+
     onVisibleChange(false);
   } catch (e) {
     console.error("Failed to create link group", e);
@@ -71,26 +79,17 @@ const onVisibleChange = (visible: boolean) => {
   }
 };
 
-const handleResetForm = () => {
-  formState.value = cloneDeep(initialFormState);
-};
-
 watch(
   () => props.visible,
   (visible) => {
-    if (!visible) {
-      handleResetForm();
-    }
-  }
-);
-
-watch(
-  () => props.group,
-  (group) => {
-    if (group) {
-      formState.value = cloneDeep(group);
+    if (visible) {
+      if (props.group) formState.value = cloneDeep(props.group);
+      formVisible.value = true;
     } else {
-      handleResetForm();
+      setTimeout(() => {
+        formVisible.value = false;
+        formState.value = cloneDeep(initialFormState);
+      }, 200);
     }
   }
 );
@@ -99,31 +98,38 @@ watch(
   <VModal
     :visible="visible"
     :width="500"
-    title="编辑分组"
+    :title="modalTitle"
     @update:visible="onVisibleChange"
   >
-    <FormKit
-      id="link-group-form"
-      v-model="formState.spec"
-      name="link-group-form"
-      type="form"
-      :config="{ validationVisibility: 'submit' }"
-      @submit="handleCreateGroup"
-    >
+    <div>
       <FormKit
-        name="displayName"
-        help="可根据此名称查询链接"
-        label="分组名称"
-        type="text"
-        validation="required"
-      ></FormKit>
-    </FormKit>
+        v-if="formVisible"
+        id="link-group-form"
+        v-model="formState.spec"
+        name="link-group-form"
+        type="form"
+        :config="{ validationVisibility: 'submit' }"
+        @submit="handleCreateOrUpdateGroup"
+      >
+        <FormKit
+          name="displayName"
+          help="可根据此名称查询链接"
+          label="分组名称"
+          type="text"
+          validation="required"
+        ></FormKit>
+      </FormKit>
+    </div>
     <template #footer>
       <VSpace>
-        <VButton type="secondary" @click="$formkit.submit('link-group-form')">
-          提交 ⌘ + ↵
+        <VButton
+          :loading="saving"
+          type="secondary"
+          @click="$formkit.submit('link-group-form')"
+        >
+          提交
         </VButton>
-        <VButton @click="onVisibleChange(false)">取消 Esc</VButton>
+        <VButton @click="onVisibleChange(false)"> 取消</VButton>
       </VSpace>
     </template>
   </VModal>

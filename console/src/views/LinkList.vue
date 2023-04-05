@@ -156,6 +156,8 @@ const handleDelete = (link: Link) => {
         apiClient.delete(
           `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
         );
+
+        Toast.success("删除成功");
       } catch (e) {
         console.error(e);
       } finally {
@@ -181,6 +183,8 @@ const handleDeleteInBatch = () => {
 
         selectedLinks.value.length = 0;
         checkedAll.value = false;
+
+        Toast.success("删除成功");
       } catch (e) {
         console.error(e);
       } finally {
@@ -415,7 +419,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                   class="links-mt-4 links-flex sm:links-mt-0"
                 >
                   <VButton size="xs" @click="editingModal = true">
-                    新增
+                    新建
                   </VButton>
                 </div>
               </div>
@@ -435,7 +439,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                     <template #icon>
                       <IconAddCircle class="h-full w-full" />
                     </template>
-                    新增链接
+                    新建
                   </VButton>
                 </VSpace>
               </template>
