@@ -43,7 +43,7 @@ public class LinkFinderImpl implements LinkFinder {
     public Flux<LinkGroupVo> groupBy() {
         Flux<Link> linkFlux = listAll(null);
         return listAllGroups()
-            .flatMap(group -> linkFlux
+            .concatMap(group -> linkFlux
                 .filter(link -> StringUtils.equals(link.getSpec().getGroupName(),
                     group.getMetadata().getName())
                 )
