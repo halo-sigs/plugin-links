@@ -13,5 +13,6 @@ spec:
   displayName: "链接管理"
   description: "链接管理模块"
   license:
-    - name: "MIT"
+    - name: "GPL-3.0"
+      url: "https://github.com/halo-sigs/plugin-links/blob/main/LICENSE"
   enabled: true
