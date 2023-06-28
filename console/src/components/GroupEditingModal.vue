@@ -30,6 +30,8 @@ const initialFormState: LinkGroup = {
   },
   spec: {
     displayName: "",
+    displayStyle: "",
+    description: "",
     priority: 0,
     links: [],
   },
@@ -117,6 +119,13 @@ watch(
           type="text"
           validation="required"
         ></FormKit>
+        <FormKit
+          name="displayStyle"
+          label="分组方式"
+          type="text"
+          validation="required"
+        ></FormKit>
+        <FormKit type="textarea" name="description" label="描述"></FormKit>
       </FormKit>
     </div>
     <template #footer>
