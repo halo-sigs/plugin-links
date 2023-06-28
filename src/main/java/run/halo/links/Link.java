@@ -29,10 +29,19 @@ public class Link extends AbstractExtension {
 
         private String logo;
 
+        private String siteshot;
+
+        private Integer label;
+
+        private Integer labelColor;
+
         private String description;
 
         private Integer priority;
 
         private String groupName;
+
+
+
     }
 }
