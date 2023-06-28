@@ -14,6 +14,8 @@ export interface Metadata {
 
 export interface LinkGroupSpec {
   displayName: string;
+  displayStyle: string;
+  description: string;
   priority?: number;
   // @deprecated
   links: string[];
@@ -23,6 +25,9 @@ export interface LinkSpec {
   url: string;
   displayName: string;
   logo?: string;
+  siteshot?: string;
+  label?: string;
+  labelColor?: string;
   description?: string;
   priority?: number;
   groupName?: string;
