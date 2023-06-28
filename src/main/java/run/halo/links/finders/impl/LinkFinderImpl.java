@@ -70,6 +70,8 @@ public class LinkFinderImpl implements LinkFinder {
         linkGroup.getMetadata().setName("ungrouped");
         linkGroup.setSpec(new LinkGroup.LinkGroupSpec());
         linkGroup.getSpec().setDisplayName("");
+        linkGroup.getSpec().setDisplayStyle("");
+        linkGroup.getSpec().setDescription("");
         linkGroup.getSpec().setPriority(0);
         return Mono.just(linkGroup);
     }
