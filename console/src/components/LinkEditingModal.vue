@@ -1,12 +1,10 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { computed, ref, watch } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
 import { useRouteQuery } from "@vueuse/router";
-import FormKit from "@/components/FormKit.vue";
-
 const props = withDefaults(
   defineProps<{
     visible: boolean;
@@ -17,12 +15,10 @@ const props = withDefaults(
     link: undefined,
   }
 );
-
 const emit = defineEmits<{
   (event: "update:visible", value: boolean): void;
   (event: "close"): void;
 }>();
-
 const initialFormState: Link = {
   metadata: {
     name: "",
@@ -37,32 +33,25 @@ const initialFormState: Link = {
   kind: "Link",
   apiVersion: "core.halo.run/v1alpha1",
 };
-
 const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
 const formVisible = ref(false);
-
 const groupQuery = useRouteQuery<string>("group");
-
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
 });
-
 const modalTitle = computed(() => {
   return isUpdateMode.value ? "编辑链接" : "新建链接";
 });
-
 const onVisibleChange = (visible: boolean) => {
   emit("update:visible", visible);
   if (!visible) {
     emit("close");
   }
 };
-
 const handleResetForm = () => {
   formState.value = cloneDeep(initialFormState);
 };
-
 watch(
   () => props.visible,
   (visible) => {
@@ -76,7 +65,6 @@ watch(
     }
   }
 );
-
 watch(
   () => props.link,
   (link) => {
@@ -85,7 +73,6 @@ watch(
     }
   }
 );
-
 const handleSaveLink = async () => {
   try {
     saving.value = true;
@@ -101,39 +88,12 @@ const handleSaveLink = async () => {
         formState.value
       );
     }
-
     Toast.success("保存成功");
-
     onVisibleChange(false);
   } catch (e) {
     console.error(e);
   } finally {
     saving.value = false;
-  }
-};
-
-const handleChooseFileButtonClick = () => {
-  // 点击“选择文件”按钮时触发
-  const input = $refs.fileInput as HTMLInputElement;
-  input.click();
-};
-
-const handleFileInputChange = async (event: Event) => {
-  // 选择文件后，处理文件上传
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) {
-    return;
-  }
-  // 处理上传文件的逻辑
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await apiClient.post("/upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  if (response.status === 200) {
-    formState.value.spec.logo = response.data.url;
-  } else {
-    Toast.error("上传失败");
   }
 };
 </script>
@@ -171,21 +131,16 @@ const handleFileInputChange = async (event: Event) => {
           validation="required"
           label="网站地址"
         ></FormKit>
-        <FormKit type="text" name="logo" label="Logo">
-          <input
-            type="file"
-            style="display: none"
-            ref="fileInput"
-            @change="handleFileInputChange"
-          />
-          <div>
-            <VButton type="secondary" @click="handleChooseFileButtonClick"
-              >选择文件</VButton
-            >
-            <span>{{ formState.spec.logo }}</span>
-          </div>
-        </FormKit>
-        <FormKit type="textarea" name="description" label="描述"></FormKit>
+        <FormKit
+          type="attachment"
+          name="logo"
+          label="Logo"
+        ></FormKit>
+        <FormKit
+          type="textarea"
+          name="description"
+          label="描述"
+        ></FormKit>
       </FormKit>
     </div>
 
@@ -195,8 +150,9 @@ const handleFileInputChange = async (event: Event) => {
           :loading="saving"
           type="secondary"
           @click="$formkit.submit('link-form')"
-          >提交</VButton
         >
+          提交
+        </VButton>
         <VButton @click="onVisibleChange(false)">取消</VButton>
       </VSpace>
     </template>
