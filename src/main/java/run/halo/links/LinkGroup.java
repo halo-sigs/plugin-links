@@ -25,7 +25,13 @@ public class LinkGroup extends AbstractExtension {
         @Schema(required = true)
         private String displayName;
 
+        @Schema(required = true)
+        private String displayStyle;
+
+        private String description;
+
         private Integer priority;
+
 
         @Deprecated(since = "1.2.0", forRemoval = true)
         @Schema(description = "Names of links below this group.")
