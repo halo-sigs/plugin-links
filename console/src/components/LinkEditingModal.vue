@@ -5,6 +5,7 @@ import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
 import { useRouteQuery } from "@vueuse/router";
+
 const props = withDefaults(
   defineProps<{
     visible: boolean;
@@ -15,10 +16,12 @@ const props = withDefaults(
     link: undefined,
   }
 );
+
 const emit = defineEmits<{
   (event: "update:visible", value: boolean): void;
   (event: "close"): void;
 }>();
+
 const initialFormState: Link = {
   metadata: {
     name: "",
@@ -33,25 +36,31 @@ const initialFormState: Link = {
   kind: "Link",
   apiVersion: "core.halo.run/v1alpha1",
 };
+
 const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
 const formVisible = ref(false);
 const groupQuery = useRouteQuery<string>("group");
+
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
 });
+
 const modalTitle = computed(() => {
   return isUpdateMode.value ? "编辑链接" : "新建链接";
 });
+
 const onVisibleChange = (visible: boolean) => {
   emit("update:visible", visible);
   if (!visible) {
     emit("close");
   }
 };
+
 const handleResetForm = () => {
   formState.value = cloneDeep(initialFormState);
 };
+
 watch(
   () => props.visible,
   (visible) => {
@@ -65,6 +74,7 @@ watch(
     }
   }
 );
+
 watch(
   () => props.link,
   (link) => {
@@ -73,6 +83,7 @@ watch(
     }
   }
 );
+
 const handleSaveLink = async () => {
   try {
     saving.value = true;
