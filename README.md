@@ -186,6 +186,9 @@ List<[#LinkGroupVo](#linkgroupvo)>
     "displayName": "string",                            // 显示名称
     "description": "string",                            // 描述
     "logo": "string",                                   // Logo
+	"siteshot": "string",                               // 卡片背景
+	"label": "string",                                  // 标签
+	"labelColor": "string",                             // 标签颜色
     "priority": 0,                                      // 排序字段
   }
 }
@@ -207,6 +210,8 @@ List<[#LinkGroupVo](#linkgroupvo)>
   },
   "spec": {
     "displayName": "string",                            // 显示名称
+	"displayStyle": "string",                           // 分组方式
+    "description": "string",                            // 分组描述
     "priority": 0,                                      // 排序字段
     "links": [                                          // 链接集合，即 Link 的 metadata.name 的集合
       "string"

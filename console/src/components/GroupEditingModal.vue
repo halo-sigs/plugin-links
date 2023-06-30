@@ -30,7 +30,7 @@ const initialFormState: LinkGroup = {
   },
   spec: {
     displayName: "",
-    displayStyle: "",
+    displayStyle: "default",
     description: "",
     priority: 0,
     links: [],
@@ -122,8 +122,14 @@ watch(
         <FormKit
           name="displayStyle"
           label="分组方式"
-          type="text"
+          type="radio"
+          value="default"
           validation="required"
+          :options="{
+            default: '默认',
+            beautify: '美化',
+            deprecated: '失联'
+          }"
         ></FormKit>
         <FormKit type="textarea" name="description" label="描述"></FormKit>
       </FormKit>

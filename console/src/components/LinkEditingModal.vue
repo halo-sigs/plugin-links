@@ -33,7 +33,7 @@ const initialFormState: Link = {
     logo: "",
     siteshot: "",
     label: "",
-    labelColor: "",
+    labelColor: "#425AEF",
     groupName: "",
   },
   kind: "Link",
@@ -148,9 +148,9 @@ const handleSaveLink = async () => {
           label="网站地址"
         ></FormKit>
         <FormKit type="text" name="logo" label="Logo"></FormKit>
-        <FormKit type="text" name="siteshot" label="卡片"></FormKit>
-        <FormKit type="text" name="label" label="标签"></FormKit>
-        <FormKit type="text" name="labelColor" label="标签颜色"></FormKit>
+        <FormKit type="text" name="siteshot" label="背景"></FormKit>
+        <FormKit type="text" name="label" label="标签"> </FormKit>
+        <FormKit type="color" value="#425AEF" name="labelColor" label="标签颜色"></FormKit>
         <FormKit type="textarea" name="description" label="描述"></FormKit>
       </FormKit>
     </div>

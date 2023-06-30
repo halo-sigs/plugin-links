@@ -35,33 +35,33 @@ public class LinkFinderImpl implements LinkFinder {
     @Override
     public Flux<LinkVo> listBy(String groupName) {
         return listAll(link -> StringUtils.equals(link.getSpec().getGroupName(), groupName)
-            && link.getMetadata().getDeletionTimestamp() != null)
-            .map(LinkVo::from);
+                && link.getMetadata().getDeletionTimestamp() != null)
+                .map(LinkVo::from);
     }
 
     @Override
     public Flux<LinkGroupVo> groupBy() {
         Flux<Link> linkFlux = listAll(null);
         return listAllGroups()
-            .concatMap(group -> linkFlux
-                .filter(link -> StringUtils.equals(link.getSpec().getGroupName(),
-                    group.getMetadata().getName())
+                .concatMap(group -> linkFlux
+                        .filter(link -> StringUtils.equals(link.getSpec().getGroupName(),
+                                group.getMetadata().getName())
+                        )
+                        .map(LinkVo::from)
+                        .collectList()
+                        .map(group::withLinks)
+                        .defaultIfEmpty(group)
                 )
-                .map(LinkVo::from)
-                .collectList()
-                .map(group::withLinks)
-                .defaultIfEmpty(group)
-            )
-            .mergeWith(Mono.defer(() -> ungrouped()
-                .map(LinkGroupVo::from)
-                .flatMap(linkGroup -> linkFlux.filter(
-                        link -> StringUtils.isBlank(link.getSpec().getGroupName()))
-                    .map(LinkVo::from)
-                    .collectList()
-                    .map(linkGroup::withLinks)
-                    .defaultIfEmpty(linkGroup)
-                ))
-            );
+                .mergeWith(Mono.defer(() -> ungrouped()
+                        .map(LinkGroupVo::from)
+                        .flatMap(linkGroup -> linkFlux.filter(
+                                        link -> StringUtils.isBlank(link.getSpec().getGroupName()))
+                                .map(LinkVo::from)
+                                .collectList()
+                                .map(linkGroup::withLinks)
+                                .defaultIfEmpty(linkGroup)
+                        ))
+                );
     }
 
     Mono<LinkGroup> ungrouped() {
@@ -82,17 +82,17 @@ public class LinkFinderImpl implements LinkFinder {
 
     Flux<LinkGroupVo> listAllGroups() {
         return client.list(LinkGroup.class, null, defaultGroupComparator())
-            .map(LinkGroupVo::from);
+                .map(LinkGroupVo::from);
     }
 
     static Comparator<LinkGroup> defaultGroupComparator() {
         Function<LinkGroup, Integer> priority = group -> group.getSpec().getPriority();
         Function<LinkGroup, Instant> createTime =
-            group -> group.getMetadata().getCreationTimestamp();
+                group -> group.getMetadata().getCreationTimestamp();
         Function<LinkGroup, String> name = group -> group.getMetadata().getName();
         return Comparator.comparing(priority, Comparators.nullsLow())
-            .thenComparing(createTime)
-            .thenComparing(name);
+                .thenComparing(createTime)
+                .thenComparing(name);
     }
 
     static Comparator<Link> defaultLinkComparator() {
@@ -100,7 +100,7 @@ public class LinkFinderImpl implements LinkFinder {
         Function<Link, Instant> createTime = link -> link.getMetadata().getCreationTimestamp();
         Function<Link, String> name = link -> link.getMetadata().getName();
         return Comparator.comparing(priority, Comparators.nullsLow())
-            .thenComparing(createTime)
-            .thenComparing(name);
+                .thenComparing(createTime)
+                .thenComparing(name);
     }
 }

@@ -31,9 +31,9 @@ public class Link extends AbstractExtension {
 
         private String siteshot;
 
-        private Integer label;
+        private String label;
 
-        private Integer labelColor;
+        private String labelColor;
 
         private String description;
 
