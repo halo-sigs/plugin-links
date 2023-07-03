@@ -2,6 +2,15 @@
 
 Halo 2.0 的链接管理插件，支持在 Console 进行管理以及为主题端提供 `/links` 页面路由。
 
+## 使用方式
+
+1. 下载，目前提供以下两个下载方式：
+    - GitHub Releases：访问 [Releases](https://github.com/halo-sigs/plugin-links/releases) 下载 Assets 中的 JAR 文件。
+    - Halo 应用市场：<https://halo.run/store/apps/app-hfbQg>
+2. 安装，插件安装和更新方式可参考：<https://docs.halo.run/user-guide/plugins>
+3. 安装完成之后，访问 Console 左侧的**链接**菜单项，即可进行管理。
+4. 前台访问地址为 `/links`，需要注意的是，此插件需要主题提供模板（links.html）才能访问 `/links`。
+
 ## 开发环境
 
 ```bash
@@ -46,13 +55,6 @@ halo:
     fixedPluginPath:
       - "/path/to/plugin-links"
 ```
-
-## 使用方式
-
-1. 在 [Releases](https://github.com/halo-sigs/plugin-links/releases) 下载最新的 JAR 文件。
-2. 在 Halo 后台的插件管理上传 JAR 文件进行安装。
-
-> 需要注意的是，此插件需要主题提供模板（links.html）才能访问 `/links`。
 
 ## 主题适配
 
