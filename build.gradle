@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.node-gradle.node" version "3.3.0"
+    id "com.github.node-gradle.node" version "5.0.0"
     id "run.halo.plugin.devtools" version "0.0.5"
     id "io.freefair.lombok" version "8.0.1"
     id 'java'
@@ -26,16 +26,11 @@ test {
 }
 
 node {
+    pnpmVersion = '8'
     nodeProjectDir = file("${project.projectDir}/console")
 }
 
-task pnpmInstall(type: NpxTask) {
-    command = "pnpm@8"
-    args = ["install"]
-}
-
-task buildFrontend(type: NpxTask) {
-    command = 'pnpm@8'
+task buildFrontend(type: PnpmTask) {
     args = ['build']
 }
 
