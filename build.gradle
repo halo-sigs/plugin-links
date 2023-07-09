@@ -1,8 +1,7 @@
 plugins {
-    id 'org.springframework.boot' version '3.0.0-M3'
-    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
-    id "com.github.node-gradle.node" version "3.3.0"
-    id "io.github.guqing.plugin-development" version "0.0.5-SNAPSHOT"
+    id "com.github.node-gradle.node" version "5.0.0"
+    id "run.halo.plugin.devtools" version "0.0.5"
+    id "io.freefair.lombok" version "8.0.1"
     id 'java'
 }
 
@@ -11,37 +10,15 @@ sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
     maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
-    maven { url 'https://repo.spring.io/milestone' }
     mavenCentral()
 }
 
-bootJar {
-    enabled = false
-}
-
-jar {
-    enabled = true
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from {
-        configurations.runtimeClasspath.collect {
-            it.isDirectory() ? it : zipTree(it)
-        }
-    }
-}
-
 dependencies {
-    compileOnly "io.swagger.core.v3:swagger-core-jakarta:2.2.0"
-    compileOnly "org.springdoc:springdoc-openapi-starter-webflux-ui:2.0.4"
-    compileOnly "org.springframework.boot:spring-boot-starter-data-jpa"
-    compileOnly "org.pf4j:pf4j:3.6.0"
-    compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
-    compileOnly 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation platform('run.halo.tools.platform:plugin:2.5.0-SNAPSHOT')
+    compileOnly 'run.halo.app:api'
 
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation 'run.halo.app:api'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 test {
@@ -49,16 +26,11 @@ test {
 }
 
 node {
+    pnpmVersion = '8'
     nodeProjectDir = file("${project.projectDir}/console")
 }
 
-task pnpmInstall(type: NpxTask) {
-    command = "pnpm@7"
-    args = ["install"]
-}
-
-task buildFrontend(type: NpxTask) {
-    command = 'pnpm@7'
+task buildFrontend(type: PnpmTask) {
     args = ['build']
 }
 

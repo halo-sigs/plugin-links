@@ -1,13 +1,11 @@
 package run.halo.links;
 
 import static java.util.Comparator.comparing;
-import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 import static run.halo.app.extension.router.QueryParamBuildUtil.buildParametersFromType;
 import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToPredicate;
 
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -30,7 +28,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import run.halo.app.core.extension.endpoint.PluginEndpoint;
 import run.halo.app.core.extension.endpoint.SortResolver;
 import run.halo.app.extension.Extension;
 import run.halo.app.extension.ListResult;
