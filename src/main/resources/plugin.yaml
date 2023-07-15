@@ -3,15 +3,15 @@ kind: Plugin
 metadata:
   name: PluginLinks
 spec:
-  version: 1.2.0
+  version: 1.2.2
   requires: ">=2.4.0"
   author:
-    name: Halo OSS Team
-    website: https://github.com/halo-dev
+    name: 困困鱼
+    website: https://github.com/chengzhongxue/plugin-links
   logo: logo.png
-  homepage: https://github.com/halo-sigs/plugin-links
+  homepage: https://github.com/chengzhongxue/plugin-links
   displayName: "链接管理"
-  description: "链接管理模块"
+  description: "链接管理模块(困困鱼魔改)"
   license:
     - name: "GPL-3.0"
       url: "https://github.com/halo-sigs/plugin-links/blob/main/LICENSE"
