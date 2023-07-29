@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch } from "vue";
+import { provide, ref, watch, type Ref } from "vue";
 import Draggable from "vuedraggable";
 import {
   IconList,
@@ -44,6 +44,7 @@ const editingModal = ref(false);
 const checkedAll = ref(false);
 
 const groupQuery = useRouteQuery<string>("group");
+provide<Ref<string>>("groupQuery", groupQuery);
 
 const page = ref(1);
 const size = ref(20);
