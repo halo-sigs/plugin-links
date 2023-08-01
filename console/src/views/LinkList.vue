@@ -560,20 +560,12 @@ async function handleMove(link: Link, group: LinkGroup) {
           </Transition>
 
           <template #footer>
-            <div
-              class="links-flex links-items-center links-justify-end links-bg-white"
-            >
-              <div
-                class="links-flex links-flex-1 links-items-center links-justify-end"
-              >
-                <VPagination
-                  v-model:page="page"
-                  v-model:size="size"
-                  :total="total"
-                  :size-options="[20, 30, 50, 100]"
-                />
-              </div>
-            </div>
+            <VPagination
+              v-model:page="page"
+              v-model:size="size"
+              :total="total"
+              :size-options="[20, 30, 50, 100]"
+            />
           </template>
         </VCard>
       </div>
