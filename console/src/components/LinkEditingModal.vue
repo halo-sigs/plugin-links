@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
-import { computed, inject, ref, watch, type Ref } from "vue";
+import { inject, ref, computed, nextTick, watch, type Ref } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
@@ -84,7 +84,23 @@ watch(
   }
 );
 
+const annotationsFormRef = ref();
+
 const handleSaveLink = async () => {
+  annotationsFormRef.value?.handleSubmit();
+  await nextTick();
+
+  const { customAnnotations, annotations, customFormInvalid, specFormInvalid } =
+    annotationsFormRef.value || {};
+  if (customFormInvalid || specFormInvalid) {
+    return;
+  }
+
+  formState.value.metadata.annotations = {
+    ...annotations,
+    ...customAnnotations,
+  };
+
   try {
     saving.value = true;
     if (isUpdateMode.value) {
@@ -121,31 +137,59 @@ const handleSaveLink = async () => {
       <slot name="append-actions" />
     </template>
 
-    <div>
-      <FormKit
-        v-if="formVisible"
-        id="link-form"
-        v-model="formState.spec"
-        name="link-form"
-        type="form"
-        :config="{ validationVisibility: 'submit' }"
-        @submit="handleSaveLink"
-      >
-        <FormKit
-          type="text"
-          name="displayName"
-          validation="required"
-          label="网站名称"
-        ></FormKit>
-        <FormKit
-          type="url"
-          name="url"
-          validation="required"
-          label="网站地址"
-        ></FormKit>
-        <FormKit type="text" name="logo" label="Logo"></FormKit>
-        <FormKit type="textarea" name="description" label="描述"></FormKit>
-      </FormKit>
+    <FormKit
+      v-if="formVisible"
+      id="link-form"
+      v-model="formState.spec"
+      name="link-form"
+      type="form"
+      :config="{ validationVisibility: 'submit' }"
+      @submit="handleSaveLink"
+    >
+      <div class="md:grid md:grid-cols-4 md:gap-6">
+        <div class="md:col-span-1">
+          <div class="sticky top-0">
+            <span class="text-base font-medium text-gray-900"> 常规 </span>
+          </div>
+        </div>
+        <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
+          <FormKit
+            type="text"
+            name="displayName"
+            validation="required"
+            label="网站名称"
+          ></FormKit>
+          <FormKit
+            type="url"
+            name="url"
+            validation="required"
+            label="网站地址"
+          ></FormKit>
+          <FormKit type="text" name="logo" label="Logo"></FormKit>
+          <FormKit type="textarea" name="description" label="描述"></FormKit>
+        </div>
+      </div>
+    </FormKit>
+
+    <div class="py-5">
+      <div class="border-t border-gray-200"></div>
+    </div>
+
+    <div class="md:grid md:grid-cols-4 md:gap-6">
+      <div class="md:col-span-1">
+        <div class="sticky top-0">
+          <span class="text-base font-medium text-gray-900"> 元数据 </span>
+        </div>
+      </div>
+      <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
+        <AnnotationsForm
+          :key="formState.metadata.name"
+          ref="annotationsFormRef"
+          :value="formState.metadata.annotations"
+          kind="Link"
+          group="core.halo.run"
+        />
+      </div>
     </div>
 
     <template #footer>

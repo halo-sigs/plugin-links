@@ -217,3 +217,12 @@ List<[#LinkGroupVo](#linkgroupvo)>
   "links": "List<#LinkVo>"                              // 链接集合
 }
 ```
+
+### Annotations 元数据适配
+
+根据 Halo 的[元数据表单定义文档](https://docs.halo.run/developer-guide/annotations-form/)和[模型元数据文档](https://docs.halo.run/developer-guide/theme/annotations)，Halo 支持为部分模型的表单添加元数据表单，此插件同样适配了此功能，如果你作为主题开发者，需要为链接或者链接分组添加额外的字段，可以参考上述文档并结合下面的 TargetRef 列表进行适配。
+
+| 对应模型   | group            | kind       |
+| ---------- | ---------------- | ---------- |
+| 链接       | core.halo.run | Link       |
+| 链接分组 | core.halo.run | LinkGroup |
