@@ -183,6 +183,7 @@ const handleSaveLink = async () => {
       </div>
       <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
         <AnnotationsForm
+          v-if="visible"
           :key="formState.metadata.name"
           ref="annotationsFormRef"
           :value="formState.metadata.annotations"
