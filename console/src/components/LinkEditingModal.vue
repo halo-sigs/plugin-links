@@ -165,7 +165,7 @@ const handleSaveLink = async () => {
             validation="required"
             label="网站地址"
           ></FormKit>
-          <FormKit type="text" name="logo" label="Logo"></FormKit>
+          <FormKit type="attachment" name="logo" label="Logo"></FormKit>
           <FormKit type="textarea" name="description" label="描述"></FormKit>
         </div>
       </div>
