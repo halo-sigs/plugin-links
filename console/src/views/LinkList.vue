@@ -278,9 +278,15 @@ function getGroup(groupName: string) {
 }
 
 async function handleMoveInBatch(group: LinkGroup) {
-  const requests = links.value?.map((link) => {
+  const linksToUpdate = selectedLinks.value
+    ?.map((name) => {
+      return links.value?.find((link) => link.metadata.name === name);
+    })
+    .filter(Boolean) as Link[];
+
+  const requests = linksToUpdate.map((link) => {
     return apiClient.put<Link>(
-      `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
+      `/apis/core.halo.run/v1alpha1/links/${link?.metadata.name}`,
       {
         ...link,
         spec: {
