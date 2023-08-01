@@ -6,11 +6,11 @@ settings:
 
 dependencies:
   '@halo-dev/components':
-    specifier: ^1.7.0-rc.1
-    version: 1.7.0-rc.1(vue-router@4.2.4)(vue@3.3.4)
+    specifier: ^1.7.0
+    version: 1.7.0(vue-router@4.2.4)(vue@3.3.4)
   '@halo-dev/console-shared':
-    specifier: ^2.8.0-rc.1
-    version: 2.8.0-rc.1(vue-router@4.2.4)(vue@3.3.4)
+    specifier: ^2.8.0
+    version: 2.8.0(vue-router@4.2.4)(vue@3.3.4)
   '@tanstack/vue-query':
     specifier: ^4.32.0
     version: 4.32.0(vue@3.3.4)
@@ -755,12 +755,12 @@ packages:
       '@floating-ui/core': 0.3.1
     dev: false
 
-  /@halo-dev/api-client@2.8.0-rc.1:
-    resolution: {integrity: sha512-GDaGMIZVCvYxNrxSILv215j5xfqVJT5rBeD7iYQcOnt8vZqvveljDs2Jljhmt92V8lrZ+wj/UtlZk/np+73m2g==}
+  /@halo-dev/api-client@2.8.0:
+    resolution: {integrity: sha512-mVfYYO437TOshRppCnfYBbc4pvbpNWPmlsv8UAWr3F3Zs3LafcHcF4hb7rq03qfEahsnoLtX8jXVWjmFtf4xqw==}
     dev: false
 
-  /@halo-dev/components@1.7.0-rc.1(vue-router@4.2.4)(vue@3.3.4):
-    resolution: {integrity: sha512-hPg7/Z9YoM2fDony7zc9m3Iyzx43tR1pMNZjKUHOnLKx/8ww4decXLDVUMLHEgZHvHXzGQPJOGjuSJquMOK5Iw==}
+  /@halo-dev/components@1.7.0(vue-router@4.2.4)(vue@3.3.4):
+    resolution: {integrity: sha512-iJ71eP2VwOMyxrTJGlYLaGLH4w8pz61pnuu5HX2yaYpDJVd8K//Hs4XmWWuzQSw361mPwBfGduQLvBA+/WOhHQ==}
     peerDependencies:
       vue: ^3.2.37
       vue-router: ^4.0.16
@@ -770,13 +770,13 @@ packages:
       vue-router: 4.2.4(vue@3.3.4)
     dev: false
 
-  /@halo-dev/console-shared@2.8.0-rc.1(vue-router@4.2.4)(vue@3.3.4):
-    resolution: {integrity: sha512-hi9QB4jtXILB6zrqUrSK9AP0daRVLwH2VaCsQAzjyhQvgBq1t3FLXSnC0uPnOAbm75OTgML0eTbjlHPG5QoN7Q==}
+  /@halo-dev/console-shared@2.8.0(vue-router@4.2.4)(vue@3.3.4):
+    resolution: {integrity: sha512-Zhi5FbVrdzSSaaT6i2xh8JOhmi9keetjg8zrYd+tEp4Iy+mPke4ZA4SIYaO1Bkwr9MD5BZ+sNswgYCPd36wYaw==}
     peerDependencies:
       vue: ^3.2.37
       vue-router: ^4.0.16
     dependencies:
-      '@halo-dev/api-client': 2.8.0-rc.1
+      '@halo-dev/api-client': 2.8.0
       vue: 3.3.4
       vue-router: 4.2.4(vue@3.3.4)
     dev: false
