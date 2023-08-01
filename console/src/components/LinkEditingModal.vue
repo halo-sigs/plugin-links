@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
-import { computed, nextTick, ref, watch } from "vue";
+import { inject, ref, computed, nextTick, watch, type Ref } from "vue";
 import type { Link } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
-import { useRouteQuery } from "@vueuse/router";
 
 const props = withDefaults(
   defineProps<{
@@ -41,7 +40,7 @@ const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
 const formVisible = ref(false);
 
-const groupQuery = useRouteQuery<string>("group");
+const groupQuery = inject<Ref<string>>("groupQuery", ref(""));
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;

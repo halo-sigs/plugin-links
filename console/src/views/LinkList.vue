@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch } from "vue";
+import { provide, ref, watch, type Ref } from "vue";
 import Draggable from "vuedraggable";
 import {
   IconList,
@@ -44,6 +44,7 @@ const editingModal = ref(false);
 const checkedAll = ref(false);
 
 const groupQuery = useRouteQuery<string>("group");
+provide<Ref<string>>("groupQuery", groupQuery);
 
 const page = ref(1);
 const size = ref(20);
@@ -565,20 +566,12 @@ async function handleMove(link: Link, group: LinkGroup) {
           </Transition>
 
           <template #footer>
-            <div
-              class="links-flex links-items-center links-justify-end links-bg-white"
-            >
-              <div
-                class="links-flex links-flex-1 links-items-center links-justify-end"
-              >
-                <VPagination
-                  v-model:page="page"
-                  v-model:size="size"
-                  :total="total"
-                  :size-options="[20, 30, 50, 100]"
-                />
-              </div>
-            </div>
+            <VPagination
+              v-model:page="page"
+              v-model:size="size"
+              :total="total"
+              :size-options="[20, 30, 50, 100]"
+            />
           </template>
         </VCard>
       </div>

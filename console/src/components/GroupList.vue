@@ -13,14 +13,13 @@ import {
 } from "@halo-dev/components";
 import GroupEditingModal from "./GroupEditingModal.vue";
 import type { LinkGroup, LinkList } from "@/types";
-import { ref, watch } from "vue";
+import { inject, ref, watch, type Ref } from "vue";
 import Draggable from "vuedraggable";
 import apiClient from "@/utils/api-client";
-import { useRouteQuery } from "@vueuse/router";
 import { useLinkGroupFetch } from "@/composables/use-link";
 import cloneDeep from "lodash.clonedeep";
 
-const groupQuery = useRouteQuery<string>("group");
+const groupQuery = inject<Ref<string>>("groupQuery", ref(""));
 
 const groupEditingModal = ref(false);
 const selectedGroup = ref<LinkGroup>();
