@@ -3,6 +3,7 @@ package run.halo.links.vo;
 import lombok.Builder;
 import lombok.Value;
 import run.halo.app.extension.MetadataOperator;
+import run.halo.app.theme.finders.vo.ExtensionVoOperator;
 import run.halo.links.Link;
 
 /**
@@ -11,7 +12,7 @@ import run.halo.links.Link;
  */
 @Value
 @Builder
-public class LinkVo {
+public class LinkVo implements ExtensionVoOperator {
 
     MetadataOperator metadata;
 
