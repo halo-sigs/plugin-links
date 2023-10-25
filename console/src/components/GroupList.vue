@@ -179,13 +179,13 @@ function onEditingModalClose() {
       </Draggable>
     </Transition>
 
-    <template v-if="!isLoading" #footer>
+    <template v-if="!isLoading" #item="{ element: group }" #footer>
       <Transition appear name="fade">
         <VButton
           v-permission="['plugin:links:manage']"
           block
           type="secondary"
-          @click="handleOpenEditingModal(undefined)"
+          @click="handleOpenEditingModal(group)"
         >
           新建
         </VButton>
