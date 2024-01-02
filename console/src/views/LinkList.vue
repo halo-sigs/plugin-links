@@ -155,7 +155,7 @@ const handleDelete = (link: Link) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        apiClient.delete(
+        await apiClient.delete(
           `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
         );
 
