@@ -34,6 +34,7 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
 import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
 import cloneDeep from "lodash.clonedeep";
+import RiLinksLine from "~icons/ri/links-line";
 
 const queryClient = useQueryClient();
 
@@ -341,6 +342,9 @@ async function handleMove(link: Link, group: LinkGroup) {
     </template>
   </LinkEditingModal>
   <VPageHeader title="链接">
+    <template #icon>
+      <RiLinksLine class="links-mr-2 links-self-center" />
+    </template>
     <template #actions>
       <VSpace v-permission="['plugin:links:manage']">
         <VButton size="sm" type="default" @click="handleImportFromYaml">
