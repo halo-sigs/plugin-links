@@ -78,11 +78,6 @@ watch(
   }
 );
 
-function onKeywordChange(data: { keyword: string }) {
-  keyword.value = data.keyword;
-  page.value = 1;
-}
-
 const handleSelectPrevious = () => {
   if (!links.value) {
     return;
