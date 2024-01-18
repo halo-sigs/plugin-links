@@ -78,11 +78,6 @@ watch(
   }
 );
 
-function onKeywordChange(data: { keyword: string }) {
-  keyword.value = data.keyword;
-  page.value = 1;
-}
-
 const handleSelectPrevious = () => {
   if (!links.value) {
     return;
@@ -237,7 +232,7 @@ const handleImportFromYaml = async () => {
       return;
     }
 
-    const parsed = yaml.parse(res.data.value);
+    const parsed = yaml.parseAllDocuments(res.data.value);
     if (Array.isArray(parsed)) {
       const promises = parsed.map((link) => {
         return apiClient.post("/apis/core.halo.run/v1alpha1/links", link);
@@ -380,19 +375,10 @@ async function handleMove(link: Link, group: LinkGroup) {
                 <div
                   class="links-flex links-w-full links-flex-1 sm:links-w-auto"
                 >
-                  <FormKit
+                  <SearchInput
                     v-if="!selectedLinks.length"
-                    type="form"
-                    @submit="onKeywordChange"
-                  >
-                    <FormKit
-                      outer-class="!p-0"
-                      placeholder="输入关键词搜索"
-                      type="text"
-                      name="keyword"
-                      :model-value="keyword"
-                    ></FormKit>
-                  </FormKit>
+                    v-model="keyword"
+                  />
                   <VSpace v-else>
                     <VButton type="danger" @click="handleDeleteInBatch">
                       删除
