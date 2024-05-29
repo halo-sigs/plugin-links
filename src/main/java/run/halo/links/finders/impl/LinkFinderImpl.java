@@ -1,16 +1,15 @@
 package run.halo.links.finders.impl;
 
-import java.time.Instant;
-import java.util.Comparator;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.lang.Nullable;
-import org.springframework.util.comparator.Comparators;
+import static org.springframework.data.domain.Sort.Order.asc;
+import static run.halo.app.extension.index.query.QueryFactory.*;
+
+import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.theme.finders.Finder;
 import run.halo.links.Link;
 import run.halo.links.LinkGroup;
@@ -26,6 +25,7 @@ import run.halo.links.vo.LinkVo;
  */
 @Finder("linkFinder")
 public class LinkFinderImpl implements LinkFinder {
+    static final String UNGROUPED_NAME = "ungrouped";
     private final ReactiveExtensionClient client;
 
     public LinkFinderImpl(ReactiveExtensionClient client) {
@@ -34,71 +34,59 @@ public class LinkFinderImpl implements LinkFinder {
 
     @Override
     public Flux<LinkVo> listBy(String groupName) {
-        return listAll(link -> StringUtils.equals(link.getSpec().getGroupName(), groupName)
-            && link.getMetadata().getDeletionTimestamp() != null)
+        var listOptions = new ListOptions();
+        var query = isNull("metadata.deletionTimestamp");
+        if (UNGROUPED_NAME.equals(groupName)) {
+            query = and(query, isNull("spec.groupName"));
+        } else {
+            query = and(query, equal("spec.groupName", groupName));
+        }
+        listOptions.setFieldSelector(FieldSelector.of(query));
+        return client.listAll(Link.class, listOptions, defaultLinkSort())
             .map(LinkVo::from);
     }
 
     @Override
     public Flux<LinkGroupVo> groupBy() {
-        Flux<Link> linkFlux = listAll(null);
-        return listAllGroups()
-            .concatMap(group -> linkFlux
-                .filter(link -> StringUtils.equals(link.getSpec().getGroupName(),
-                    group.getMetadata().getName())
-                )
-                .map(LinkVo::from)
+        return client.listAll(LinkGroup.class, new ListOptions(), defaultGroupSort())
+            .map(LinkGroupVo::from)
+            .concatMap(group -> listBy(group.getMetadata().getName())
                 .collectList()
                 .map(group::withLinks)
                 .defaultIfEmpty(group)
             )
-            .mergeWith(Mono.defer(() -> ungrouped()
-                .map(LinkGroupVo::from)
-                .flatMap(linkGroup -> linkFlux.filter(
-                        link -> StringUtils.isBlank(link.getSpec().getGroupName()))
-                    .map(LinkVo::from)
-                    .collectList()
-                    .map(linkGroup::withLinks)
-                    .defaultIfEmpty(linkGroup)
-                ))
-            );
+            .mergeWith(Mono.defer(() -> listBy(UNGROUPED_NAME)
+                .collectList()
+                // do not return ungrouped group if no links
+                .filter(links -> !links.isEmpty())
+                .flatMap(links -> ungrouped()
+                    .map(LinkGroupVo::from)
+                    .map(group -> group.withLinks(links))
+                )
+            ));
     }
 
     Mono<LinkGroup> ungrouped() {
         LinkGroup linkGroup = new LinkGroup();
         linkGroup.setMetadata(new Metadata());
-        linkGroup.getMetadata().setName("ungrouped");
+        linkGroup.getMetadata().setName(UNGROUPED_NAME);
         linkGroup.setSpec(new LinkGroup.LinkGroupSpec());
         linkGroup.getSpec().setDisplayName("");
         linkGroup.getSpec().setPriority(0);
         return Mono.just(linkGroup);
     }
 
-    Flux<Link> listAll(@Nullable Predicate<Link> predicate) {
-        return client.list(Link.class, predicate, defaultLinkComparator());
+    static Sort defaultGroupSort() {
+        return Sort.by(asc("spec.priority"),
+            asc("metadata.creationTimestamp"),
+            asc("metadata.name")
+        );
     }
 
-    Flux<LinkGroupVo> listAllGroups() {
-        return client.list(LinkGroup.class, null, defaultGroupComparator())
-            .map(LinkGroupVo::from);
-    }
-
-    static Comparator<LinkGroup> defaultGroupComparator() {
-        Function<LinkGroup, Integer> priority = group -> group.getSpec().getPriority();
-        Function<LinkGroup, Instant> createTime =
-            group -> group.getMetadata().getCreationTimestamp();
-        Function<LinkGroup, String> name = group -> group.getMetadata().getName();
-        return Comparator.comparing(priority, Comparators.nullsLow())
-            .thenComparing(createTime)
-            .thenComparing(name);
-    }
-
-    static Comparator<Link> defaultLinkComparator() {
-        Function<Link, Integer> priority = link -> link.getSpec().getPriority();
-        Function<Link, Instant> createTime = link -> link.getMetadata().getCreationTimestamp();
-        Function<Link, String> name = link -> link.getMetadata().getName();
-        return Comparator.comparing(priority, Comparators.nullsLow())
-            .thenComparing(createTime)
-            .thenComparing(name);
+    static Sort defaultLinkSort() {
+        return Sort.by(asc("spec.priority"),
+            asc("metadata.creationTimestamp"),
+            asc("metadata.name")
+        );
     }
 }

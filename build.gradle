@@ -1,6 +1,6 @@
 plugins {
     id "com.github.node-gradle.node" version "5.0.0"
-    id "run.halo.plugin.devtools" version "0.0.5"
+    id "run.halo.plugin.devtools" version "0.0.9"
     id "io.freefair.lombok" version "8.0.1"
     id 'java'
 }
@@ -10,11 +10,12 @@ sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
     maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
+    maven { url 'https://repo.spring.io/milestone' }
     mavenCentral()
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.9.0-SNAPSHOT')
+    implementation platform('run.halo.tools.platform:plugin:2.15.0-SNAPSHOT')
     compileOnly 'run.halo.app:api'
 
     testImplementation 'run.halo.app:api'
@@ -30,11 +31,20 @@ node {
     nodeProjectDir = file("${project.projectDir}/console")
 }
 
-task buildFrontend(type: PnpmTask) {
-    args = ['build']
+tasks.register("installDeps", PnpmTask) {
+    onlyIf { !file("${project.projectDir}/console/node_modules").exists() }
+    args = ['install']
 }
 
-build {
-    // build frontend before build
-    tasks.getByName('compileJava').dependsOn('buildFrontend')
+tasks.register("buildFrontend", PnpmTask) {
+    args = ['build']
+    dependsOn("installDeps")
+}
+
+tasks.named("compileJava").configure {
+    dependsOn("buildFrontend")
+}
+
+halo {
+    version = '2.15'
 }

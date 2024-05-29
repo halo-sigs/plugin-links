@@ -26,7 +26,7 @@ export function useLinkFetch(
             size: size.value,
             keyword: keyword?.value,
             groupName: group?.value,
-            sort: "priority,asc",
+            sort: "spec.priority,asc",
           },
         }
       );
