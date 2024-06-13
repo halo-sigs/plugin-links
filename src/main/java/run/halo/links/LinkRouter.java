@@ -32,6 +32,7 @@ import run.halo.app.extension.router.IListRequest;
 import run.halo.app.extension.router.SortableRequest;
 import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.plugin.PluginContext;
+import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.finders.LinkFinder;
 import run.halo.links.vo.LinkGroupVo;
 
@@ -43,13 +44,15 @@ public class LinkRouter {
     private final ReactiveExtensionClient client;
     private final String tag = "api.plugin.halo.run/v1alpha1/Link";
     private final PluginContext pluginContext;
-
+    private final ReactiveSettingFetcher settingFetcher;
+    
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
         return route(GET("/links"),
             request -> ServerResponse.ok().render("links",
                 Map.of("groups", linkGroups(),
-                    "pluginName", pluginContext.getName())));
+                    "pluginName", pluginContext.getName(),
+                    "linksTitle", getLinkTitle())));
     }
 
     @Bean
@@ -149,5 +152,11 @@ public class LinkRouter {
     private Mono<List<LinkGroupVo>> linkGroups() {
         return linkFinder.groupBy()
             .collectList();
+    }
+    
+    Mono<String> getLinkTitle() {
+        return this.settingFetcher.get("base")
+            .map(setting -> setting.get("title").asText())
+            .defaultIfEmpty("链接");
     }
 }
