@@ -96,6 +96,20 @@ List<[#LinkGroupVo](#linkgroupvo)>
 </th:block>
 ```
 
+#### 变量
+
+linksTitle
+
+##### 变量类型
+
+String
+
+##### 示例
+
+```html
+<h2 th:text="${linksTitle}"></h2>
+```
+
 ### Finder API
 
 #### listBy(group)
