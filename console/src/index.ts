@@ -38,8 +38,8 @@ export default definePlugin({
           group: "plugin.halo.run",
           resolve: (subject: Extension): CommentSubjectRefResult => {
             return {
-              label: "友链",
-              title: "友链页面",
+              label: "链接",
+              title: "链接页面",
               externalUrl: "/links",
               route: {
                 name: "Links",
