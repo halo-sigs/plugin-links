@@ -29,7 +29,7 @@ public class LinkCommentSubject implements CommentSubject<Plugin> {
     
     @Override
     public Mono<SubjectDisplay> getSubjectDisplay(String name) {
-        return Mono.just(new SubjectDisplay("", "", ""));
+        return Mono.just(new SubjectDisplay("友情链接", "/links", "友情链接"));
     }
     
     @Override
