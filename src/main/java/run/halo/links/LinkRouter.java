@@ -49,7 +49,7 @@ public class LinkRouter {
         return route(GET("/links"),
             request -> ServerResponse.ok().render("links",
                 Map.of("groups", linkGroups(),
-                    "plugin_name", pluginContext.getName())));
+                    "pluginName", pluginContext.getName())));
     }
 
     @Bean

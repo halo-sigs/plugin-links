@@ -177,7 +177,7 @@ group：plugin.halo.run
 
 kind: Plugin
 
-name: ${plugin_name}
+name: ${pluginName}
 
 #### 示例
 
@@ -186,7 +186,7 @@ name: ${plugin_name}
     <halo:comment
         group="plugin.halo.run"
         kind="Plugin"
-        th:attr="name=${plugin_name}"
+        th:attr="name=${pluginName}"
     />
 </div>
 ```
