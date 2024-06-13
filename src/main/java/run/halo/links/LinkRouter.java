@@ -31,6 +31,7 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.router.IListRequest;
 import run.halo.app.extension.router.SortableRequest;
 import run.halo.app.extension.router.selector.FieldSelector;
+import run.halo.app.plugin.PluginContext;
 import run.halo.links.finders.LinkFinder;
 import run.halo.links.vo.LinkGroupVo;
 
@@ -41,12 +42,14 @@ public class LinkRouter {
     private final LinkFinder linkFinder;
     private final ReactiveExtensionClient client;
     private final String tag = "api.plugin.halo.run/v1alpha1/Link";
+    private final PluginContext pluginContext;
 
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
         return route(GET("/links"),
             request -> ServerResponse.ok().render("links",
-                Map.of("groups", linkGroups())));
+                Map.of("groups", linkGroups(),
+                    "plugin_name", pluginContext.getName())));
     }
 
     @Bean
