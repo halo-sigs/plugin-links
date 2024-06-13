@@ -47,4 +47,5 @@ tasks.named("compileJava").configure {
 
 halo {
     version = '2.15'
+    debug = true
 }

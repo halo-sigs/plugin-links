@@ -5,12 +5,15 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@halo-dev/api-client':
+    specifier: ^2.15.0
+    version: 2.16.0
   '@halo-dev/components':
-    specifier: ^1.7.0
-    version: 1.7.0(vue-router@4.2.4)(vue@3.3.4)
+    specifier: ^2.15.0
+    version: 2.16.0(vue-router@4.2.4)(vue@3.3.4)
   '@halo-dev/console-shared':
-    specifier: ^2.8.0
-    version: 2.8.0(vue-router@4.2.4)(vue@3.3.4)
+    specifier: ^2.15.0
+    version: 2.16.0(vue-router@4.2.4)(vue@3.3.4)
   '@tanstack/vue-query':
     specifier: ^4.32.0
     version: 4.32.0(vue@3.3.4)
@@ -745,38 +748,46 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
-  /@floating-ui/core@0.3.1:
-    resolution: {integrity: sha512-ensKY7Ub59u16qsVIFEo2hwTCqZ/r9oZZFh51ivcLGHfUwTn8l1Xzng8RJUe91H/UP8PeqeBronAGx0qmzwk2g==}
-    dev: false
-
-  /@floating-ui/dom@0.1.10:
-    resolution: {integrity: sha512-4kAVoogvQm2N0XE0G6APQJuCNuErjOfPW8Ux7DFxh8+AfugWflwVJ5LDlHOwrwut7z/30NUvdtHzQ3zSip4EzQ==}
+  /@floating-ui/core@1.6.2:
+    resolution: {integrity: sha512-+2XpQV9LLZeanU4ZevzRnGFg2neDeKHgFLjP6YLW+tly0IvrhqT4u8enLGjLH3qeh85g19xY5rsAusfwTdn5lg==}
     dependencies:
-      '@floating-ui/core': 0.3.1
+      '@floating-ui/utils': 0.2.2
     dev: false
 
-  /@halo-dev/api-client@2.8.0:
-    resolution: {integrity: sha512-mVfYYO437TOshRppCnfYBbc4pvbpNWPmlsv8UAWr3F3Zs3LafcHcF4hb7rq03qfEahsnoLtX8jXVWjmFtf4xqw==}
+  /@floating-ui/dom@1.1.1:
+    resolution: {integrity: sha512-TpIO93+DIujg3g7SykEAGZMDtbJRrmnYRCNYSjJlvIbGhBjRSNTLVbNeDQBrzy9qDgUbiWdc7KA0uZHZ2tJmiw==}
+    dependencies:
+      '@floating-ui/core': 1.6.2
     dev: false
 
-  /@halo-dev/components@1.7.0(vue-router@4.2.4)(vue@3.3.4):
-    resolution: {integrity: sha512-iJ71eP2VwOMyxrTJGlYLaGLH4w8pz61pnuu5HX2yaYpDJVd8K//Hs4XmWWuzQSw361mPwBfGduQLvBA+/WOhHQ==}
+  /@floating-ui/utils@0.2.2:
+    resolution: {integrity: sha512-J4yDIIthosAsRZ5CPYP/jQvUAQtlZTTD/4suA08/FEnlxqW3sKS9iAhgsa9VYLZ6vDHn/ixJgIqRQPotoBjxIw==}
+    dev: false
+
+  /@halo-dev/api-client@2.16.0:
+    resolution: {integrity: sha512-oSrP+84p8HZzRjO4DgGxkAJwN8hwHpOUlFhO3PdEi3F2QC3bwH5+LmYJgHilVP9KEMRY+uplE//v908kfkYLhg==}
+    dev: false
+
+  /@halo-dev/components@2.16.0(vue-router@4.2.4)(vue@3.3.4):
+    resolution: {integrity: sha512-r4bGGmR9Hz/m1hnL1Ha0iWwQM2ImtB4DfJOMOfsABP0eGCZL1hXv/08JE05sP9g7gtLlRNQ6xTPLKyp6E6WY4g==}
     peerDependencies:
-      vue: ^3.2.37
-      vue-router: ^4.0.16
+      vue: ^3.4.27
+      vue-router: ^4.3.2
     dependencies:
-      floating-vue: 2.0.0-beta.20(vue@3.3.4)
+      floating-vue: 5.2.2(vue@3.3.4)
       vue: 3.3.4
       vue-router: 4.2.4(vue@3.3.4)
+    transitivePeerDependencies:
+      - '@nuxt/kit'
     dev: false
 
-  /@halo-dev/console-shared@2.8.0(vue-router@4.2.4)(vue@3.3.4):
-    resolution: {integrity: sha512-Zhi5FbVrdzSSaaT6i2xh8JOhmi9keetjg8zrYd+tEp4Iy+mPke4ZA4SIYaO1Bkwr9MD5BZ+sNswgYCPd36wYaw==}
+  /@halo-dev/console-shared@2.16.0(vue-router@4.2.4)(vue@3.3.4):
+    resolution: {integrity: sha512-skt6lvZsJibHYJ/87ofH8rnyVF4SNzleZMh58xhGyQAZcSS09YgXJGd39DqGqxdWSAx/lX3O08b+r/xcJIPc3g==}
     peerDependencies:
-      vue: ^3.2.37
-      vue-router: ^4.0.16
+      vue: ^3.4.27
+      vue-router: ^4.3.2
     dependencies:
-      '@halo-dev/api-client': 2.8.0
+      '@halo-dev/api-client': 2.16.0
       vue: 3.3.4
       vue-router: 4.2.4(vue@3.3.4)
     dev: false
@@ -2572,12 +2583,16 @@ packages:
     resolution: {integrity: sha512-0sQoMh9s0BYsm+12Huy/rkKxVu4R1+r96YX5cG44rHV0pQ6iC3Q+mkoMFaGWObMFYQxCVT+ssG1ksneA2MI9KQ==}
     dev: true
 
-  /floating-vue@2.0.0-beta.20(vue@3.3.4):
-    resolution: {integrity: sha512-N68otcpp6WwcYC7zP8GeJqNZVdfvS7tEY88lwmuAHeqRgnfWx1Un8enzLxROyVnBDZ3TwUoUdj5IFg+bUT7JeA==}
+  /floating-vue@5.2.2(vue@3.3.4):
+    resolution: {integrity: sha512-afW+h2CFafo+7Y9Lvw/xsqjaQlKLdJV7h1fCHfcYQ1C4SVMlu7OAekqWgu5d4SgvkBVU0pVpLlVsrSTBURFRkg==}
     peerDependencies:
+      '@nuxt/kit': ^3.2.0
       vue: ^3.2.0
+    peerDependenciesMeta:
+      '@nuxt/kit':
+        optional: true
     dependencies:
-      '@floating-ui/dom': 0.1.10
+      '@floating-ui/dom': 1.1.1
       vue: 3.3.4
       vue-resize: 2.0.0-alpha.1(vue@3.3.4)
     dev: false
