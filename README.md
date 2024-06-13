@@ -167,6 +167,30 @@ List<[#LinkGroupVo](#linkgroupvo)>
 </th:block>
 ```
 
+### 评论适配
+
+主题开发者可以参考 [自定义标签](https://docs.halo.run/developer-guide/theme/template-tag/#halocomment)，来为友情链接接入评论功能。
+
+#### 参数值
+
+group：plugin.halo.run
+
+kind: Plugin
+
+name: ${pluginName}
+
+#### 示例
+
+```html
+<div th:if="${haloCommentEnabled}">
+    <halo:comment
+        group="plugin.halo.run"
+        kind="Plugin"
+        th:attr="name=${pluginName}"
+    />
+</div>
+```
+
 ### 类型定义
 
 #### LinkVo
