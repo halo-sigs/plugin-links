@@ -375,10 +375,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                 <div
                   class="links-flex links-w-full links-flex-1 sm:links-w-auto"
                 >
-                  <SearchInput
-                    v-if="!selectedLinks.length"
-                    v-model="keyword"
-                  />
+                  <SearchInput v-if="!selectedLinks.length" v-model="keyword" />
                   <VSpace v-else>
                     <VButton type="danger" @click="handleDeleteInBatch">
                       删除
@@ -528,7 +525,11 @@ async function handleMove(link: Link, group: LinkGroup) {
                       <VDropdownItem @click="handleOpenCreateModal(link)">
                         编辑
                       </VDropdownItem>
-                      <VDropdown placement="left" :triggers="['click']">
+                      <VDropdown
+                        v-if="groups?.length"
+                        placement="left"
+                        :triggers="['click']"
+                      >
                         <VDropdownItem> 移动 </VDropdownItem>
                         <template #popper>
                           <template
