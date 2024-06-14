@@ -1,5 +1,6 @@
 package run.halo.links;
 
+import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
 import static org.springframework.data.domain.Sort.Order.asc;
 import static org.springframework.data.domain.Sort.Order.desc;
@@ -24,6 +25,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ListResult;
@@ -31,6 +33,7 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.router.IListRequest;
 import run.halo.app.extension.router.SortableRequest;
 import run.halo.app.extension.router.selector.FieldSelector;
+import run.halo.app.infra.utils.PathUtils;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.finders.LinkFinder;
@@ -45,7 +48,7 @@ public class LinkRouter {
     private final String tag = "api.plugin.halo.run/v1alpha1/Link";
     private final PluginContext pluginContext;
     private final ReactiveSettingFetcher settingFetcher;
-    
+
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
         return route(GET("/links"),
@@ -68,14 +71,28 @@ public class LinkRouter {
 
     RouterFunction<ServerResponse> nested() {
         return SpringdocRouteBuilder.route()
-            .GET("/links", this::listLinkByGroup,
+            .GET("links", this::listLinkByGroup,
                 builder -> {
                     builder.operationId("listLinks")
                         .description("Lists link by query parameters")
                         .tag(tag);
                     LinkQuery.buildParameters(builder);
                 }
-            ).build();
+            )
+            .GET("link-detail", this::getLinkDetail, builder -> {
+                builder.operationId("GetLinkDetail")
+                    .description("Get link detail by id")
+                    .tag(tag)
+                    .response(responseBuilder().implementation(LinkDetailDTO.class));
+            }).build();
+    }
+
+    private Mono<ServerResponse> getLinkDetail(ServerRequest request) {
+        final var url = request.queryParam("url")
+            .filter(PathUtils::isAbsoluteUri)
+            .orElseThrow(() -> new ServerWebInputException("Invalid url."));
+        return Mono.just(LinkRequest.getLinkDetail(url))
+            .flatMap(dto -> ServerResponse.ok().bodyValue(dto));
     }
 
     Mono<ServerResponse> listLinkByGroup(ServerRequest request) {
@@ -106,7 +123,8 @@ public class LinkRouter {
 
         @Override
         public ListOptions toListOptions() {
-            var listOptions = labelAndFieldSelectorToListOptions(getLabelSelector(), getFieldSelector());
+            var listOptions =
+                labelAndFieldSelectorToListOptions(getLabelSelector(), getFieldSelector());
             var query = listOptions.getFieldSelector().query();
             if (StringUtils.isNotBlank(getKeyword())) {
                 query = and(query, or(
@@ -153,7 +171,7 @@ public class LinkRouter {
         return linkFinder.groupBy()
             .collectList();
     }
-    
+
     Mono<String> getLinkTitle() {
         return this.settingFetcher.get("base")
             .map(setting -> setting.get("title").asText())
