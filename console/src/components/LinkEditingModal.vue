@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
+import { Toast, VButton, VModal, VSpace, VLoading } from "@halo-dev/components";
 import { inject, ref, computed, nextTick, watch, type Ref } from "vue";
-import type { Link } from "@/types";
+import type { Link, LinkDetail } from "@/types";
 import apiClient from "@/utils/api-client";
 import cloneDeep from "lodash.clonedeep";
+import MdiWebRefresh from "~icons/mdi/web-refresh";
 
 const props = withDefaults(
   defineProps<{
@@ -125,6 +126,34 @@ const handleSaveLink = async () => {
     saving.value = false;
   }
 };
+
+const loading = ref(false);
+
+const handleGetLinkDetail = async () => {
+  if (loading.value) {
+    return;
+  }
+  const url = formState.value.spec.url;
+  if (!url) {
+    return;
+  }
+  loading.value = true;
+  try {
+    const { data } = await apiClient.get<LinkDetail>(
+      `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-detail?url=${url}`
+    );
+
+    formState.value.spec.displayName = data.title || "";
+    formState.value.spec.logo = data.icon;
+    formState.value.spec.description = data.description;
+
+    Toast.info("获取链接详情成功");
+  } catch (e) {
+    Toast.error("获取链接详情失败");
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 <template>
   <VModal
@@ -144,6 +173,7 @@ const handleSaveLink = async () => {
       name="link-form"
       type="form"
       :config="{ validationVisibility: 'submit' }"
+      :disabled="loading"
       @submit="handleSaveLink"
     >
       <div class="md:grid md:grid-cols-4 md:gap-6">
@@ -153,17 +183,31 @@ const handleSaveLink = async () => {
           </div>
         </div>
         <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
+          <FormKit type="url" name="url" validation="required" label="网站地址">
+            <template #suffix>
+              <div
+                v-tooltip="{
+                  content: '获取网站信息',
+                }"
+                class="group flex h-full cursor-pointer items-center px-3 transition-all"
+                @click="handleGetLinkDetail"
+              >
+                <VLoading
+                  v-if="loading"
+                  class="h-4 w-4 text-gray-500 group-hover:text-gray-700"
+                />
+                <MdiWebRefresh
+                  v-else
+                  class="h-4 w-4 text-gray-500 group-hover:text-gray-700"
+                />
+              </div>
+            </template>
+          </FormKit>
           <FormKit
             type="text"
             name="displayName"
             validation="required"
             label="网站名称"
-          ></FormKit>
-          <FormKit
-            type="url"
-            name="url"
-            validation="required"
-            label="网站地址"
           ></FormKit>
           <FormKit type="attachment" name="logo" label="Logo"></FormKit>
           <FormKit type="textarea" name="description" label="描述"></FormKit>

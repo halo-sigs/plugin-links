@@ -65,3 +65,10 @@ export interface LinkGroupList {
   hasPrevious: boolean;
   totalPages: number;
 }
+
+export interface LinkDetail {
+  title?: string;
+  description?: string;
+  icon?: string;
+  image?: string;
+}
