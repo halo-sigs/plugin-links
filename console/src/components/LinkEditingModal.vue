@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { Toast, VButton, VModal, VSpace, VLoading } from "@halo-dev/components";
-import { inject, ref, computed, nextTick, watch, type Ref } from "vue";
 import type { Link, LinkDetail } from "@/types";
-import apiClient from "@/utils/api-client";
+import { axiosInstance } from "@halo-dev/api-client";
+import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import cloneDeep from "lodash.clonedeep";
+import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 
 const props = withDefaults(
@@ -105,13 +105,13 @@ const handleSaveLink = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
-      await apiClient.put<Link>(
+      await axiosInstance.put<Link>(
         `/apis/core.halo.run/v1alpha1/links/${formState.value.metadata.name}`,
         formState.value
       );
     } else {
       formState.value.spec.groupName = groupQuery.value;
-      await apiClient.post<Link>(
+      await axiosInstance.post<Link>(
         `/apis/core.halo.run/v1alpha1/links`,
         formState.value
       );
@@ -139,7 +139,7 @@ const handleGetLinkDetail = async () => {
   }
   loading.value = true;
   try {
-    const { data } = await apiClient.get<LinkDetail>(
+    const { data } = await axiosInstance.get<LinkDetail>(
       `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-detail?url=${url}`
     );
 

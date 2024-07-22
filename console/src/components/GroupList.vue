@@ -1,23 +1,23 @@
 <script lang="ts" setup>
+import { useLinkGroupFetch } from "@/composables/use-link";
+import type { LinkGroup, LinkList } from "@/types";
+import { axiosInstance } from "@halo-dev/api-client";
 import {
+  Dialog,
+  IconList,
+  Toast,
   VButton,
   VCard,
-  VEntity,
-  IconList,
-  VEntityField,
-  VStatusDot,
-  Dialog,
-  VLoading,
   VDropdownItem,
-  Toast,
+  VEntity,
+  VEntityField,
+  VLoading,
+  VStatusDot,
 } from "@halo-dev/components";
-import GroupEditingModal from "./GroupEditingModal.vue";
-import type { LinkGroup, LinkList } from "@/types";
+import cloneDeep from "lodash.clonedeep";
 import { inject, ref, watch, type Ref } from "vue";
 import Draggable from "vuedraggable";
-import apiClient from "@/utils/api-client";
-import { useLinkGroupFetch } from "@/composables/use-link";
-import cloneDeep from "lodash.clonedeep";
+import GroupEditingModal from "./GroupEditingModal.vue";
 
 const groupQuery = inject<Ref<string>>("groupQuery", ref(""));
 
@@ -48,7 +48,7 @@ const onPriorityChange = async () => {
       if (group.spec) {
         group.spec.priority = index;
       }
-      return apiClient.put(
+      return axiosInstance.put(
         `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`,
         group
       );
@@ -70,11 +70,11 @@ const handleDelete = async (group: LinkGroup) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        await apiClient.delete(
+        await axiosInstance.delete(
           `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`
         );
 
-        const { data } = await apiClient.get<LinkList>(
+        const { data } = await axiosInstance.get<LinkList>(
           `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links`,
           {
             params: {
@@ -86,7 +86,7 @@ const handleDelete = async (group: LinkGroup) => {
         );
 
         const deleteLinkPromises = data.items.map((link) =>
-          apiClient.delete(
+          axiosInstance.delete(
             `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
           )
         );
