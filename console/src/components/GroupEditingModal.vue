@@ -53,8 +53,7 @@ const handleCreateOrUpdateGroup = async () => {
   annotationsFormRef.value?.handleSubmit();
   await nextTick();
 
-  const { customAnnotations, annotations, customFormInvalid, specFormInvalid } =
-    annotationsFormRef.value || {};
+  const { customAnnotations, annotations, customFormInvalid, specFormInvalid } = annotationsFormRef.value || {};
   if (customFormInvalid || specFormInvalid) {
     return;
   }
@@ -72,10 +71,7 @@ const handleCreateOrUpdateGroup = async () => {
         formState.value
       );
     } else {
-      await axiosInstance.post(
-        "/apis/core.halo.run/v1alpha1/linkgroups",
-        formState.value
-      );
+      await axiosInstance.post("/apis/core.halo.run/v1alpha1/linkgroups", formState.value);
     }
 
     Toast.success("保存成功");
@@ -111,12 +107,7 @@ watch(
 );
 </script>
 <template>
-  <VModal
-    :visible="visible"
-    :width="600"
-    :title="modalTitle"
-    @update:visible="onVisibleChange"
-  >
+  <VModal :visible="visible" :width="600" :title="modalTitle" @update:visible="onVisibleChange">
     <FormKit
       v-if="formVisible"
       id="link-group-form"
@@ -129,16 +120,11 @@ watch(
       <div class="md:grid md:grid-cols-4 md:gap-6">
         <div class="md:col-span-1">
           <div class="sticky top-0">
-            <span class="text-base font-medium text-gray-900"> 常规 </span>
+            <span class="text-base text-gray-900 font-medium"> 常规 </span>
           </div>
         </div>
-        <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
-          <FormKit
-            name="displayName"
-            label="分组名称"
-            type="text"
-            validation="required"
-          ></FormKit>
+        <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+          <FormKit name="displayName" label="分组名称" type="text" validation="required"></FormKit>
         </div>
       </div>
     </FormKit>
@@ -150,10 +136,10 @@ watch(
     <div class="md:grid md:grid-cols-4 md:gap-6">
       <div class="md:col-span-1">
         <div class="sticky top-0">
-          <span class="text-base font-medium text-gray-900"> 元数据 </span>
+          <span class="text-base text-gray-900 font-medium"> 元数据 </span>
         </div>
       </div>
-      <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
+      <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
         <AnnotationsForm
           v-if="visible"
           :key="formState.metadata.name"
@@ -167,13 +153,7 @@ watch(
 
     <template #footer>
       <VSpace>
-        <VButton
-          :loading="saving"
-          type="secondary"
-          @click="$formkit.submit('link-group-form')"
-        >
-          提交
-        </VButton>
+        <VButton :loading="saving" type="secondary" @click="$formkit.submit('link-group-form')"> 提交 </VButton>
         <VButton @click="onVisibleChange(false)"> 取消</VButton>
       </VSpace>
     </template>

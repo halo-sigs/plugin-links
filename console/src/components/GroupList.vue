@@ -48,10 +48,7 @@ const onPriorityChange = async () => {
       if (group.spec) {
         group.spec.priority = index;
       }
-      return axiosInstance.put(
-        `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`,
-        group
-      );
+      return axiosInstance.put(`/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`, group);
     });
     if (promises) {
       await Promise.all(promises);
@@ -70,9 +67,7 @@ const handleDelete = async (group: LinkGroup) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        await axiosInstance.delete(
-          `/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`
-        );
+        await axiosInstance.delete(`/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`);
 
         const { data } = await axiosInstance.get<LinkList>(
           `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links`,
@@ -86,9 +81,7 @@ const handleDelete = async (group: LinkGroup) => {
         );
 
         const deleteLinkPromises = data.items.map((link) =>
-          axiosInstance.delete(
-            `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
-          )
+          axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`)
         );
 
         if (deleteLinkPromises) {
@@ -113,17 +106,13 @@ function onEditingModalClose() {
 }
 </script>
 <template>
-  <GroupEditingModal
-    v-model:visible="groupEditingModal"
-    :group="selectedGroup"
-    @close="onEditingModalClose"
-  />
+  <GroupEditingModal v-model:visible="groupEditingModal" :group="selectedGroup" @close="onEditingModalClose" />
   <VCard :body-class="['!p-0']" title="分组">
     <VLoading v-if="isLoading" />
     <Transition v-else appear name="fade">
       <Draggable
         v-model="draggableGroups"
-        class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
+        class="box-border size-full divide-y divide-gray-100"
         group="group"
         handle=".drag-element"
         item-key="metadata.name"
@@ -132,7 +121,7 @@ function onEditingModalClose() {
       >
         <template #header>
           <li @click="groupQuery = ''">
-            <VEntity class="links-group" :is-selected="!groupQuery">
+            <VEntity class="group" :is-selected="!groupQuery">
               <template #start>
                 <VEntityField title="全部"> </VEntityField>
               </template>
@@ -141,13 +130,10 @@ function onEditingModalClose() {
         </template>
         <template #item="{ element: group }">
           <li @click="groupQuery = group.metadata.name">
-            <VEntity
-              :is-selected="groupQuery === group.metadata.name"
-              class="links-group"
-            >
+            <VEntity :is-selected="groupQuery === group.metadata.name" class="group">
               <template #prepend>
                 <div
-                  class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
+                  class="drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
                 >
                   <IconList class="h-3.5 w-3.5" />
                 </div>
@@ -166,12 +152,8 @@ function onEditingModalClose() {
               </template>
 
               <template #dropdownItems>
-                <VDropdownItem @click="handleOpenEditingModal(group)">
-                  修改
-                </VDropdownItem>
-                <VDropdownItem type="danger" @click="handleDelete(group)">
-                  删除
-                </VDropdownItem>
+                <VDropdownItem @click="handleOpenEditingModal(group)"> 修改 </VDropdownItem>
+                <VDropdownItem type="danger" @click="handleDelete(group)"> 删除 </VDropdownItem>
               </template>
             </VEntity>
           </li>
