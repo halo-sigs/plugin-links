@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.node-gradle.node" version "5.0.0"
+    id "com.github.node-gradle.node" version "7.0.2"
     id "run.halo.plugin.devtools" version "0.0.9"
     id "io.freefair.lombok" version "8.0.1"
     id 'java'
@@ -26,23 +26,28 @@ test {
     useJUnitPlatform()
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+}
+
 node {
-    pnpmVersion = '8'
     nodeProjectDir = file("${project.projectDir}/console")
 }
 
-tasks.register("installDeps", PnpmTask) {
-    onlyIf { !file("${project.projectDir}/console/node_modules").exists() }
+tasks.register('buildFrontend', PnpmTask) {
+    args = ['build']
+    dependsOn('installDepsForUI')
+}
+
+tasks.register('installDepsForUI', PnpmTask) {
     args = ['install']
 }
 
-tasks.register("buildFrontend", PnpmTask) {
-    args = ['build']
-    dependsOn("installDeps")
-}
-
-tasks.named("compileJava").configure {
-    dependsOn("buildFrontend")
+build {
+    // build frontend before build
+    tasks.named('compileJava').configure {
+        dependsOn('buildFrontend')
+    }
 }
 
 halo {
