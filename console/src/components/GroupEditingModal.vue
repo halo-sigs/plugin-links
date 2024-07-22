@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
-import { computed, nextTick, ref, watch } from "vue";
-import apiClient from "@/utils/api-client";
-import cloneDeep from "lodash.clonedeep";
 import type { LinkGroup } from "@/types";
+import { axiosInstance } from "@halo-dev/api-client";
+import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
+import cloneDeep from "lodash.clonedeep";
+import { computed, nextTick, ref, watch } from "vue";
 
 const props = withDefaults(
   defineProps<{
@@ -67,12 +67,12 @@ const handleCreateOrUpdateGroup = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
-      await apiClient.put(
+      await axiosInstance.put(
         `/apis/core.halo.run/v1alpha1/linkgroups/${formState.value.metadata.name}`,
         formState.value
       );
     } else {
-      await apiClient.post(
+      await axiosInstance.post(
         "/apis/core.halo.run/v1alpha1/linkgroups",
         formState.value
       );

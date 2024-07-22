@@ -1,40 +1,40 @@
 <script lang="ts" setup>
-import { provide, ref, watch, type Ref } from "vue";
-import Draggable from "vuedraggable";
+import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
+import type { Link, LinkGroup } from "@/types";
+import { formatDatetime } from "@/utils/date";
+import { axiosInstance } from "@halo-dev/api-client";
 import {
-  IconList,
+  Dialog,
+  IconAddCircle,
   IconArrowLeft,
   IconArrowRight,
+  IconList,
+  Toast,
+  VAvatar,
   VButton,
   VCard,
+  VDropdown,
+  VDropdownDivider,
+  VDropdownItem,
+  VEmpty,
+  VEntity,
+  VEntityField,
+  VLoading,
   VPageHeader,
   VPagination,
   VSpace,
-  VEntity,
-  VEntityField,
-  VAvatar,
   VStatusDot,
-  Dialog,
-  VEmpty,
-  IconAddCircle,
-  VLoading,
-  VDropdown,
-  VDropdownItem,
-  VDropdownDivider,
-  Toast,
 } from "@halo-dev/components";
+import { useQueryClient } from "@tanstack/vue-query";
+import { useFileSystemAccess } from "@vueuse/core";
+import { useRouteQuery } from "@vueuse/router";
+import cloneDeep from "lodash.clonedeep";
+import { provide, ref, watch, type Ref } from "vue";
+import Draggable from "vuedraggable";
+import yaml from "yaml";
+import RiLinksLine from "~icons/ri/links-line";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
-import apiClient from "@/utils/api-client";
-import type { Link, LinkGroup } from "@/types";
-import yaml from "yaml";
-import { useFileSystemAccess } from "@vueuse/core";
-import { formatDatetime } from "@/utils/date";
-import { useQueryClient } from "@tanstack/vue-query";
-import { useRouteQuery } from "@vueuse/router";
-import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
-import cloneDeep from "lodash.clonedeep";
-import RiLinksLine from "~icons/ri/links-line";
 
 const queryClient = useQueryClient();
 
@@ -123,7 +123,7 @@ const onPriorityChange = async () => {
       if (link.spec) {
         link.spec.priority = index;
       }
-      return apiClient.put(
+      return axiosInstance.put(
         `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
         link
       );
@@ -150,7 +150,7 @@ const handleDelete = (link: Link) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        await apiClient.delete(
+        await axiosInstance.delete(
           `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
         );
 
@@ -172,7 +172,9 @@ const handleDeleteInBatch = () => {
     onConfirm: async () => {
       try {
         const promises = selectedLinks.value.map((link) => {
-          return apiClient.delete(`/apis/core.halo.run/v1alpha1/links/${link}`);
+          return axiosInstance.delete(
+            `/apis/core.halo.run/v1alpha1/links/${link}`
+          );
         });
         if (promises) {
           await Promise.all(promises);
@@ -235,13 +237,13 @@ const handleImportFromYaml = async () => {
     const parsed = yaml.parseAllDocuments(res.data.value);
     if (Array.isArray(parsed)) {
       const promises = parsed.map((link) => {
-        return apiClient.post("/apis/core.halo.run/v1alpha1/links", link);
+        return axiosInstance.post("/apis/core.halo.run/v1alpha1/links", link);
       });
       if (promises) {
         await Promise.all(promises);
       }
     } else {
-      await apiClient.post("/apis/core.halo.run/v1alpha1/links", parsed);
+      await axiosInstance.post("/apis/core.halo.run/v1alpha1/links", parsed);
     }
   } catch (e) {
     console.error(e);
@@ -282,7 +284,7 @@ async function handleMoveInBatch(group: LinkGroup) {
     .filter(Boolean) as Link[];
 
   const requests = linksToUpdate.map((link) => {
-    return apiClient.put<Link>(
+    return axiosInstance.put<Link>(
       `/apis/core.halo.run/v1alpha1/links/${link?.metadata.name}`,
       {
         ...link,
@@ -305,7 +307,7 @@ async function handleMoveInBatch(group: LinkGroup) {
 }
 
 async function handleMove(link: Link, group: LinkGroup) {
-  await apiClient.put<Link>(
+  await axiosInstance.put<Link>(
     `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
     {
       ...link,

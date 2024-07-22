@@ -1,5 +1,5 @@
 import type { LinkGroup, LinkGroupList, LinkList } from "@/types";
-import apiClient from "@/utils/api-client";
+import { axiosInstance } from "@halo-dev/api-client";
 import { useQuery } from "@tanstack/vue-query";
 import { ref, type Ref } from "vue";
 
@@ -18,7 +18,7 @@ export function useLinkFetch(
   } = useQuery({
     queryKey: ["links", page, size, group, keyword],
     queryFn: async () => {
-      const { data } = await apiClient.get<LinkList>(
+      const { data } = await axiosInstance.get<LinkList>(
         "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links",
         {
           params: {
@@ -60,7 +60,7 @@ export function useLinkGroupFetch() {
   } = useQuery<LinkGroup[]>({
     queryKey: ["link-groups"],
     queryFn: async () => {
-      const { data } = await apiClient.get<LinkGroupList>(
+      const { data } = await axiosInstance.get<LinkGroupList>(
         "/apis/core.halo.run/v1alpha1/linkgroups"
       );
 
