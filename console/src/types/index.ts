@@ -1,16 +1,4 @@
-export interface Metadata {
-  name: string;
-  generateName?: string;
-  labels?: {
-    [key: string]: string;
-  } | null;
-  annotations?: {
-    [key: string]: string;
-  } | null;
-  version?: number | null;
-  creationTimestamp?: string | null;
-  deletionTimestamp?: string | null;
-}
+import type { Metadata } from "@halo-dev/api-client";
 
 export interface LinkGroupSpec {
   displayName: string;

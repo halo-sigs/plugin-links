@@ -91,8 +91,7 @@ const handleSaveLink = async () => {
   annotationsFormRef.value?.handleSubmit();
   await nextTick();
 
-  const { customAnnotations, annotations, customFormInvalid, specFormInvalid } =
-    annotationsFormRef.value || {};
+  const { customAnnotations, annotations, customFormInvalid, specFormInvalid } = annotationsFormRef.value || {};
   if (customFormInvalid || specFormInvalid) {
     return;
   }
@@ -111,10 +110,7 @@ const handleSaveLink = async () => {
       );
     } else {
       formState.value.spec.groupName = groupQuery.value;
-      await axiosInstance.post<Link>(
-        `/apis/core.halo.run/v1alpha1/links`,
-        formState.value
-      );
+      await axiosInstance.post<Link>(`/apis/core.halo.run/v1alpha1/links`, formState.value);
     }
 
     Toast.success("保存成功");
@@ -156,12 +152,7 @@ const handleGetLinkDetail = async () => {
 };
 </script>
 <template>
-  <VModal
-    :title="modalTitle"
-    :visible="visible"
-    :width="650"
-    @update:visible="onVisibleChange"
-  >
+  <VModal :title="modalTitle" :visible="visible" :width="650" @update:visible="onVisibleChange">
     <template #actions>
       <slot name="append-actions" />
     </template>
@@ -179,36 +170,25 @@ const handleGetLinkDetail = async () => {
       <div class="md:grid md:grid-cols-4 md:gap-6">
         <div class="md:col-span-1">
           <div class="sticky top-0">
-            <span class="text-base font-medium text-gray-900"> 常规 </span>
+            <span class="text-base text-gray-900 font-medium"> 常规 </span>
           </div>
         </div>
-        <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
+        <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
           <FormKit type="url" name="url" validation="required" label="网站地址">
             <template #suffix>
               <div
                 v-tooltip="{
                   content: '获取网站信息',
                 }"
-                class="group flex h-full cursor-pointer items-center px-3 transition-all"
+                class="group h-full flex cursor-pointer items-center px-3 transition-all"
                 @click="handleGetLinkDetail"
               >
-                <VLoading
-                  v-if="loading"
-                  class="h-4 w-4 text-gray-500 group-hover:text-gray-700"
-                />
-                <MdiWebRefresh
-                  v-else
-                  class="h-4 w-4 text-gray-500 group-hover:text-gray-700"
-                />
+                <VLoading v-if="loading" class="size-4 text-gray-500 group-hover:text-gray-700" />
+                <MdiWebRefresh v-else class="size-4 text-gray-500 group-hover:text-gray-700" />
               </div>
             </template>
           </FormKit>
-          <FormKit
-            type="text"
-            name="displayName"
-            validation="required"
-            label="网站名称"
-          ></FormKit>
+          <FormKit type="text" name="displayName" validation="required" label="网站名称"></FormKit>
           <FormKit type="attachment" name="logo" label="Logo"></FormKit>
           <FormKit type="textarea" name="description" label="描述"></FormKit>
         </div>
@@ -222,10 +202,10 @@ const handleGetLinkDetail = async () => {
     <div class="md:grid md:grid-cols-4 md:gap-6">
       <div class="md:col-span-1">
         <div class="sticky top-0">
-          <span class="text-base font-medium text-gray-900"> 元数据 </span>
+          <span class="text-base text-gray-900 font-medium"> 元数据 </span>
         </div>
       </div>
-      <div class="mt-5 divide-y divide-gray-100 md:col-span-3 md:mt-0">
+      <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
         <AnnotationsForm
           v-if="visible"
           :key="formState.metadata.name"
@@ -239,13 +219,7 @@ const handleGetLinkDetail = async () => {
 
     <template #footer>
       <VSpace>
-        <VButton
-          :loading="saving"
-          type="secondary"
-          @click="$formkit.submit('link-form')"
-        >
-          提交
-        </VButton>
+        <VButton :loading="saving" type="secondary" @click="$formkit.submit('link-form')"> 提交 </VButton>
         <VButton @click="onVisibleChange(false)">取消</VButton>
       </VSpace>
     </template>

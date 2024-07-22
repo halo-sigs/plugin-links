@@ -51,12 +51,7 @@ const page = ref(1);
 const size = ref(20);
 const keyword = ref("");
 
-const { links, isLoading, total, refetch } = useLinkFetch(
-  page,
-  size,
-  keyword,
-  groupQuery
-);
+const { links, isLoading, total, refetch } = useLinkFetch(page, size, keyword, groupQuery);
 const draggableLinks = ref<Link[]>();
 
 watch(
@@ -83,9 +78,7 @@ const handleSelectPrevious = () => {
     return;
   }
 
-  const currentIndex = links.value.findIndex(
-    (link) => link.metadata.name === selectedLink.value?.metadata.name
-  );
+  const currentIndex = links.value.findIndex((link) => link.metadata.name === selectedLink.value?.metadata.name);
 
   if (currentIndex > 0) {
     selectedLink.value = links.value[currentIndex - 1];
@@ -104,9 +97,7 @@ const handleSelectNext = () => {
     selectedLink.value = links.value[0];
     return;
   }
-  const currentIndex = links.value.findIndex(
-    (link) => link.metadata.name === selectedLink.value?.metadata.name
-  );
+  const currentIndex = links.value.findIndex((link) => link.metadata.name === selectedLink.value?.metadata.name);
   if (currentIndex !== links.value.length - 1) {
     selectedLink.value = links.value[currentIndex + 1];
   }
@@ -123,10 +114,7 @@ const onPriorityChange = async () => {
       if (link.spec) {
         link.spec.priority = index;
       }
-      return axiosInstance.put(
-        `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
-        link
-      );
+      return axiosInstance.put(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`, link);
     });
     if (promises) {
       await Promise.all(promises);
@@ -150,9 +138,7 @@ const handleDelete = (link: Link) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        await axiosInstance.delete(
-          `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`
-        );
+        await axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`);
 
         Toast.success("删除成功");
       } catch (e) {
@@ -172,9 +158,7 @@ const handleDeleteInBatch = () => {
     onConfirm: async () => {
       try {
         const promises = selectedLinks.value.map((link) => {
-          return axiosInstance.delete(
-            `/apis/core.halo.run/v1alpha1/links/${link}`
-          );
+          return axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link}`);
         });
         if (promises) {
           await Promise.all(promises);
@@ -284,16 +268,13 @@ async function handleMoveInBatch(group: LinkGroup) {
     .filter(Boolean) as Link[];
 
   const requests = linksToUpdate.map((link) => {
-    return axiosInstance.put<Link>(
-      `/apis/core.halo.run/v1alpha1/links/${link?.metadata.name}`,
-      {
-        ...link,
-        spec: {
-          ...link.spec,
-          groupName: group.metadata.name,
-        },
-      }
-    );
+    return axiosInstance.put<Link>(`/apis/core.halo.run/v1alpha1/links/${link?.metadata.name}`, {
+      ...link,
+      spec: {
+        ...link.spec,
+        groupName: group.metadata.name,
+      },
+    });
   });
 
   if (requests) await Promise.all(requests);
@@ -307,16 +288,13 @@ async function handleMoveInBatch(group: LinkGroup) {
 }
 
 async function handleMove(link: Link, group: LinkGroup) {
-  await axiosInstance.put<Link>(
-    `/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`,
-    {
-      ...link,
-      spec: {
-        ...link.spec,
-        groupName: group.metadata.name,
-      },
-    }
-  );
+  await axiosInstance.put<Link>(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`, {
+    ...link,
+    spec: {
+      ...link.spec,
+      groupName: group.metadata.name,
+    },
+  });
 
   Toast.success("移动成功");
 
@@ -324,11 +302,7 @@ async function handleMove(link: Link, group: LinkGroup) {
 }
 </script>
 <template>
-  <LinkEditingModal
-    v-model:visible="editingModal"
-    :link="selectedLink"
-    @close="onEditingModalClose"
-  >
+  <LinkEditingModal v-model:visible="editingModal" :link="selectedLink" @close="onEditingModalClose">
     <template #append-actions>
       <span @click="handleSelectPrevious">
         <IconArrowLeft />
@@ -340,62 +314,40 @@ async function handleMove(link: Link, group: LinkGroup) {
   </LinkEditingModal>
   <VPageHeader title="链接">
     <template #icon>
-      <RiLinksLine class="links-mr-2 links-self-center" />
+      <RiLinksLine class="mr-2 self-center" />
     </template>
     <template #actions>
       <VSpace v-permission="['plugin:links:manage']">
-        <VButton size="sm" type="default" @click="handleImportFromYaml">
-          导入
-        </VButton>
+        <VButton size="sm" type="default" @click="handleImportFromYaml"> 导入 </VButton>
       </VSpace>
     </template>
   </VPageHeader>
-  <div class="links-p-4">
-    <div class="links-flex links-flex-row links-gap-2">
-      <div class="links-w-96">
+  <div class="p-4">
+    <div class="flex flex-row gap-2">
+      <div class="w-96">
         <GroupList />
       </div>
-      <div class="links-flex-1">
+      <div class="flex-1">
         <VCard :body-class="['!p-0']">
           <template #header>
-            <div
-              class="links-block links-w-full links-bg-gray-50 links-px-4 links-py-3"
-            >
-              <div
-                class="links-relative links-flex links-flex-col links-items-start sm:links-flex-row sm:links-items-center"
-              >
-                <div
-                  class="links-mr-4 links-hidden links-items-center sm:links-flex"
-                >
-                  <input
-                    v-model="checkedAll"
-                    class="links-h-4 links-w-4 links-rounded links-border-gray-300 links-text-indigo-600"
-                    type="checkbox"
-                    @change="handleCheckAllChange"
-                  />
+            <div class="block w-full bg-gray-50 px-4 py-3">
+              <div class="relative flex flex-col items-start sm:flex-row sm:items-center">
+                <div class="mr-4 hidden items-center sm:flex">
+                  <input v-model="checkedAll" type="checkbox" @change="handleCheckAllChange" />
                 </div>
-                <div
-                  class="links-flex links-w-full links-flex-1 sm:links-w-auto"
-                >
+                <div class="w-full flex flex-1 sm:w-auto">
                   <SearchInput v-if="!selectedLinks.length" v-model="keyword" />
                   <VSpace v-else>
-                    <VButton type="danger" @click="handleDeleteInBatch">
-                      删除
-                    </VButton>
+                    <VButton type="danger" @click="handleDeleteInBatch"> 删除 </VButton>
                     <VDropdown>
                       <VButton type="default">更多</VButton>
                       <template #popper>
-                        <VDropdownItem @click="handleExportSelectedLinks">
-                          导出
-                        </VDropdownItem>
+                        <VDropdownItem @click="handleExportSelectedLinks"> 导出 </VDropdownItem>
                         <VDropdownDivider />
                         <VDropdown placement="right" :triggers="['click']">
                           <VDropdownItem> 移动 </VDropdownItem>
                           <template #popper>
-                            <template
-                              v-for="group in groups"
-                              :key="group.metadata.name"
-                            >
+                            <template v-for="group in groups" :key="group.metadata.name">
                               <VDropdownItem
                                 v-if="group.metadata.name !== groupQuery"
                                 v-close-popper.all
@@ -410,13 +362,8 @@ async function handleMove(link: Link, group: LinkGroup) {
                     </VDropdown>
                   </VSpace>
                 </div>
-                <div
-                  v-permission="['plugin:links:manage']"
-                  class="links-mt-4 links-flex sm:links-mt-0"
-                >
-                  <VButton size="xs" @click="editingModal = true">
-                    新建
-                  </VButton>
+                <div v-permission="['plugin:links:manage']" class="mt-4 flex sm:mt-0">
+                  <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
                 </div>
               </div>
             </div>
@@ -427,13 +374,9 @@ async function handleMove(link: Link, group: LinkGroup) {
               <template #actions>
                 <VSpace>
                   <VButton @click="refetch"> 刷新</VButton>
-                  <VButton
-                    v-permission="['system:menus:manage']"
-                    type="primary"
-                    @click="editingModal = true"
-                  >
+                  <VButton v-permission="['system:menus:manage']" type="primary" @click="editingModal = true">
                     <template #icon>
-                      <IconAddCircle class="h-full w-full" />
+                      <IconAddCircle class="size-full" />
                     </template>
                     新建
                   </VButton>
@@ -444,7 +387,7 @@ async function handleMove(link: Link, group: LinkGroup) {
           <Transition v-else appear name="fade">
             <Draggable
               v-model="draggableLinks"
-              class="links-box-border links-h-full links-w-full links-divide-y links-divide-gray-100"
+              class="box-border size-full divide-y divide-gray-100"
               group="link"
               handle=".drag-element"
               item-key="id"
@@ -455,26 +398,17 @@ async function handleMove(link: Link, group: LinkGroup) {
             >
               <template #item="{ element: link }">
                 <li>
-                  <VEntity
-                    :is-selected="selectedLinks.includes(link.metadata.name)"
-                    class="links-group"
-                  >
+                  <VEntity :is-selected="selectedLinks.includes(link.metadata.name)" class="group">
                     <template v-if="!keyword && groupQuery" #prepend>
                       <div
-                        class="drag-element links-absolute links-inset-y-0 links-left-0 links-hidden links-w-3.5 links-cursor-move links-items-center links-bg-gray-100 links-transition-all hover:links-bg-gray-200 group-hover:links-flex"
+                        class="drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
                       >
                         <IconList class="h-3.5 w-3.5" />
                       </div>
                     </template>
 
                     <template #checkbox>
-                      <input
-                        v-model="selectedLinks"
-                        :value="link.metadata.name"
-                        class="links-h-4 links-w-4 links-rounded links-border-gray-300 links-text-indigo-600"
-                        name="post-checkbox"
-                        type="checkbox"
-                      />
+                      <input v-model="selectedLinks" :value="link.metadata.name" type="checkbox" />
                     </template>
 
                     <template #start>
@@ -492,7 +426,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                         <template #description>
                           <a
                             :href="link.spec.url"
-                            class="links-truncate links-text-xs links-text-gray-500 hover:links-text-gray-900"
+                            class="truncate text-xs text-gray-500 hover:text-gray-900"
                             target="_blank"
                           >
                             {{ link.spec.url }}
@@ -504,40 +438,21 @@ async function handleMove(link: Link, group: LinkGroup) {
                     <template #end>
                       <VEntityField
                         v-if="getGroup(link.spec.groupName)"
-                        :description="
-                          getGroup(link.spec.groupName)?.spec.displayName
-                        "
+                        :description="getGroup(link.spec.groupName)?.spec.displayName"
                       />
                       <VEntityField v-if="link.metadata.deletionTimestamp">
                         <template #description>
-                          <VStatusDot
-                            v-tooltip="`删除中`"
-                            state="warning"
-                            animate
-                          />
+                          <VStatusDot v-tooltip="`删除中`" state="warning" animate />
                         </template>
                       </VEntityField>
-                      <VEntityField
-                        :description="
-                          formatDatetime(link.metadata.creationTimestamp)
-                        "
-                      />
+                      <VEntityField :description="formatDatetime(link.metadata.creationTimestamp)" />
                     </template>
                     <template #dropdownItems>
-                      <VDropdownItem @click="handleOpenCreateModal(link)">
-                        编辑
-                      </VDropdownItem>
-                      <VDropdown
-                        v-if="groups?.length"
-                        placement="left"
-                        :triggers="['click']"
-                      >
+                      <VDropdownItem @click="handleOpenCreateModal(link)"> 编辑 </VDropdownItem>
+                      <VDropdown v-if="groups?.length" placement="left" :triggers="['click']">
                         <VDropdownItem> 移动 </VDropdownItem>
                         <template #popper>
-                          <template
-                            v-for="group in groups"
-                            :key="group.metadata.name"
-                          >
+                          <template v-for="group in groups" :key="group.metadata.name">
                             <VDropdownItem
                               v-if="group.metadata.name !== groupQuery"
                               v-close-popper.all
@@ -548,9 +463,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                           </template>
                         </template>
                       </VDropdown>
-                      <VDropdownItem type="danger" @click="handleDelete(link)">
-                        删除
-                      </VDropdownItem>
+                      <VDropdownItem type="danger" @click="handleDelete(link)"> 删除 </VDropdownItem>
                     </template>
                   </VEntity>
                 </li>
@@ -559,12 +472,7 @@ async function handleMove(link: Link, group: LinkGroup) {
           </Transition>
 
           <template #footer>
-            <VPagination
-              v-model:page="page"
-              v-model:size="size"
-              :total="total"
-              :size-options="[20, 30, 50, 100]"
-            />
+            <VPagination v-model:page="page" v-model:size="size" :total="total" :size-options="[20, 30, 50, 100]" />
           </template>
         </VCard>
       </div>
