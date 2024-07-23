@@ -1,5 +1,5 @@
-import type { LinkGroup, LinkGroupList, LinkList } from "@/types";
-import { axiosInstance } from "@halo-dev/api-client";
+import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
+import { LinkGroup } from "@/api/generated";
 import { useQuery } from "@tanstack/vue-query";
 import { ref, type Ref } from "vue";
 
@@ -13,18 +13,13 @@ export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref
   } = useQuery({
     queryKey: ["links", page, size, group, keyword],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<LinkList>(
-        "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links",
-        {
-          params: {
-            page: page.value,
-            size: size.value,
-            keyword: keyword?.value,
-            groupName: group?.value,
-            sort: "spec.priority,asc",
-          },
-        }
-      );
+      const { data } = await linksConsoleApiClient.link.listLinks({
+        page: page.value,
+        size: size.value,
+        keyword: keyword?.value,
+        groupName: group?.value,
+        sort: ["spec.priority,asc"],
+      });
 
       total.value = data.total;
 
@@ -53,7 +48,7 @@ export function useLinkGroupFetch() {
   } = useQuery<LinkGroup[]>({
     queryKey: ["link-groups"],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<LinkGroupList>("/apis/core.halo.run/v1alpha1/linkgroups");
+      const { data } = await linksCoreApiClient.group.listLinkGroup();
 
       return data.items
         .map((group) => {
@@ -68,10 +63,10 @@ export function useLinkGroupFetch() {
     },
     refetchOnWindowFocus: false,
     refetchInterval(data) {
-      const deletingGroups = data?.filter((group) => {
+      const hasDeletingData = data?.some((group) => {
         return !!group.metadata.deletionTimestamp;
       });
-      return deletingGroups?.length ? 1000 : false;
+      return hasDeletingData ? 1000 : false;
     },
   });
 

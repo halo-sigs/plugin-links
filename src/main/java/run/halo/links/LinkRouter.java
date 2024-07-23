@@ -6,14 +6,15 @@ import static org.springframework.data.domain.Sort.Order.asc;
 import static org.springframework.data.domain.Sort.Order.desc;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
-import static run.halo.app.extension.index.query.QueryFactory.*;
+import static run.halo.app.extension.index.query.QueryFactory.and;
+import static run.halo.app.extension.index.query.QueryFactory.contains;
+import static run.halo.app.extension.index.query.QueryFactory.equal;
+import static run.halo.app.extension.index.query.QueryFactory.or;
 import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToListOptions;
 
 import java.util.List;
 import java.util.Map;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.RequiredArgsConstructor;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.fn.builders.operation.Builder;
 import org.springdoc.webflux.core.fn.SpringdocRouteBuilder;
@@ -26,11 +27,14 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
+
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.router.IListRequest;
 import run.halo.app.extension.router.SortableRequest;
 import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.infra.utils.PathUtils;
@@ -75,7 +79,9 @@ public class LinkRouter {
                 builder -> {
                     builder.operationId("listLinks")
                         .description("Lists link by query parameters")
-                        .tag(tag);
+                        .tag(tag)
+                        .response(responseBuilder()
+                            .implementation(ListResult.generateGenericClass(Link.class)));
                     LinkQuery.buildParameters(builder);
                 }
             )
@@ -83,6 +89,13 @@ public class LinkRouter {
                 builder.operationId("GetLinkDetail")
                     .description("Get link detail by id")
                     .tag(tag)
+                    .parameter(parameterBuilder()
+                        .name("url")
+                        .description("Link url")
+                        .in(ParameterIn.QUERY)
+                        .implementation(String.class)
+                        .required(true)
+                    )
                     .response(responseBuilder().implementation(LinkDetailDTO.class));
             }).build();
     }
@@ -149,7 +162,6 @@ public class LinkRouter {
         }
 
         public static void buildParameters(Builder builder) {
-            IListRequest.buildParameters(builder);
             builder.parameter(parameterBuilder()
                     .name("keyword")
                     .description("Keyword to search links under the group")
@@ -164,6 +176,7 @@ public class LinkRouter {
                     .implementation(String.class)
                     .required(false)
                 );
+            SortableRequest.buildParameters(builder);
         }
     }
 

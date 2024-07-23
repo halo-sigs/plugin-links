@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
+import { LinkGroup } from "@/api/generated";
 import { useLinkGroupFetch } from "@/composables/use-link";
-import type { LinkGroup, LinkList } from "@/types";
-import { axiosInstance } from "@halo-dev/api-client";
 import {
   Dialog,
   IconList,
@@ -48,7 +48,10 @@ const onPriorityChange = async () => {
       if (group.spec) {
         group.spec.priority = index;
       }
-      return axiosInstance.put(`/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`, group);
+      return linksCoreApiClient.group.updateLinkGroup({
+        name: group.metadata.name,
+        linkGroup: group,
+      });
     });
     if (promises) {
       await Promise.all(promises);
@@ -67,21 +70,18 @@ const handleDelete = async (group: LinkGroup) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        await axiosInstance.delete(`/apis/core.halo.run/v1alpha1/linkgroups/${group.metadata.name}`);
+        await linksCoreApiClient.group.deleteLinkGroup({ name: group.metadata.name });
 
-        const { data } = await axiosInstance.get<LinkList>(
-          `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links`,
-          {
-            params: {
-              page: 0,
-              size: 0,
-              groupName: group.metadata.name,
-            },
-          }
-        );
+        const { data } = await linksConsoleApiClient.link.listLinks({
+          page: 0,
+          size: 0,
+          groupName: group.metadata.name,
+        });
 
         const deleteLinkPromises = data.items.map((link) =>
-          axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`)
+          linksCoreApiClient.link.deleteLink({
+            name: link.metadata.name,
+          })
         );
 
         if (deleteLinkPromises) {
