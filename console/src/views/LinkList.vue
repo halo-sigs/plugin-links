@@ -1,8 +1,8 @@
 <script lang="ts" setup>
+import { linksCoreApiClient } from "@/api";
+import { Link, LinkGroup } from "@/api/generated";
 import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
-import type { Link, LinkGroup } from "@/types";
 import { formatDatetime } from "@/utils/date";
-import { axiosInstance } from "@halo-dev/api-client";
 import {
   Dialog,
   IconAddCircle,
@@ -114,7 +114,10 @@ const onPriorityChange = async () => {
       if (link.spec) {
         link.spec.priority = index;
       }
-      return axiosInstance.put(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`, link);
+      return linksCoreApiClient.link.updateLink({
+        name: link.metadata.name,
+        link,
+      });
     });
     if (promises) {
       await Promise.all(promises);
@@ -138,7 +141,9 @@ const handleDelete = (link: Link) => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        await axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`);
+        await linksCoreApiClient.link.deleteLink({
+          name: link.metadata.name,
+        });
 
         Toast.success("删除成功");
       } catch (e) {
@@ -157,9 +162,10 @@ const handleDeleteInBatch = () => {
     confirmType: "danger",
     onConfirm: async () => {
       try {
-        const promises = selectedLinks.value.map((link) => {
-          return axiosInstance.delete(`/apis/core.halo.run/v1alpha1/links/${link}`);
+        const promises = selectedLinks.value.map((name) => {
+          return linksCoreApiClient.link.deleteLink({ name });
         });
+
         if (promises) {
           await Promise.all(promises);
         }
@@ -220,14 +226,14 @@ const handleImportFromYaml = async () => {
 
     const parsed = yaml.parseAllDocuments(res.data.value);
     if (Array.isArray(parsed)) {
-      const promises = parsed.map((link) => {
-        return axiosInstance.post("/apis/core.halo.run/v1alpha1/links", link);
+      const promises = parsed.map((link: Link) => {
+        return linksCoreApiClient.link.createLink({ link });
       });
       if (promises) {
         await Promise.all(promises);
       }
     } else {
-      await axiosInstance.post("/apis/core.halo.run/v1alpha1/links", parsed);
+      await linksCoreApiClient.link.createLink({ link: parsed });
     }
   } catch (e) {
     console.error(e);
@@ -268,11 +274,14 @@ async function handleMoveInBatch(group: LinkGroup) {
     .filter(Boolean) as Link[];
 
   const requests = linksToUpdate.map((link) => {
-    return axiosInstance.put<Link>(`/apis/core.halo.run/v1alpha1/links/${link?.metadata.name}`, {
-      ...link,
-      spec: {
-        ...link.spec,
-        groupName: group.metadata.name,
+    return linksCoreApiClient.link.updateLink({
+      name: link.metadata.name,
+      link: {
+        ...link,
+        spec: {
+          ...link.spec,
+          groupName: group.metadata.name,
+        },
       },
     });
   });
@@ -288,11 +297,14 @@ async function handleMoveInBatch(group: LinkGroup) {
 }
 
 async function handleMove(link: Link, group: LinkGroup) {
-  await axiosInstance.put<Link>(`/apis/core.halo.run/v1alpha1/links/${link.metadata.name}`, {
-    ...link,
-    spec: {
-      ...link.spec,
-      groupName: group.metadata.name,
+  await linksCoreApiClient.link.updateLink({
+    name: link.metadata.name,
+    link: {
+      ...link,
+      spec: {
+        ...link.spec,
+        groupName: group.metadata.name,
+      },
     },
   });
 

@@ -1,6 +1,6 @@
 plugins {
     id "com.github.node-gradle.node" version "7.0.2"
-    id "run.halo.plugin.devtools" version "0.0.9"
+    id "run.halo.plugin.devtools" version "0.0.10-SNAPSHOT"
     id "io.freefair.lombok" version "8.0.1"
     id 'java'
 }
@@ -53,4 +53,22 @@ build {
 halo {
     version = '2.17'
     debug = true
+}
+
+haloPlugin {
+    openApi {
+        outputDir = file("$rootDir/api-docs/openapi/v3_0")
+        groupingRules {
+            linksV1alpha1Api {
+                displayName = 'Extension API for Links'
+                pathsToMatch = ['/apis/core.halo.run/v1alpha1/links/**', '/apis/core.halo.run/v1alpha1/linkgroups/**','/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/**']
+            }
+        }
+        groupedApiMappings = [
+                '/v3/api-docs/linksV1alpha1Api': 'linksV1alpha1Api.json'
+        ]
+        generator {
+            outputDir = file("${projectDir}/console/src/api/generated")
+        }
+    }
 }
