@@ -1,6 +1,6 @@
 plugins {
     id "com.github.node-gradle.node" version "7.0.2"
-    id "run.halo.plugin.devtools" version "0.0.10-SNAPSHOT"
+    id "run.halo.plugin.devtools" version "0.1.1"
     id "io.freefair.lombok" version "8.0.1"
     id 'java'
 }
@@ -61,7 +61,11 @@ haloPlugin {
         groupingRules {
             linksV1alpha1Api {
                 displayName = 'Extension API for Links'
-                pathsToMatch = ['/apis/core.halo.run/v1alpha1/links/**', '/apis/core.halo.run/v1alpha1/linkgroups/**','/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/**']
+                pathsToMatch = [
+                    '/apis/core.halo.run/v1alpha1/links/**',
+                    '/apis/core.halo.run/v1alpha1/linkgroups/**',
+                    '/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/**'
+                ]
             }
         }
         groupedApiMappings = [
