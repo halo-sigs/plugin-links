@@ -274,15 +274,15 @@ async function handleMoveInBatch(group: LinkGroup) {
     .filter(Boolean) as Link[];
 
   const requests = linksToUpdate.map((link) => {
-    return linksCoreApiClient.link.updateLink({
+    return linksCoreApiClient.link.patchLink({
       name: link.metadata.name,
-      link: {
-        ...link,
-        spec: {
-          ...link.spec,
-          groupName: group.metadata.name,
+      jsonPatchInner: [
+        {
+          op: "add",
+          path: "/spec/groupName",
+          value: group.metadata.name || "",
         },
-      },
+      ],
     });
   });
 
@@ -297,15 +297,15 @@ async function handleMoveInBatch(group: LinkGroup) {
 }
 
 async function handleMove(link: Link, group: LinkGroup) {
-  await linksCoreApiClient.link.updateLink({
+  await linksCoreApiClient.link.patchLink({
     name: link.metadata.name,
-    link: {
-      ...link,
-      spec: {
-        ...link.spec,
-        groupName: group.metadata.name,
+    jsonPatchInner: [
+      {
+        op: "add",
+        path: "/spec/groupName",
+        value: group.metadata.name || "",
       },
-    },
+    ],
   });
 
   Toast.success("移动成功");
