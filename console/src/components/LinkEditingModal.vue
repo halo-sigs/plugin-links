@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { Link, LinkDetail } from "@/types";
-import { axiosInstance } from "@halo-dev/api-client";
+import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
+import { Link } from "@/api/generated";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import cloneDeep from "lodash.clonedeep";
 import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
@@ -104,13 +104,15 @@ const handleSaveLink = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
-      await axiosInstance.put<Link>(
-        `/apis/core.halo.run/v1alpha1/links/${formState.value.metadata.name}`,
-        formState.value
-      );
+      await linksCoreApiClient.link.updateLink({
+        name: formState.value.metadata.name,
+        link: formState.value,
+      });
     } else {
-      formState.value.spec.groupName = groupQuery.value;
-      await axiosInstance.post<Link>(`/apis/core.halo.run/v1alpha1/links`, formState.value);
+      formState.value.spec!.groupName = groupQuery.value;
+      await linksCoreApiClient.link.createLink({
+        link: formState.value,
+      });
     }
 
     Toast.success("保存成功");
@@ -129,19 +131,19 @@ const handleGetLinkDetail = async () => {
   if (loading.value) {
     return;
   }
-  const url = formState.value.spec.url;
+  const url = formState.value.spec?.url;
   if (!url) {
     return;
   }
   loading.value = true;
   try {
-    const { data } = await axiosInstance.get<LinkDetail>(
-      `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-detail?url=${url}`
-    );
+    const { data } = await linksConsoleApiClient.link.getLinkDetail({
+      url: url,
+    });
 
-    formState.value.spec.displayName = data.title || "";
-    formState.value.spec.logo = data.icon;
-    formState.value.spec.description = data.description;
+    formState.value.spec!.displayName = data.title || "";
+    formState.value.spec!.logo = data.icon;
+    formState.value.spec!.description = data.description;
 
     Toast.info("获取链接详情成功");
   } catch (e) {

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { LinkGroup } from "@/types";
-import { axiosInstance } from "@halo-dev/api-client";
+import { linksCoreApiClient } from "@/api";
+import { LinkGroup } from "@/api/generated";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import cloneDeep from "lodash.clonedeep";
 import { computed, nextTick, ref, watch } from "vue";
@@ -66,12 +66,14 @@ const handleCreateOrUpdateGroup = async () => {
   try {
     saving.value = true;
     if (isUpdateMode.value) {
-      await axiosInstance.put(
-        `/apis/core.halo.run/v1alpha1/linkgroups/${formState.value.metadata.name}`,
-        formState.value
-      );
+      await linksCoreApiClient.group.updateLinkGroup({
+        name: formState.value.metadata.name,
+        linkGroup: formState.value,
+      });
     } else {
-      await axiosInstance.post("/apis/core.halo.run/v1alpha1/linkgroups", formState.value);
+      await linksCoreApiClient.group.createLinkGroup({
+        linkGroup: formState.value,
+      });
     }
 
     Toast.success("保存成功");
