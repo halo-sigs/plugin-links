@@ -1,0 +1,51 @@
+apiVersion: notification.halo.run/v1alpha1
+kind: ReasonType
+metadata:
+  name: new-comment-on-link
+spec:
+  displayName: "友情链接页面收到新评论"
+  description: "当你发布的友情链接页面收到新评论时，你将会收到一条通知，告诉你有新的评论。"
+  properties:
+    - name: linkTitle
+      type: string
+      description: "link page title."
+    - name: commenter
+      type: string
+      description: "The display name of the commenter."
+    - name: commentName
+      type: string
+      description: "The name of the comment."
+    - name: content
+      type: string
+      description: "The content of the comment."
+---
+apiVersion: notification.halo.run/v1alpha1
+kind: NotificationTemplate
+metadata:
+  name: template-new-comment-on-link
+spec:
+  reasonSelector:
+    reasonType: new-comment-on-link
+    language: default
+  template:
+    title: "[(${commenter})] 在[(${linkTitle})]页面进行了评论"
+    rawBody: |
+      [(${subscriber.displayName})] 你好：
+
+      [(${commenter})] 在[(${linkTitle})]页面进行了评论， 以下是评论的具体内容：
+
+      [(${content})]
+    htmlBody: |
+      <div class="notification-content">
+        <div class="head">
+          <p class="honorific" th:text="|${subscriber.displayName} 你好：|"></p>
+        </div>
+        <div class="body">
+          <div>
+            <div th:text="|${commenter} 在[(${linkTitle})]页面进行了评论|"></div>
+            <div>以下是评论的具体内容：</div>
+          </div>
+          <pre class="content" th:text="${content}"></pre>
+        </div>
+        <div></div>
+      </div>
