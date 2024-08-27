@@ -44,15 +44,16 @@ public class LinkPlugin extends BasePlugin {
             );
             indexSpecs.add(new IndexSpec()
                 .setName("spec.priority")
-                .setIndexFunc(simpleAttribute(Link.class, link -> String.valueOf(link.getSpec().getPriority())))
+                .setIndexFunc(simpleAttribute(Link.class,
+                    link -> String.valueOf(link.getSpec().getPriority())))
             );
         });
-        schemeManager.register(LinkGroup.class, indexSpecs -> {
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.priority")
-                .setIndexFunc(simpleAttribute(LinkGroup.class, group -> String.valueOf(group.getSpec().getPriority())))
-            );
-        });
+        schemeManager.register(LinkGroup.class, indexSpecs -> indexSpecs.add(new IndexSpec()
+            .setName("spec.priority")
+            .setIndexFunc(simpleAttribute(LinkGroup.class,
+                group -> String.valueOf(group.getSpec().getPriority()))
+            )
+        ));
     }
 
     @Override
