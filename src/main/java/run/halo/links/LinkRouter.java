@@ -32,6 +32,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
@@ -104,7 +105,9 @@ public class LinkRouter {
         final var url = request.queryParam("url")
             .filter(PathUtils::isAbsoluteUri)
             .orElseThrow(() -> new ServerWebInputException("Invalid url."));
-        return Mono.just(LinkRequest.getLinkDetail(url))
+        return Mono.fromSupplier(() -> LinkRequest.getLinkDetail(url))
+            .subscribeOn(Schedulers.boundedElastic())
+            .publishOn(Schedulers.parallel())
             .flatMap(dto -> ServerResponse.ok().bodyValue(dto));
     }
 
