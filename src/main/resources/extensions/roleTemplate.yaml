@@ -5,7 +5,7 @@ metadata:
   labels:
     halo.run/role-template: "true"
   annotations:
-    rbac.authorization.halo.run/module: "Link Management"
+    rbac.authorization.halo.run/module: "链接"
     rbac.authorization.halo.run/display-name: "链接查看"
     rbac.authorization.halo.run/ui-permissions: |
       ["plugin:links:view"]
@@ -25,7 +25,7 @@ metadata:
   labels:
     halo.run/role-template: "true"
   annotations:
-    rbac.authorization.halo.run/module: "Link Management"
+    rbac.authorization.halo.run/module: "链接"
     rbac.authorization.halo.run/display-name: "链接管理"
     rbac.authorization.halo.run/ui-permissions: |
       ["plugin:links:manage"]
