@@ -1,0 +1,75 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id "io.freefair.lombok" version "8.0.1"
+}
+
+group = 'run.halo.links'
+version = rootProject.version
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+}
+
+compileJava.options.encoding = "UTF-8"
+compileTestJava.options.encoding = "UTF-8"
+javadoc.options.encoding = "UTF-8"
+
+dependencies {
+    api platform('run.halo.tools.platform:plugin:2.20.11')
+    compileOnly 'run.halo.app:api'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            artifactId = 'api'
+            version = project.hasProperty('version') ? project.property('version') : 'unspecified'
+
+            pom {
+                name = '链接管理'
+                description = '链接管理模块，可用于管理网站友情链接。'
+                url = 'https://www.halo.run/store/apps/app-hfbQg'
+
+                licenses {
+                    license {
+                        name = 'GPL-3.0'
+                        url = 'https://github.com/halo-sigs/plugin-links/blob/main/LICENSE'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'guqing'
+                        name = 'guqing'
+                        email = 'i@guqing.email'
+                    }
+                }
+
+                scm {
+                    connection = 'scm:git:git@github.com:halo-sigs/plugin-links.git'
+                    developerConnection = 'scm:git:git@github.com:halo-sigs/plugin-links.git'
+                    url = 'https://github.com/halo-sigs/plugin-links'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            url = version.endsWith('-SNAPSHOT') ? 'https://s01.oss.sonatype.org/content/repositories/snapshots/' :
+                    'https://s01.oss.sonatype.org/content/repositories/releases/'
+            credentials {
+                username = project.findProperty("ossr.user") ?: System.getenv("OSSR_USERNAME")
+                password = project.findProperty("ossr.password") ?: System.getenv("OSSR_PASSWORD")
+            }
+        }
+    }
+}

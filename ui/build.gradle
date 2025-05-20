@@ -1,0 +1,23 @@
+plugins {
+  id "com.github.node-gradle.node" version "7.1.0"
+}
+
+tasks.register('clean', Delete) {
+  delete layout.buildDirectory
+}
+
+tasks.register('build', PnpmTask) {
+  group = 'build'
+  description = 'Build console.'
+  dependsOn tasks.named('pnpmInstall')
+  pnpmCommand = ['run', 'build']
+  inputs.dir('src')
+  inputs.files(fileTree('node_modules').exclude('.cache'))
+  inputs.files(layout.projectDirectory.asFile.listFiles({ pathname ->
+    pathname.name.endsWithAny(".json", ".yaml", ".env", ".ts", ".json")
+  } as FileFilter))
+  outputs.dir(layout.buildDirectory.dir('dist'))
+  configure {
+    shouldRunAfter tasks.named('clean')
+  }
+}

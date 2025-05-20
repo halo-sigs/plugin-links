@@ -1,0 +1,23 @@
+apiVersion: plugin.halo.run/v1alpha1
+kind: Plugin
+metadata:
+  name: PluginLinks
+  annotations:
+    "store.halo.run/app-id": "app-hfbQg"
+spec:
+  requires: ">=2.20.11"
+  author:
+    name: Halo
+    website: https://github.com/halo-dev
+  logo: logo.svg
+  configMapName: plugin-links-configmap
+  settingName: plugin-links-settings
+  repo: https://github.com/halo-sigs/plugin-links
+  homepage: https://www.halo.run/store/apps/app-hfbQg
+  issues: https://github.com/halo-sigs/plugin-links/issues
+  displayName: "链接管理"
+  description: "链接管理模块，可用于管理网站友情链接。"
+  license:
+    - name: "GPL-3.0"
+      url: "https://github.com/halo-sigs/plugin-links/blob/main/LICENSE"
+  enabled: true
