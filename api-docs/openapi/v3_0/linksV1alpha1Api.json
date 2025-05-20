@@ -2,10 +2,10 @@
   "openapi" : "3.0.1",
   "info" : {
     "title" : "Halo",
-    "version" : "2.17.2"
+    "version" : "2.20.19"
   },
   "servers" : [ {
-    "url" : "http://localhost:31788",
+    "url" : "http://localhost:52749",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -816,15 +816,18 @@
             "type" : "object",
             "additionalProperties" : {
               "type" : "string"
-            }
+            },
+            "description" : "Annotations are like key-value format."
           },
           "creationTimestamp" : {
             "type" : "string",
+            "description" : "Creation timestamp of the Extension.",
             "format" : "date-time",
             "nullable" : true
           },
           "deletionTimestamp" : {
             "type" : "string",
+            "description" : "Deletion timestamp of the Extension.",
             "format" : "date-time",
             "nullable" : true
           },
@@ -845,7 +848,8 @@
             "type" : "object",
             "additionalProperties" : {
               "type" : "string"
-            }
+            },
+            "description" : "Labels are like key-value format."
           },
           "name" : {
             "type" : "string",
@@ -853,10 +857,12 @@
           },
           "version" : {
             "type" : "integer",
+            "description" : "Current version of the Extension. It will be bumped up every update.",
             "format" : "int64",
             "nullable" : true
           }
-        }
+        },
+        "description" : "Metadata of Extension."
       },
       "MoveOperation" : {
         "required" : [ "op", "from", "path" ],

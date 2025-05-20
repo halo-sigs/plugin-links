@@ -17,4 +17,4 @@ jobs:
       node-version: 20
       pnpm-version: 9
       app-id: app-hfbQg
-      ui-path: "console"
+      ui-path: "ui"

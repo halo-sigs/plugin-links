@@ -71,4 +71,6 @@ application-local.yaml
 application-local.properties
 
 /workplace/
-/src/main/resources/console/
+*/workplace/
+/ui/node_modules/
+/app/src/main/resources/console/

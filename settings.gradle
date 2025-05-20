@@ -1,7 +1,11 @@
 pluginManagement {
     repositories {
+        mavenCentral()
         gradlePluginPortal()
     }
 }
 rootProject.name = 'plugin-links'
 
+include 'api'
+include 'app'
+include 'ui'
