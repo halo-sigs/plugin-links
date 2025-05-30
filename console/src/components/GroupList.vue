@@ -14,10 +14,9 @@ import {
   VLoading,
   VStatusDot,
 } from "@halo-dev/components";
-import cloneDeep from "lodash.clonedeep";
-import { inject, ref, watch, type Ref } from "vue";
-import Draggable from "vuedraggable";
+import { inject, ref, type Ref } from "vue";
 import GroupEditingModal from "./GroupEditingModal.vue";
+import { VueDraggable } from "vue-draggable-plus";
 
 const groupQuery = inject<Ref<string>>("groupQuery", ref(""));
 
@@ -25,17 +24,6 @@ const groupEditingModal = ref(false);
 const selectedGroup = ref<LinkGroup>();
 
 const { groups, isLoading, refetch } = useLinkGroupFetch();
-const draggableGroups = ref<LinkGroup[]>();
-
-watch(
-  () => groups.value,
-  () => {
-    draggableGroups.value = cloneDeep(groups.value);
-  },
-  {
-    immediate: true,
-  }
-);
 
 const handleOpenEditingModal = (group?: LinkGroup) => {
   selectedGroup.value = group;
@@ -44,7 +32,7 @@ const handleOpenEditingModal = (group?: LinkGroup) => {
 
 const onPriorityChange = async () => {
   try {
-    const promises = draggableGroups.value?.map((group: LinkGroup, index) => {
+    const promises = groups.value?.map((group: LinkGroup, index) => {
       if (group.spec) {
         group.spec.priority = index;
       }
@@ -110,27 +98,29 @@ function onEditingModalClose() {
   <VCard :body-class="['!p-0']" title="分组">
     <VLoading v-if="isLoading" />
     <Transition v-else appear name="fade">
-      <Draggable
-        v-model="draggableGroups"
-        class="box-border size-full divide-y divide-gray-100"
-        group="group"
-        handle=".drag-element"
-        item-key="metadata.name"
-        tag="ul"
-        @change="onPriorityChange"
-      >
-        <template #header>
-          <li @click="groupQuery = ''">
-            <VEntity class="group" :is-selected="!groupQuery">
-              <template #start>
-                <VEntityField title="全部"> </VEntityField>
-              </template>
-            </VEntity>
-          </li>
-        </template>
-        <template #item="{ element: group }">
-          <li @click="groupQuery = group.metadata.name">
-            <VEntity :is-selected="groupQuery === group.metadata.name" class="group">
+      <div class="w-full overflow-x-auto">
+        <table class="w-full border-spacing-0">
+          <VEntity @click="groupQuery = ''" class="group" :is-selected="!groupQuery">
+            <template #start>
+              <VEntityField title="全部"> </VEntityField>
+            </template>
+          </VEntity>
+          <VueDraggable
+            v-model="groups"
+            class="divide-y divide-gray-100"
+            group="group"
+            handle=".drag-element"
+            item-key="metadata.name"
+            tag="tbody"
+            @update="onPriorityChange"
+          >
+            <VEntity
+              v-for="group in groups"
+              :key="group.metadata.name"
+              :is-selected="groupQuery === group.metadata.name"
+              class="group"
+              @click="groupQuery = group.metadata.name"
+            >
               <template #prepend>
                 <div
                   class="drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
@@ -156,9 +146,9 @@ function onEditingModalClose() {
                 <VDropdownItem type="danger" @click="handleDelete(group)"> 删除 </VDropdownItem>
               </template>
             </VEntity>
-          </li>
-        </template>
-      </Draggable>
+          </VueDraggable>
+        </table>
+      </div>
     </Transition>
 
     <template v-if="!isLoading" #footer>
