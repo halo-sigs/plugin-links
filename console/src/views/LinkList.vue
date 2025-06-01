@@ -28,13 +28,12 @@ import {
 import { useQueryClient } from "@tanstack/vue-query";
 import { useFileSystemAccess } from "@vueuse/core";
 import { useRouteQuery } from "@vueuse/router";
-import cloneDeep from "lodash.clonedeep";
 import { provide, ref, watch, type Ref } from "vue";
-import Draggable from "vuedraggable";
 import yaml from "yaml";
 import RiLinksLine from "~icons/ri/links-line";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
+import { VueDraggable } from "vue-draggable-plus";
 
 const queryClient = useQueryClient();
 
@@ -52,17 +51,6 @@ const size = ref(20);
 const keyword = ref("");
 
 const { links, isLoading, total, refetch } = useLinkFetch(page, size, keyword, groupQuery);
-const draggableLinks = ref<Link[]>();
-
-watch(
-  () => links.value,
-  () => {
-    draggableLinks.value = cloneDeep(links.value);
-  },
-  {
-    immediate: true,
-  }
-);
 
 watch(
   () => groupQuery.value,
@@ -110,7 +98,7 @@ const handleOpenCreateModal = (link: Link) => {
 
 const onPriorityChange = async () => {
   try {
-    const promises = draggableLinks.value?.map((link: Link, index) => {
+    const promises = links.value?.map((link: Link, index) => {
       if (link.spec) {
         link.spec.priority = index;
       }
@@ -365,7 +353,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                                 v-close-popper.all
                                 @click="handleMoveInBatch(group)"
                               >
-                                {{ group.spec.displayName }}
+                                {{ group.spec?.displayName }}
                               </VDropdownItem>
                             </template>
                           </template>
@@ -397,20 +385,25 @@ async function handleMove(link: Link, group: LinkGroup) {
             </VEmpty>
           </Transition>
           <Transition v-else appear name="fade">
-            <Draggable
-              v-model="draggableLinks"
-              class="box-border size-full divide-y divide-gray-100"
-              group="link"
-              handle=".drag-element"
-              item-key="id"
-              tag="ul"
-              @end="drag = false"
-              @start="drag = true"
-              @change="onPriorityChange"
-            >
-              <template #item="{ element: link }">
-                <li>
-                  <VEntity :is-selected="selectedLinks.includes(link.metadata.name)" class="group">
+            <div class="w-full overflow-x-auto">
+              <table class="w-full border-spacing-0">
+                <VueDraggable
+                  v-model="links"
+                  class="divide-y divide-gray-100"
+                  group="link"
+                  handle=".drag-element"
+                  item-key="id"
+                  tag="tbody"
+                  @end="drag = false"
+                  @start="drag = true"
+                  @update="onPriorityChange"
+                >
+                  <VEntity
+                    v-for="link in links"
+                    :key="link.metadata.name"
+                    :is-selected="selectedLinks.includes(link.metadata.name)"
+                    class="group"
+                  >
                     <template v-if="!keyword && groupQuery" #prepend>
                       <div
                         class="drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
@@ -428,20 +421,20 @@ async function handleMove(link: Link, group: LinkGroup) {
                         <template #description>
                           <VAvatar
                             :key="link.metadata.name"
-                            :alt="link.spec.displayName"
-                            :src="link.spec.logo"
+                            :alt="link.spec?.displayName"
+                            :src="link.spec?.logo"
                             size="md"
                           ></VAvatar>
                         </template>
                       </VEntityField>
-                      <VEntityField :title="link.spec.displayName">
+                      <VEntityField :title="link.spec?.displayName">
                         <template #description>
                           <a
-                            :href="link.spec.url"
+                            :href="link.spec?.url"
                             class="truncate text-xs text-gray-500 hover:text-gray-900"
                             target="_blank"
                           >
-                            {{ link.spec.url }}
+                            {{ link.spec?.url }}
                           </a>
                         </template>
                       </VEntityField>
@@ -449,8 +442,8 @@ async function handleMove(link: Link, group: LinkGroup) {
 
                     <template #end>
                       <VEntityField
-                        v-if="getGroup(link.spec.groupName)"
-                        :description="getGroup(link.spec.groupName)?.spec.displayName"
+                        v-if="getGroup(link.spec?.groupName || '')"
+                        :description="getGroup(link.spec?.groupName || '')?.spec?.displayName"
                       />
                       <VEntityField v-if="link.metadata.deletionTimestamp">
                         <template #description>
@@ -470,7 +463,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                               v-close-popper.all
                               @click="handleMove(link, group)"
                             >
-                              {{ group.spec.displayName }}
+                              {{ group.spec?.displayName }}
                             </VDropdownItem>
                           </template>
                         </template>
@@ -478,9 +471,9 @@ async function handleMove(link: Link, group: LinkGroup) {
                       <VDropdownItem type="danger" @click="handleDelete(link)"> 删除 </VDropdownItem>
                     </template>
                   </VEntity>
-                </li>
-              </template>
-            </Draggable>
+                </VueDraggable>
+              </table>
+            </div>
           </Transition>
 
           <template #footer>

@@ -1,16 +1,14 @@
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
-import { LinkGroup } from "@/api/generated";
+import { Link, LinkGroup } from "@/api/generated";
 import { useQuery } from "@tanstack/vue-query";
 import { ref, type Ref } from "vue";
 
 export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref<string>, group?: Ref<string>) {
   const total = ref(0);
 
-  const {
-    data: links,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const links = ref<Link[]>([]);
+
+  const { isLoading, refetch } = useQuery({
     queryKey: ["links", page, size, group, keyword],
     queryFn: async () => {
       const { data } = await linksConsoleApiClient.link.listLinks({
@@ -30,6 +28,9 @@ export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref
       const deletingLinks = data?.filter((link) => !!link.metadata.deletionTimestamp);
       return deletingLinks?.length ? 1000 : false;
     },
+    onSuccess(data) {
+      links.value = data;
+    },
   });
 
   return {
@@ -41,11 +42,9 @@ export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref
 }
 
 export function useLinkGroupFetch() {
-  const {
-    data: groups,
-    isLoading,
-    refetch,
-  } = useQuery<LinkGroup[]>({
+  const groups = ref<LinkGroup[]>([]);
+
+  const { isLoading, refetch } = useQuery<LinkGroup[]>({
     queryKey: ["link-groups"],
     queryFn: async () => {
       const { data } = await linksCoreApiClient.group.listLinkGroup();
@@ -67,6 +66,9 @@ export function useLinkGroupFetch() {
         return !!group.metadata.deletionTimestamp;
       });
       return hasDeletingData ? 1000 : false;
+    },
+    onSuccess(data) {
+      groups.value = data;
     },
   });
 
