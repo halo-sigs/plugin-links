@@ -28,9 +28,7 @@ import {
 import { useQueryClient } from "@tanstack/vue-query";
 import { useFileSystemAccess } from "@vueuse/core";
 import { useRouteQuery } from "@vueuse/router";
-import cloneDeep from "lodash.clonedeep";
 import { provide, ref, watch, type Ref } from "vue";
-// import Draggable from "vuedraggable";
 import yaml from "yaml";
 import RiLinksLine from "~icons/ri/links-line";
 import GroupList from "../components/GroupList.vue";
