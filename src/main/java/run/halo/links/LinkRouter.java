@@ -12,9 +12,11 @@ import static run.halo.app.extension.index.query.QueryFactory.equal;
 import static run.halo.app.extension.index.query.QueryFactory.or;
 import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToListOptions;
 
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.fn.builders.operation.Builder;
 import org.springdoc.webflux.core.fn.SpringdocRouteBuilder;
@@ -27,10 +29,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
-
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import run.halo.app.extension.ListOptions;
@@ -48,6 +46,8 @@ import run.halo.links.vo.LinkGroupVo;
 @RequiredArgsConstructor
 public class LinkRouter {
 
+    public static final String LINKS_ROUTE_PATH = "/links";
+
     private final LinkFinder linkFinder;
     private final ReactiveExtensionClient client;
     private final String tag = "api.plugin.halo.run/v1alpha1/Link";
@@ -56,7 +56,7 @@ public class LinkRouter {
 
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
-        return route(GET("/links"),
+        return route(GET(LINKS_ROUTE_PATH),
             request -> ServerResponse.ok().render("links",
                 Map.of("groups", linkGroups(),
                     "pluginName", pluginContext.getName(),
