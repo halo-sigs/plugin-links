@@ -13,4 +13,7 @@ module.exports = {
   env: {
     "vue/setup-compiler-macros": true,
   },
+  rules: {
+    "@unocss/enforce-class-compile": 1,
+  },
 };

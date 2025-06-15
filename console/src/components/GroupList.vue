@@ -89,25 +89,26 @@ const handleDelete = async (group: LinkGroup) => {
 };
 
 function onEditingModalClose() {
+  groupEditingModal.value = false;
   selectedGroup.value = undefined;
   refetch();
 }
 </script>
 <template>
-  <GroupEditingModal v-model:visible="groupEditingModal" :group="selectedGroup" @close="onEditingModalClose" />
-  <VCard :body-class="['!p-0']" title="分组">
+  <GroupEditingModal v-if="groupEditingModal" :group="selectedGroup" @close="onEditingModalClose" />
+  <VCard :body-class="[':uno: !p-0']" title="分组">
     <VLoading v-if="isLoading" />
     <Transition v-else appear name="fade">
-      <div class="w-full overflow-x-auto">
-        <table class="w-full border-spacing-0">
-          <VEntity @click="groupQuery = ''" class="group" :is-selected="!groupQuery">
+      <div class=":uno: w-full overflow-x-auto">
+        <table class=":uno: w-full border-spacing-0">
+          <VEntity class=":uno: group" :is-selected="!groupQuery" @click="groupQuery = ''">
             <template #start>
               <VEntityField title="全部"> </VEntityField>
             </template>
           </VEntity>
           <VueDraggable
             v-model="groups"
-            class="divide-y divide-gray-100"
+            class=":uno: divide-y divide-gray-100"
             group="group"
             handle=".drag-element"
             item-key="metadata.name"
@@ -118,14 +119,14 @@ function onEditingModalClose() {
               v-for="group in groups"
               :key="group.metadata.name"
               :is-selected="groupQuery === group.metadata.name"
-              class="group"
+              class=":uno: group"
               @click="groupQuery = group.metadata.name"
             >
               <template #prepend>
                 <div
-                  class="drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
+                  class=":uno: drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
                 >
-                  <IconList class="h-3.5 w-3.5" />
+                  <IconList class=":uno: h-3.5 w-3.5" />
                 </div>
               </template>
 
@@ -153,6 +154,7 @@ function onEditingModalClose() {
 
     <template v-if="!isLoading" #footer>
       <Transition appear name="fade">
+        <!-- @unocss-skip-start -->
         <VButton
           v-permission="['plugin:links:manage']"
           block
@@ -161,6 +163,7 @@ function onEditingModalClose() {
         >
           新建
         </VButton>
+        <!-- @unocss-skip-end -->
       </Transition>
     </template>
   </VCard>

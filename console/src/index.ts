@@ -1,9 +1,8 @@
-import LinkList from "@/views/LinkList.vue";
-import type { Extension } from "@halo-dev/api-client/index";
 import { definePlugin, type CommentSubjectRefProvider, type CommentSubjectRefResult } from "@halo-dev/console-shared";
-import { markRaw } from "vue";
+import { defineAsyncComponent, markRaw } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
-import "./styles/index.css";
+import "uno.css";
+import { VLoading } from "@halo-dev/components";
 
 export default definePlugin({
   components: {},
@@ -13,7 +12,10 @@ export default definePlugin({
       route: {
         path: "/links",
         name: "Links",
-        component: LinkList,
+        component: defineAsyncComponent({
+          loader: () => import("@/views/LinkList.vue"),
+          loadingComponent: VLoading,
+        }),
         meta: {
           permissions: ["plugin:links:view"],
           menu: {
@@ -31,7 +33,7 @@ export default definePlugin({
         {
           kind: "Plugin",
           group: "plugin.halo.run",
-          resolve: (subject: Extension): CommentSubjectRefResult => {
+          resolve: (): CommentSubjectRefResult => {
             return {
               label: "链接",
               title: "链接页面",

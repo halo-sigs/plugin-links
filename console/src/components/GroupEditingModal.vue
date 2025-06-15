@@ -3,21 +3,18 @@ import { linksCoreApiClient } from "@/api";
 import { LinkGroup } from "@/api/generated";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import cloneDeep from "lodash.clonedeep";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from "vue";
 
 const props = withDefaults(
   defineProps<{
-    visible: boolean;
     group?: LinkGroup;
   }>(),
   {
-    visible: false,
     group: undefined,
   }
 );
 
 const emit = defineEmits<{
-  (event: "update:visible", visible: boolean): void;
   (event: "close"): void;
 }>();
 
@@ -36,8 +33,8 @@ const initialFormState: LinkGroup = {
 };
 
 const formState = ref<LinkGroup>(cloneDeep(initialFormState));
-const saving = ref(false);
-const formVisible = ref(false);
+const isSubmitting = ref(false);
+const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const isUpdateMode = computed(() => {
   return !!formState.value.metadata.creationTimestamp;
@@ -64,7 +61,7 @@ const handleCreateOrUpdateGroup = async () => {
   };
 
   try {
-    saving.value = true;
+    isSubmitting.value = true;
     if (isUpdateMode.value) {
       await linksCoreApiClient.group.updateLinkGroup({
         name: formState.value.metadata.name,
@@ -78,40 +75,23 @@ const handleCreateOrUpdateGroup = async () => {
 
     Toast.success("保存成功");
 
-    onVisibleChange(false);
+    modal.value?.close();
   } catch (e) {
     console.error("Failed to create link group", e);
   } finally {
-    saving.value = false;
+    isSubmitting.value = false;
   }
 };
 
-const onVisibleChange = (visible: boolean) => {
-  emit("update:visible", visible);
-  if (!visible) {
-    emit("close");
+onMounted(() => {
+  if (props.group) {
+    formState.value = cloneDeep(props.group);
   }
-};
-
-watch(
-  () => props.visible,
-  (visible) => {
-    if (visible) {
-      if (props.group) formState.value = cloneDeep(props.group);
-      formVisible.value = true;
-    } else {
-      setTimeout(() => {
-        formVisible.value = false;
-        formState.value = cloneDeep(initialFormState);
-      }, 200);
-    }
-  }
-);
+});
 </script>
 <template>
-  <VModal :visible="visible" :width="600" :title="modalTitle" @update:visible="onVisibleChange">
+  <VModal ref="modal" :width="600" :title="modalTitle" @close="emit('close')">
     <FormKit
-      v-if="formVisible"
       id="link-group-form"
       v-model="formState.spec"
       name="link-group-form"
@@ -119,31 +99,30 @@ watch(
       :config="{ validationVisibility: 'submit' }"
       @submit="handleCreateOrUpdateGroup"
     >
-      <div class="md:grid md:grid-cols-4 md:gap-6">
-        <div class="md:col-span-1">
-          <div class="sticky top-0">
-            <span class="text-base text-gray-900 font-medium"> 常规 </span>
+      <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+        <div class=":uno: md:col-span-1">
+          <div class=":uno: sticky top-0">
+            <span class=":uno: text-base text-gray-900 font-medium"> 常规 </span>
           </div>
         </div>
-        <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+        <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
           <FormKit name="displayName" label="分组名称" type="text" validation="required"></FormKit>
         </div>
       </div>
     </FormKit>
 
-    <div class="py-5">
-      <div class="border-t border-gray-200"></div>
+    <div class=":uno: py-5">
+      <div class=":uno: border-t border-gray-200"></div>
     </div>
 
-    <div class="md:grid md:grid-cols-4 md:gap-6">
-      <div class="md:col-span-1">
-        <div class="sticky top-0">
-          <span class="text-base text-gray-900 font-medium"> 元数据 </span>
+    <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+      <div class=":uno: md:col-span-1">
+        <div class=":uno: sticky top-0">
+          <span class=":uno: text-base text-gray-900 font-medium"> 元数据 </span>
         </div>
       </div>
-      <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+      <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
         <AnnotationsForm
-          v-if="visible"
           :key="formState.metadata.name"
           ref="annotationsFormRef"
           :value="formState.metadata.annotations"
@@ -155,8 +134,9 @@ watch(
 
     <template #footer>
       <VSpace>
-        <VButton :loading="saving" type="secondary" @click="$formkit.submit('link-group-form')"> 提交 </VButton>
-        <VButton @click="onVisibleChange(false)"> 取消</VButton>
+        <!-- @vue-ignore -->
+        <VButton :loading="isSubmitting" type="secondary" @click="$formkit.submit('link-group-form')"> 提交 </VButton>
+        <VButton @click="modal?.close()"> 取消</VButton>
       </VSpace>
     </template>
   </VModal>
