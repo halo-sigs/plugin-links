@@ -3,22 +3,19 @@ import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import { Link } from "@/api/generated";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import cloneDeep from "lodash.clonedeep";
-import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
+import { computed, inject, nextTick, onMounted, ref, useTemplateRef, watch, type Ref } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 
 const props = withDefaults(
   defineProps<{
-    visible: boolean;
     link?: Link;
   }>(),
   {
-    visible: false,
     link: undefined,
   }
 );
 
 const emit = defineEmits<{
-  (event: "update:visible", value: boolean): void;
   (event: "close"): void;
 }>();
 
@@ -39,7 +36,7 @@ const initialFormState: Link = {
 
 const formState = ref<Link>(cloneDeep(initialFormState));
 const saving = ref<boolean>(false);
-const formVisible = ref(false);
+const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const groupQuery = inject<Ref<string>>("groupQuery", ref(""));
 
@@ -51,39 +48,11 @@ const modalTitle = computed(() => {
   return isUpdateMode.value ? "编辑链接" : "新建链接";
 });
 
-const onVisibleChange = (visible: boolean) => {
-  emit("update:visible", visible);
-  if (!visible) {
-    emit("close");
+onMounted(() => {
+  if (props.link) {
+    formState.value = cloneDeep(props.link);
   }
-};
-
-const handleResetForm = () => {
-  formState.value = cloneDeep(initialFormState);
-};
-
-watch(
-  () => props.visible,
-  (visible) => {
-    if (visible) {
-      formVisible.value = true;
-    } else {
-      setTimeout(() => {
-        formVisible.value = false;
-        handleResetForm();
-      }, 200);
-    }
-  }
-);
-
-watch(
-  () => props.link,
-  (link) => {
-    if (link) {
-      formState.value = cloneDeep(link);
-    }
-  }
-);
+});
 
 const annotationsFormRef = ref();
 
@@ -117,7 +86,7 @@ const handleSaveLink = async () => {
 
     Toast.success("保存成功");
 
-    onVisibleChange(false);
+    modal.value?.close();
   } catch (e) {
     console.error(e);
   } finally {
@@ -154,13 +123,12 @@ const handleGetLinkDetail = async () => {
 };
 </script>
 <template>
-  <VModal :title="modalTitle" :visible="visible" :width="650" @update:visible="onVisibleChange">
+  <VModal :title="modalTitle" ref="modal" :width="650" @close="emit('close')">
     <template #actions>
       <slot name="append-actions" />
     </template>
 
     <FormKit
-      v-if="formVisible"
       id="link-form"
       v-model="formState.spec"
       name="link-form"
@@ -169,24 +137,24 @@ const handleGetLinkDetail = async () => {
       :disabled="loading"
       @submit="handleSaveLink"
     >
-      <div class="md:grid md:grid-cols-4 md:gap-6">
-        <div class="md:col-span-1">
-          <div class="sticky top-0">
-            <span class="text-base text-gray-900 font-medium"> 常规 </span>
+      <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+        <div class=":uno: md:col-span-1">
+          <div class=":uno: sticky top-0">
+            <span class=":uno: text-base text-gray-900 font-medium"> 常规 </span>
           </div>
         </div>
-        <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+        <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
           <FormKit type="url" name="url" validation="required" label="网站地址">
             <template #suffix>
               <div
                 v-tooltip="{
                   content: '获取网站信息',
                 }"
-                class="group h-full flex cursor-pointer items-center px-3 transition-all"
+                class=":uno: group h-full flex cursor-pointer items-center px-3 transition-all"
                 @click="handleGetLinkDetail"
               >
-                <VLoading v-if="loading" class="size-4 text-gray-500 group-hover:text-gray-700" />
-                <MdiWebRefresh v-else class="size-4 text-gray-500 group-hover:text-gray-700" />
+                <VLoading v-if="loading" class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
+                <MdiWebRefresh v-else class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
               </div>
             </template>
           </FormKit>
@@ -197,19 +165,18 @@ const handleGetLinkDetail = async () => {
       </div>
     </FormKit>
 
-    <div class="py-5">
-      <div class="border-t border-gray-200"></div>
+    <div class=":uno: py-5">
+      <div class=":uno: border-t border-gray-200"></div>
     </div>
 
-    <div class="md:grid md:grid-cols-4 md:gap-6">
-      <div class="md:col-span-1">
-        <div class="sticky top-0">
-          <span class="text-base text-gray-900 font-medium"> 元数据 </span>
+    <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+      <div class=":uno: md:col-span-1">
+        <div class=":uno: sticky top-0">
+          <span class=":uno: text-base text-gray-900 font-medium"> 元数据 </span>
         </div>
       </div>
-      <div class="mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+      <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
         <AnnotationsForm
-          v-if="visible"
           :key="formState.metadata.name"
           ref="annotationsFormRef"
           :value="formState.metadata.annotations"
@@ -221,8 +188,9 @@ const handleGetLinkDetail = async () => {
 
     <template #footer>
       <VSpace>
+        <!-- @vue-ignore -->
         <VButton :loading="saving" type="secondary" @click="$formkit.submit('link-form')"> 提交 </VButton>
-        <VButton @click="onVisibleChange(false)">取消</VButton>
+        <VButton @click="modal?.close()">取消</VButton>
       </VSpace>
     </template>
   </VModal>

@@ -119,6 +119,7 @@ const onPriorityChange = async () => {
 
 const onEditingModalClose = async () => {
   selectedLink.value = undefined;
+  editingModal.value = false;
   refetch();
 };
 
@@ -302,7 +303,7 @@ async function handleMove(link: Link, group: LinkGroup) {
 }
 </script>
 <template>
-  <LinkEditingModal v-model:visible="editingModal" :link="selectedLink" @close="onEditingModalClose">
+  <LinkEditingModal v-if="editingModal" :link="selectedLink" @close="onEditingModalClose">
     <template #append-actions>
       <span @click="handleSelectPrevious">
         <IconArrowLeft />
@@ -314,7 +315,7 @@ async function handleMove(link: Link, group: LinkGroup) {
   </LinkEditingModal>
   <VPageHeader title="链接">
     <template #icon>
-      <RiLinksLine class="mr-2 self-center" />
+      <RiLinksLine />
     </template>
     <template #actions>
       <VSpace v-permission="['plugin:links:manage']">
@@ -322,20 +323,20 @@ async function handleMove(link: Link, group: LinkGroup) {
       </VSpace>
     </template>
   </VPageHeader>
-  <div class="p-4">
-    <div class="flex flex-row gap-2">
-      <div class="w-96">
+  <div class=":uno: p-4">
+    <div class=":uno: flex flex-row gap-2">
+      <div class=":uno: w-96">
         <GroupList />
       </div>
-      <div class="flex-1">
-        <VCard :body-class="['!p-0']">
+      <div class=":uno: flex-1">
+        <VCard :body-class="[':uno: !p-0']">
           <template #header>
-            <div class="block w-full bg-gray-50 px-4 py-3">
-              <div class="relative flex flex-col items-start sm:flex-row sm:items-center">
-                <div class="mr-4 hidden items-center sm:flex">
+            <div class=":uno: block w-full bg-gray-50 px-4 py-3">
+              <div class=":uno: relative flex flex-col items-start sm:flex-row sm:items-center">
+                <div class=":uno: mr-4 hidden items-center sm:flex">
                   <input v-model="checkedAll" type="checkbox" @change="handleCheckAllChange" />
                 </div>
-                <div class="w-full flex flex-1 sm:w-auto">
+                <div class=":uno: w-full flex flex-1 sm:w-auto">
                   <SearchInput v-if="!selectedLinks.length" v-model="keyword" />
                   <VSpace v-else>
                     <VButton type="danger" @click="handleDeleteInBatch"> 删除 </VButton>
@@ -362,7 +363,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                     </VDropdown>
                   </VSpace>
                 </div>
-                <div v-permission="['plugin:links:manage']" class="mt-4 flex sm:mt-0">
+                <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0">
                   <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
                 </div>
               </div>
@@ -376,7 +377,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                   <VButton @click="refetch"> 刷新</VButton>
                   <VButton v-permission="['system:menus:manage']" type="primary" @click="editingModal = true">
                     <template #icon>
-                      <IconAddCircle class="size-full" />
+                      <IconAddCircle class=":uno: size-full" />
                     </template>
                     新建
                   </VButton>
@@ -385,11 +386,11 @@ async function handleMove(link: Link, group: LinkGroup) {
             </VEmpty>
           </Transition>
           <Transition v-else appear name="fade">
-            <div class="w-full overflow-x-auto">
-              <table class="w-full border-spacing-0">
+            <div class=":uno: w-full overflow-x-auto">
+              <table class=":uno: w-full border-spacing-0">
                 <VueDraggable
                   v-model="links"
-                  class="divide-y divide-gray-100"
+                  class=":uno: divide-y divide-gray-100"
                   group="link"
                   handle=".drag-element"
                   item-key="id"
@@ -402,13 +403,13 @@ async function handleMove(link: Link, group: LinkGroup) {
                     v-for="link in links"
                     :key="link.metadata.name"
                     :is-selected="selectedLinks.includes(link.metadata.name)"
-                    class="group"
+                    class=":uno: group"
                   >
                     <template v-if="!keyword && groupQuery" #prepend>
                       <div
-                        class="drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
+                        class=":uno: drag-element absolute inset-y-0 left-0 hidden w-3.5 cursor-move items-center bg-gray-100 transition-all group-hover:flex hover:bg-gray-200"
                       >
-                        <IconList class="h-3.5 w-3.5" />
+                        <IconList class=":uno: h-3.5 w-3.5" />
                       </div>
                     </template>
 
@@ -431,7 +432,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                         <template #description>
                           <a
                             :href="link.spec?.url"
-                            class="truncate text-xs text-gray-500 hover:text-gray-900"
+                            class=":uno: truncate text-xs text-gray-500 hover:text-gray-900"
                             target="_blank"
                           >
                             {{ link.spec?.url }}
