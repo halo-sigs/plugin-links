@@ -1,3 +1,7 @@
+// ⚠️ IMPORTANT: Using rspack to build Halo plugins is just an attempt by the Halo team.
+// Currently, it is still recommended to refer to https://github.com/halo-dev/plugin-starter
+// Using Vite
+
 import { defineConfig } from "@rspack/cli";
 import { UnoCSSRspackPlugin } from "@unocss/webpack/rspack";
 import path from "path";
