@@ -145,7 +145,8 @@ public class LinkRouter {
             if (StringUtils.isNotBlank(getKeyword())) {
                 query = and(query, or(
                     contains("spec.displayName", getKeyword()),
-                    contains("spec.description", getKeyword())
+                    contains("spec.description", getKeyword()),
+                    contains("spec.url", getKeyword())
                 ));
             }
 
