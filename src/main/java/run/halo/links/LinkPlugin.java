@@ -36,6 +36,10 @@ public class LinkPlugin extends BasePlugin {
                 .setIndexFunc(simpleAttribute(Link.class, link -> link.getSpec().getDescription()))
             );
             indexSpecs.add(new IndexSpec()
+                .setName("spec.url")
+                .setIndexFunc(simpleAttribute(Link.class, link -> link.getSpec().getUrl()))
+            );
+            indexSpecs.add(new IndexSpec()
                 .setName("spec.groupName")
                 .setIndexFunc(simpleAttribute(Link.class, link -> {
                     var group = link.getSpec().getGroupName();
