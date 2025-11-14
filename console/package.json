@@ -7,41 +7,49 @@
     "lint": "eslint ./src --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "prettier": "prettier --write './src/**/*.{vue,js,jsx,ts,tsx,css,scss,json,yml,yaml,html}'"
   },
+  "prettier": {
+    "printWidth": 120,
+    "tabWidth": 2,
+    "useTabs": false,
+    "endOfLine": "lf",
+    "plugins": [
+      "prettier-plugin-organize-imports"
+    ]
+  },
   "dependencies": {
     "@halo-dev/api-client": "^2.21.1",
     "@halo-dev/components": "^2.21.0",
-    "@halo-dev/console-shared": "^2.21.0",
+    "@halo-dev/ui-shared": "https://pkg.pr.new/@halo-dev/ui-shared@ac88ee7",
     "@tanstack/vue-query": "^4.41.0",
     "@vueuse/core": "^10.11.1",
     "@vueuse/router": "^10.11.1",
-    "axios": "^1.13.1",
-    "dayjs": "^1.11.19",
-    "lodash.clonedeep": "^4.5.0",
-    "vue": "^3.5.22",
+    "axios": "^1.13.2",
+    "es-toolkit": "^1.41.0",
+    "vue": "^3.5.24",
     "vue-draggable-plus": "^0.6.0",
     "vue-router": "^4.6.3",
     "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@halo-dev/ui-plugin-bundler-kit": "2.21.2",
-    "@iconify/json": "^2.2.402",
-    "@rsbuild/core": "^1.6.0",
-    "@rushstack/eslint-patch": "^1.14.1",
-    "@types/lodash.clonedeep": "^4.5.9",
+    "@halo-dev/ui-plugin-bundler-kit": "https://pkg.pr.new/@halo-dev/ui-plugin-bundler-kit@ac88ee7",
+    "@iconify/json": "^2.2.407",
+    "@rsbuild/core": "^1.6.6",
+    "@rushstack/eslint-patch": "^1.15.0",
     "@types/node": "^16.18.126",
-    "@unocss/eslint-config": "^66.5.4",
-    "@unocss/webpack": "^66.5.4",
+    "@unocss/eslint-config": "^66.5.6",
+    "@unocss/webpack": "^66.5.6",
     "@vue/eslint-config-prettier": "^7.1.0",
     "@vue/eslint-config-typescript": "^10.0.0",
     "@vue/tsconfig": "^0.1.3",
     "eslint": "^8.57.1",
     "eslint-plugin-vue": "^8.7.1",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.8.8",
-    "typescript": "~5.5.4",
-    "unocss": "^66.5.4",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "~5.9.3",
+    "unocss": "^66.5.6",
     "unplugin-icons": "^22.5.0",
     "vue-tsc": "^2.2.12"
   },
-  "packageManager": "pnpm@10.20.0"
+  "packageManager": "pnpm@10.22.0"
 }
