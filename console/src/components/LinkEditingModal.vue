@@ -2,7 +2,7 @@
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import { Link } from "@/api/generated";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
-import cloneDeep from "lodash.clonedeep";
+import { cloneDeep } from "es-toolkit";
 import { computed, inject, nextTick, onMounted, ref, useTemplateRef, watch, type Ref } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 

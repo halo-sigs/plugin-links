@@ -2,8 +2,8 @@
 import { linksCoreApiClient } from "@/api";
 import { LinkGroup } from "@/api/generated";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
-import cloneDeep from "lodash.clonedeep";
-import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from "vue";
+import { cloneDeep } from "es-toolkit";
+import { computed, nextTick, onMounted, ref, useTemplateRef } from "vue";
 
 const props = withDefaults(
   defineProps<{

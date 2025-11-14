@@ -2,7 +2,6 @@
 import { linksCoreApiClient } from "@/api";
 import { Link, LinkGroup } from "@/api/generated";
 import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
-import { formatDatetime } from "@/utils/date";
 import {
   Dialog,
   IconAddCircle,
@@ -34,6 +33,7 @@ import RiLinksLine from "~icons/ri/links-line";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
 import { VueDraggable } from "vue-draggable-plus";
+import { utils } from "@halo-dev/ui-shared";
 
 const queryClient = useQueryClient();
 
@@ -451,7 +451,7 @@ async function handleMove(link: Link, group: LinkGroup) {
                           <VStatusDot v-tooltip="`删除中`" state="warning" animate />
                         </template>
                       </VEntityField>
-                      <VEntityField :description="formatDatetime(link.metadata.creationTimestamp)" />
+                      <VEntityField :description="utils.date.format(link.metadata.creationTimestamp)" />
                     </template>
                     <template #dropdownItems>
                       <VDropdownItem @click="handleOpenCreateModal(link)"> 编辑 </VDropdownItem>

@@ -1,8 +1,7 @@
-import { definePlugin, type CommentSubjectRefProvider, type CommentSubjectRefResult } from "@halo-dev/console-shared";
-import { defineAsyncComponent, markRaw } from "vue";
-import RiLinksLine from "~icons/ri/links-line";
+import { definePlugin, type CommentSubjectRefProvider, type CommentSubjectRefResult } from "@halo-dev/ui-shared";
 import "uno.css";
-import { VLoading } from "@halo-dev/components";
+import { markRaw } from "vue";
+import RiLinksLine from "~icons/ri/links-line";
 
 export default definePlugin({
   components: {},
@@ -12,10 +11,7 @@ export default definePlugin({
       route: {
         path: "/links",
         name: "Links",
-        component: defineAsyncComponent({
-          loader: () => import("@/views/LinkList.vue"),
-          loadingComponent: VLoading,
-        }),
+        component: () => import("@/views/LinkList.vue"),
         meta: {
           permissions: ["plugin:links:view"],
           menu: {
