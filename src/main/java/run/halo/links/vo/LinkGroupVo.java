@@ -1,13 +1,12 @@
 package run.halo.links.vo;
 
+import java.util.List;
 import lombok.Builder;
 import lombok.Value;
 import lombok.With;
 import run.halo.app.extension.MetadataOperator;
 import run.halo.app.theme.finders.vo.ExtensionVoOperator;
 import run.halo.links.LinkGroup;
-
-import java.util.List;
 
 /**
  * @author guqing
