@@ -17,9 +17,9 @@
     ]
   },
   "dependencies": {
-    "@halo-dev/api-client": "^2.21.1",
-    "@halo-dev/components": "^2.21.0",
-    "@halo-dev/ui-shared": "https://pkg.pr.new/@halo-dev/ui-shared@ac88ee7",
+    "@halo-dev/api-client": "^2.22.0",
+    "@halo-dev/components": "^2.22.0",
+    "@halo-dev/ui-shared": "^2.22.0",
     "@tanstack/vue-query": "^4.41.0",
     "@vueuse/core": "^10.11.1",
     "@vueuse/router": "^10.11.1",
@@ -31,7 +31,7 @@
     "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@halo-dev/ui-plugin-bundler-kit": "https://pkg.pr.new/@halo-dev/ui-plugin-bundler-kit@ac88ee7",
+    "@halo-dev/ui-plugin-bundler-kit": "^2.22.0",
     "@iconify/json": "^2.2.407",
     "@rsbuild/core": "^1.6.6",
     "@rushstack/eslint-patch": "^1.15.0",
