@@ -1,25 +1,28 @@
 plugins {
-    id "com.github.node-gradle.node" version "7.0.2"
-    id "run.halo.plugin.devtools" version "0.5.0"
-    id "io.freefair.lombok" version "8.0.1"
+    id "com.github.node-gradle.node" version "7.1.0"
+    id "run.halo.plugin.devtools" version "0.6.2"
+    id "io.freefair.lombok" version "9.1.0"
     id 'java'
 }
 
 group 'run.halo.links'
-sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
-    maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
-    maven { url 'https://repo.spring.io/milestone' }
     mavenCentral()
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.15.0-SNAPSHOT')
+    implementation platform('run.halo.tools.platform:plugin:2.22.5')
     compileOnly 'run.halo.app:api'
 
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 test {
@@ -28,6 +31,7 @@ test {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
+    options.release = 21
 }
 
 node {
@@ -51,7 +55,7 @@ build {
 }
 
 halo {
-    version = '2.21.0'
+    version = '2.22.5'
     debug = true
 }
 

@@ -12,9 +12,11 @@ import static run.halo.app.extension.index.query.QueryFactory.equal;
 import static run.halo.app.extension.index.query.QueryFactory.or;
 import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToListOptions;
 
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.fn.builders.operation.Builder;
 import org.springdoc.webflux.core.fn.SpringdocRouteBuilder;
@@ -27,10 +29,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
-
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import run.halo.app.extension.ListOptions;
@@ -66,10 +64,9 @@ public class LinkRouter {
     @Bean
     RouterFunction<ServerResponse> linkRoute() {
         return SpringdocRouteBuilder.route()
-            .nest(RequestPredicates.path("/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks"),
-                this::nested,
-                builder -> builder.operationId("PluginLinksEndpoints")
-                    .description("Plugin links Endpoints").tag(tag)
+            .nest(
+                RequestPredicates.path("/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks"),
+                this::nested
             )
             .build();
     }
