@@ -46,6 +46,8 @@ import run.halo.links.vo.LinkGroupVo;
 @RequiredArgsConstructor
 public class LinkRouter {
 
+    public static final String LINKS_ROUTE_PATH = "/links";
+
     private final LinkFinder linkFinder;
     private final ReactiveExtensionClient client;
     private final String tag = "api.plugin.halo.run/v1alpha1/Link";
@@ -54,7 +56,7 @@ public class LinkRouter {
 
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
-        return route(GET("/links"),
+        return route(GET(LINKS_ROUTE_PATH),
             request -> ServerResponse.ok().render("links",
                 Map.of("groups", linkGroups(),
                     "pluginName", pluginContext.getName(),
