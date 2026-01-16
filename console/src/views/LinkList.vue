@@ -301,6 +301,36 @@ async function handleMove(link: Link, group: LinkGroup) {
 
   refetch();
 }
+
+async function handleToggleHiddenInBatch(hidden: boolean) {
+  const linksToUpdate = selectedLinks.value
+    ?.map((name) => {
+      return links.value?.find((link) => link.metadata.name === name);
+    })
+    .filter(Boolean) as Link[];
+
+  const requests = linksToUpdate.map((link) => {
+    return linksCoreApiClient.link.patchLink({
+      name: link.metadata.name,
+      jsonPatchInner: [
+        {
+          op: "add",
+          path: "/spec/hidden",
+          value: hidden,
+        },
+      ],
+    });
+  });
+
+  if (requests) await Promise.all(requests);
+
+  refetch();
+
+  selectedLinks.value.length = 0;
+  checkedAll.value = false;
+
+  Toast.success(hidden ? "隐藏成功" : "取消隐藏成功");
+}
 </script>
 <template>
   <LinkEditingModal v-if="editingModal" :link="selectedLink" @close="onEditingModalClose">
@@ -359,6 +389,10 @@ async function handleMove(link: Link, group: LinkGroup) {
                             </template>
                           </template>
                         </VDropdown>
+                        <VDropdownDivider />
+                        <VDropdownItem @click="handleToggleHiddenInBatch(true)"> 隐藏 </VDropdownItem>
+                        <VDropdownItem @click="handleToggleHiddenInBatch(false)"> 取消隐藏 </VDropdownItem>
+                        <VDropdownDivider />
                       </template>
                     </VDropdown>
                   </VSpace>
