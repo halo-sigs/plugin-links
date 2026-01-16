@@ -41,6 +41,7 @@ public class LinkFinderImpl implements LinkFinder {
         } else {
             query = and(query, equal("spec.groupName", groupName));
         }
+        query = and(query, or(isNull("spec.hidden"), equal("spec.hidden", "false")));
         listOptions.setFieldSelector(FieldSelector.of(query));
         return client.listAll(Link.class, listOptions, defaultLinkSort())
             .map(LinkVo::from);
@@ -48,6 +49,10 @@ public class LinkFinderImpl implements LinkFinder {
 
     @Override
     public Flux<LinkGroupVo> groupBy() {
+        var listOptions = new ListOptions();
+        var query = isNull("metadata.deletionTimestamp");
+        query = and(query, or(isNull("spec.hidden"), equal("spec.hidden", "false")));
+        listOptions.setFieldSelector(FieldSelector.of(query));
         return client.listAll(LinkGroup.class, new ListOptions(), defaultGroupSort())
             .map(LinkGroupVo::from)
             .concatMap(group -> listBy(group.getMetadata().getName())
@@ -73,6 +78,7 @@ public class LinkFinderImpl implements LinkFinder {
         linkGroup.setSpec(new LinkGroup.LinkGroupSpec());
         linkGroup.getSpec().setDisplayName("");
         linkGroup.getSpec().setPriority(0);
+        linkGroup.getSpec().setHidden(false);
         return Mono.just(linkGroup);
     }
 

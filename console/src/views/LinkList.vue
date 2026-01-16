@@ -442,6 +442,11 @@ async function handleMove(link: Link, group: LinkGroup) {
                     </template>
 
                     <template #end>
+                      <VEntityField v-if="link.spec?.hidden">
+                        <template #description>
+                          <VStatusDot v-tooltip="`已隐藏`" state="default" />
+                        </template>
+                      </VEntityField>
                       <VEntityField
                         v-if="getGroup(link.spec?.groupName || '')"
                         :description="getGroup(link.spec?.groupName || '')?.spec?.displayName"

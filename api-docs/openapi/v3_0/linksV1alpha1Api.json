@@ -2,10 +2,10 @@
   "openapi" : "3.0.1",
   "info" : {
     "title" : "Halo",
-    "version" : "2.17.2"
+    "version" : "2.22.5"
   },
   "servers" : [ {
-    "url" : "http://localhost:31788",
+    "url" : "http://localhost:42136",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -624,7 +624,8 @@
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
           }
-        }
+        },
+        "description" : "A chunk of items."
       },
       "LinkDetailDTO" : {
         "required" : [ "title" ],
@@ -718,6 +719,9 @@
           "displayName" : {
             "type" : "string"
           },
+          "hidden" : {
+            "type" : "boolean"
+          },
           "links" : {
             "type" : "array",
             "description" : "Names of links below this group.",
@@ -796,6 +800,9 @@
           "groupName" : {
             "type" : "string"
           },
+          "hidden" : {
+            "type" : "boolean"
+          },
           "logo" : {
             "type" : "string"
           },
@@ -816,15 +823,18 @@
             "type" : "object",
             "additionalProperties" : {
               "type" : "string"
-            }
+            },
+            "description" : "Annotations are like key-value format."
           },
           "creationTimestamp" : {
             "type" : "string",
+            "description" : "Creation timestamp of the Extension.",
             "format" : "date-time",
             "nullable" : true
           },
           "deletionTimestamp" : {
             "type" : "string",
+            "description" : "Deletion timestamp of the Extension.",
             "format" : "date-time",
             "nullable" : true
           },
@@ -845,7 +855,8 @@
             "type" : "object",
             "additionalProperties" : {
               "type" : "string"
-            }
+            },
+            "description" : "Labels are like key-value format."
           },
           "name" : {
             "type" : "string",
@@ -853,10 +864,12 @@
           },
           "version" : {
             "type" : "integer",
+            "description" : "Current version of the Extension. It will be bumped up every update.",
             "format" : "int64",
             "nullable" : true
           }
-        }
+        },
+        "description" : "Metadata of Extension."
       },
       "MoveOperation" : {
         "required" : [ "op", "from", "path" ],
