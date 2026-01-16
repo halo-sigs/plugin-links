@@ -53,7 +53,7 @@ public class LinkFinderImpl implements LinkFinder {
         var query = isNull("metadata.deletionTimestamp");
         query = and(query, or(isNull("spec.hidden"), equal("spec.hidden", "false")));
         listOptions.setFieldSelector(FieldSelector.of(query));
-        return client.listAll(LinkGroup.class, new ListOptions(), defaultGroupSort())
+        return client.listAll(LinkGroup.class, listOptions, defaultGroupSort())
             .map(LinkGroupVo::from)
             .concatMap(group -> listBy(group.getMetadata().getName())
                 .collectList()
