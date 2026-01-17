@@ -10,6 +10,7 @@ import static run.halo.app.extension.index.query.QueryFactory.and;
 import static run.halo.app.extension.index.query.QueryFactory.contains;
 import static run.halo.app.extension.index.query.QueryFactory.equal;
 import static run.halo.app.extension.index.query.QueryFactory.or;
+import static run.halo.app.extension.index.query.QueryFactory.isNull;
 import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToListOptions;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -151,6 +152,8 @@ public class LinkRouter {
                 query = and(query, equal("spec.groupName", getGroupName()));
             }
             listOptions.setFieldSelector(FieldSelector.of(query));
+            
+            query = and(query, or(isNull("spec.hidden"), equal("spec.hidden", "false")));
             return listOptions;
         }
 

@@ -49,8 +49,9 @@ provide<Ref<string>>("groupQuery", groupQuery);
 const page = ref(1);
 const size = ref(20);
 const keyword = ref("");
+const hiddenFilter = ref<string | undefined>("all");
 
-const { links, isLoading, total, refetch } = useLinkFetch(page, size, keyword, groupQuery);
+const { links, isLoading, total, refetch } = useLinkFetch(page, size, keyword, groupQuery, hiddenFilter);
 
 watch(
   () => groupQuery.value,
@@ -301,6 +302,36 @@ async function handleMove(link: Link, group: LinkGroup) {
 
   refetch();
 }
+
+async function handleToggleHiddenInBatch(hidden: boolean) {
+  const linksToUpdate = selectedLinks.value
+    ?.map((name) => {
+      return links.value?.find((link) => link.metadata.name === name);
+    })
+    .filter(Boolean) as Link[];
+
+  const requests = linksToUpdate.map((link) => {
+    return linksCoreApiClient.link.patchLink({
+      name: link.metadata.name,
+      jsonPatchInner: [
+        {
+          op: "add",
+          path: "/spec/hidden",
+          value: hidden,
+        },
+      ],
+    });
+  });
+
+  if (requests) await Promise.all(requests);
+
+  refetch();
+
+  selectedLinks.value.length = 0;
+  checkedAll.value = false;
+
+  Toast.success(hidden ? "隐藏成功" : "取消隐藏成功");
+}
 </script>
 <template>
   <LinkEditingModal v-if="editingModal" :link="selectedLink" @close="onEditingModalClose">
@@ -359,12 +390,31 @@ async function handleMove(link: Link, group: LinkGroup) {
                             </template>
                           </template>
                         </VDropdown>
+                        <VDropdownDivider />
+                        <VDropdownItem @click="handleToggleHiddenInBatch(true)"> 隐藏 </VDropdownItem>
+                        <VDropdownItem @click="handleToggleHiddenInBatch(false)"> 取消隐藏 </VDropdownItem>
+                        <VDropdownDivider />
                       </template>
                     </VDropdown>
                   </VSpace>
                 </div>
-                <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0">
-                  <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
+                <div class=":uno: flex items-center gap-2">
+                  <div class=":uno: flex items-center gap-2">
+                    <VDropdown>
+                      <div class=":uno: flex items-center gap-1 cursor-pointer text-sm select-none">
+                        <span>状态：{{ hiddenFilter === 'all' ? '全部' : hiddenFilter === 'true' ? '隐藏' : '未隐藏' }}</span>
+                        <svg viewBox="0 0 24 24" width="1.2em" height="1.2em" class=":uno: text-gray-500"><path fill="currentColor" d="m12 16l-6-6h12z"></path></svg>
+                      </div>
+                      <template #popper>
+                        <VDropdownItem @click="hiddenFilter = 'all'" :is-active="hiddenFilter === 'all'">全部</VDropdownItem>
+                        <VDropdownItem @click="hiddenFilter = 'true'" :is-active="hiddenFilter === 'true'">隐藏</VDropdownItem>
+                        <VDropdownItem @click="hiddenFilter = 'false'" :is-active="hiddenFilter === 'false'">未隐藏</VDropdownItem>
+                      </template>
+                    </VDropdown>
+                  </div>
+                  <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0">
+                    <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -442,6 +492,11 @@ async function handleMove(link: Link, group: LinkGroup) {
                     </template>
 
                     <template #end>
+                      <VEntityField v-if="link.spec?.hidden">
+                        <template #description>
+                          <VStatusDot v-tooltip="`已隐藏`" state="default" />
+                        </template>
+                      </VEntityField>
                       <VEntityField
                         v-if="getGroup(link.spec?.groupName || '')"
                         :description="getGroup(link.spec?.groupName || '')?.spec?.displayName"
