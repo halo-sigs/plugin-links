@@ -49,8 +49,9 @@ provide<Ref<string>>("groupQuery", groupQuery);
 const page = ref(1);
 const size = ref(20);
 const keyword = ref("");
+const hiddenFilter = ref<string | undefined>("all");
 
-const { links, isLoading, total, refetch } = useLinkFetch(page, size, keyword, groupQuery);
+const { links, isLoading, total, refetch } = useLinkFetch(page, size, keyword, groupQuery, hiddenFilter);
 
 watch(
   () => groupQuery.value,
@@ -397,8 +398,23 @@ async function handleToggleHiddenInBatch(hidden: boolean) {
                     </VDropdown>
                   </VSpace>
                 </div>
-                <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0">
-                  <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
+                <div class=":uno: flex items-center gap-2">
+                  <div class=":uno: flex items-center gap-2">
+                    <VDropdown>
+                      <div class=":uno: flex items-center gap-1 cursor-pointer text-sm select-none">
+                        <span>状态：{{ hiddenFilter === 'all' ? '全部' : hiddenFilter === 'true' ? '隐藏' : '未隐藏' }}</span>
+                        <svg viewBox="0 0 24 24" width="1.2em" height="1.2em" class=":uno: text-gray-500"><path fill="currentColor" d="m12 16l-6-6h12z"></path></svg>
+                      </div>
+                      <template #popper>
+                        <VDropdownItem @click="hiddenFilter = 'all'" :is-active="hiddenFilter === 'all'">全部</VDropdownItem>
+                        <VDropdownItem @click="hiddenFilter = 'true'" :is-active="hiddenFilter === 'true'">隐藏</VDropdownItem>
+                        <VDropdownItem @click="hiddenFilter = 'false'" :is-active="hiddenFilter === 'false'">未隐藏</VDropdownItem>
+                      </template>
+                    </VDropdown>
+                  </div>
+                  <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0">
+                    <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
+                  </div>
                 </div>
               </div>
             </div>
