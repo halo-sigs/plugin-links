@@ -1,0 +1,31 @@
+schema: spec-driven
+
+context: |
+  Tech stack:
+    Backend: Java 21, Spring WebFlux (Project Reactor), Gradle
+    Frontend: Vue 3 (Composition API), TypeScript, Rsbuild, pnpm
+    Styling: UnoCSS, Halo Dev Components
+    State: Vue Query (@tanstack/vue-query)
+  Architecture:
+    - Halo 2.0 plugin using the Extension system (GVK, AbstractExtension, ReactiveExtensionClient)
+    - Two extension models: Link and LinkGroup (GVK: core.halo.run/v1alpha1)
+    - Reactive backend with Mono/Flux throughout
+    - Auto-generated OpenAPI TypeScript client in console/src/api/generated/
+    - No unit tests currently exist
+  Conventions:
+    - Follow .editorconfig (IntelliJ style): Java line length 100, 4-space indent, single-class imports
+    - Frontend Prettier: 120 print width, 2-space indent, LF line endings
+    - Frontend icons via unplugin-icons (~icons/ri/...)
+    - Atomic CSS with :uno: prefix
+    - All backend queries use Halo's index query system (QueryFactory.and/or/contains/equal/isNull)
+  Domain:
+    Link management plugin for Halo CMS. Manages friend links with groups, priority sorting, logo, description.
+    Provides a Console admin UI and a public /links page route for themes.
+
+rules:
+  proposal:
+    - Keep proposals focused on the plugin's scope (link/group management)
+    - Mention whether changes affect backend, frontend, or both
+  tasks:
+    - Break cross-stack changes into backend-first and frontend-followup tasks
+    - When touching extension models, include a task to verify OpenAPI regeneration
