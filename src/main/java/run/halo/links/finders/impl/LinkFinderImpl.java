@@ -1,7 +1,7 @@
 package run.halo.links.finders.impl;
 
 import static org.springframework.data.domain.Sort.Order.asc;
-import static run.halo.app.extension.index.query.QueryFactory.*;
+import static run.halo.app.extension.index.query.Queries.*;
 
 import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Flux;

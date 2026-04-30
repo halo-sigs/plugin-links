@@ -1,12 +1,11 @@
 package run.halo.links;
 
-import static run.halo.app.extension.index.IndexAttributeFactory.simpleAttribute;
+import run.halo.app.extension.index.IndexSpecs;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import run.halo.app.extension.Scheme;
 import run.halo.app.extension.SchemeManager;
-import run.halo.app.extension.index.IndexSpec;
 import run.halo.app.plugin.BasePlugin;
 import run.halo.app.plugin.PluginContext;
 
@@ -27,34 +26,28 @@ public class LinkPlugin extends BasePlugin {
     @Override
     public void start() {
         schemeManager.register(Link.class, indexSpecs -> {
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.displayName")
-                .setIndexFunc(simpleAttribute(Link.class, link -> link.getSpec().getDisplayName()))
+            indexSpecs.add(IndexSpecs.<Link, String>single("spec.displayName", String.class)
+                .indexFunc(link -> link.getSpec().getDisplayName())
             );
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.description")
-                .setIndexFunc(simpleAttribute(Link.class, link -> link.getSpec().getDescription()))
+            indexSpecs.add(IndexSpecs.<Link, String>single("spec.description", String.class)
+                .indexFunc(link -> link.getSpec().getDescription())
             );
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.url")
-                .setIndexFunc(simpleAttribute(Link.class, link -> link.getSpec().getUrl()))
+            indexSpecs.add(IndexSpecs.<Link, String>single("spec.url", String.class)
+                .indexFunc(link -> link.getSpec().getUrl())
             );
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.groupName")
-                .setIndexFunc(simpleAttribute(Link.class, link -> {
+            indexSpecs.add(IndexSpecs.<Link, String>single("spec.groupName", String.class)
+                .indexFunc(link -> {
                     var group = link.getSpec().getGroupName();
                     return StringUtils.isBlank(group) ? null : group;
-                }))
+                })
             );
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.priority")
-                .setIndexFunc(simpleAttribute(Link.class, link -> String.valueOf(link.getSpec().getPriority())))
+            indexSpecs.add(IndexSpecs.<Link, Integer>single("spec.priority", Integer.class)
+                .indexFunc(link -> link.getSpec().getPriority())
             );
         });
         schemeManager.register(LinkGroup.class, indexSpecs -> {
-            indexSpecs.add(new IndexSpec()
-                .setName("spec.priority")
-                .setIndexFunc(simpleAttribute(LinkGroup.class, group -> String.valueOf(group.getSpec().getPriority())))
+            indexSpecs.add(IndexSpecs.<LinkGroup, Integer>single("spec.priority", Integer.class)
+                .indexFunc(group -> group.getSpec().getPriority())
             );
         });
     }
