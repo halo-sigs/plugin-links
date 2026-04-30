@@ -4,4 +4,4 @@ pluginManagement {
     }
 }
 rootProject.name = 'plugin-links'
-
+include 'console'

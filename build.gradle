@@ -1,8 +1,7 @@
 plugins {
-    id "com.github.node-gradle.node" version "7.1.0"
-    id "run.halo.plugin.devtools" version "0.6.2"
-    id "io.freefair.lombok" version "9.1.0"
     id 'java'
+    id "io.freefair.lombok" version "9.2.0"
+    id "run.halo.plugin.devtools" version "0.6.2"
 }
 
 group 'run.halo.links'
@@ -12,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.22.5')
+    implementation platform('run.halo.tools.platform:plugin:2.24.0')
     compileOnly 'run.halo.app:api'
 
     testImplementation 'run.halo.app:api'
@@ -34,28 +33,23 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 21
 }
 
-node {
-    nodeProjectDir = file("${project.projectDir}/console")
+tasks.register('processUiResources', Copy) {
+    from project(':console').layout.buildDirectory.dir('dist')
+    into layout.buildDirectory.dir('resources/main/console')
+    dependsOn project(':console').tasks.named('assemble')
+    shouldRunAfter tasks.named('processResources')
 }
 
-tasks.register('buildFrontend', PnpmTask) {
-    args = ['build']
-    dependsOn('installDepsForUI')
+tasks.named('classes') {
+    dependsOn tasks.named('processUiResources')
 }
 
-tasks.register('installDepsForUI', PnpmTask) {
-    args = ['install']
-}
-
-build {
-    // build frontend before build
-    tasks.named('compileJava').configure {
-        dependsOn('buildFrontend')
-    }
+tasks.named('generatePluginComponentsIdx') {
+    notCompatibleWithConfigurationCache('This task invokes "Task.project" at execution time, which is not supported with configuration cache.')
 }
 
 halo {
-    version = '2.22.5'
+    version = '2.24.0'
     debug = true
 }
 
