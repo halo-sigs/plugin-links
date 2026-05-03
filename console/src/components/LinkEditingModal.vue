@@ -29,6 +29,7 @@ const initialFormState: Link = {
     url: "",
     logo: "",
     groupName: "",
+    hidden: false,
   },
   kind: "Link",
   apiVersion: "core.halo.run/v1alpha1",
@@ -161,6 +162,7 @@ const handleGetLinkDetail = async () => {
           <FormKit type="text" name="displayName" validation="required" label="网站名称"></FormKit>
           <FormKit type="attachment" name="logo" label="Logo"></FormKit>
           <FormKit type="textarea" name="description" label="描述"></FormKit>
+          <FormKit type="checkbox" name="hidden" label="隐藏链接"></FormKit>
         </div>
       </div>
     </FormKit>

@@ -135,6 +135,11 @@ function onEditingModalClose() {
               </template>
 
               <template #end>
+                <VEntityField v-if="group.spec?.hidden">
+                  <template #description>
+                    <VStatusDot v-tooltip="`已隐藏`" state="default" />
+                  </template>
+                </VEntityField>
                 <VEntityField v-if="group.metadata.deletionTimestamp">
                   <template #description>
                     <VStatusDot v-tooltip="`删除中`" state="warning" animate />

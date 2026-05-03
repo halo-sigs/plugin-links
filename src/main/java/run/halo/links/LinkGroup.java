@@ -31,5 +31,7 @@ public class LinkGroup extends AbstractExtension {
         @Schema(description = "Names of links below this group.")
         @ArraySchema(arraySchema = @Schema(description = "Links of this group."), schema = @Schema(description = "Name of link."))
         private LinkedHashSet<String> links;
+
+        private Boolean hidden = false;
     }
 }

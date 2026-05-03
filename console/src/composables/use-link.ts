@@ -3,19 +3,21 @@ import { Link, LinkGroup } from "@/api/generated";
 import { useQuery } from "@tanstack/vue-query";
 import { ref, type Ref } from "vue";
 
-export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref<string>, group?: Ref<string>) {
+export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref<string>, group?: Ref<string>, hidden?: Ref<string | undefined>) {
   const total = ref(0);
 
   const links = ref<Link[]>([]);
 
   const { isLoading, refetch } = useQuery({
-    queryKey: ["links", page, size, group, keyword],
+    queryKey: ["links", page, size, group, keyword, hidden],
     queryFn: async () => {
+      const fieldSelector = hidden?.value && hidden.value !== 'all' ? [`spec.hidden=${hidden.value}`] : undefined;
       const { data } = await linksConsoleApiClient.link.listLinks({
         page: page.value,
         size: size.value,
         keyword: keyword?.value,
         groupName: group?.value,
+        fieldSelector,
         sort: ["spec.priority,asc"],
       });
 

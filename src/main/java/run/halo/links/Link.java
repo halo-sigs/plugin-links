@@ -34,5 +34,7 @@ public class Link extends AbstractExtension {
         private Integer priority;
 
         private String groupName;
+
+        private Boolean hidden = false;
     }
 }
