@@ -1,5 +1,7 @@
 package run.halo.links;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,14 +19,15 @@ import run.halo.app.extension.GVK;
         kind = "Link", plural = "links", singular = "link")
 public class Link extends AbstractExtension {
 
+    @Schema(requiredMode = REQUIRED)
     private LinkSpec spec;
 
     @Data
     public static class LinkSpec {
-        @Schema(required = true)
+        @Schema(requiredMode = REQUIRED)
         private String url;
 
-        @Schema(required = true)
+        @Schema(requiredMode = REQUIRED)
         private String displayName;
 
         private String logo;

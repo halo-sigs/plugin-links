@@ -1,80 +1,27 @@
-import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
-import { Link, LinkGroup } from "@/api/generated";
+import { linksConsoleApiClient } from "@/api";
+import { ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link } from "@/api/generated";
+import { paginate } from "@halo-dev/api-client";
 import { useQuery } from "@tanstack/vue-query";
-import { ref, type Ref } from "vue";
 
-export function useLinkFetch(page: Ref<number>, size: Ref<number>, keyword?: Ref<string>, group?: Ref<string>) {
-  const total = ref(0);
+export const QK_LINKS = "plugin:links:links";
 
-  const links = ref<Link[]>([]);
-
-  const { isLoading, refetch } = useQuery({
-    queryKey: ["links", page, size, group, keyword],
+export function useLinkFetch() {
+  return useQuery<Link[]>({
+    queryKey: [QK_LINKS],
     queryFn: async () => {
-      const { data } = await linksConsoleApiClient.link.listLinks({
-        page: page.value,
-        size: size.value,
-        keyword: keyword?.value,
-        groupName: group?.value,
-        sort: ["spec.priority,asc"],
-      });
+      const data = await paginate<ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link>(
+        (params) => linksConsoleApiClient.link.listLinks(params),
+        {
+          size: 1000,
+          sort: ["spec.priority,asc"],
+        },
+      );
 
-      total.value = data.total;
-
-      return data.items;
+      return data;
     },
-    refetchOnWindowFocus: false,
     refetchInterval(data) {
-      const deletingLinks = data?.filter((link) => !!link.metadata.deletionTimestamp);
-      return deletingLinks?.length ? 1000 : false;
-    },
-    onSuccess(data) {
-      links.value = data;
-    },
-  });
-
-  return {
-    links,
-    isLoading,
-    refetch,
-    total,
-  };
-}
-
-export function useLinkGroupFetch() {
-  const groups = ref<LinkGroup[]>([]);
-
-  const { isLoading, refetch } = useQuery<LinkGroup[]>({
-    queryKey: ["link-groups"],
-    queryFn: async () => {
-      const { data } = await linksCoreApiClient.group.listLinkGroup();
-
-      return data.items
-        .map((group) => {
-          if (group.spec) {
-            group.spec.priority = group.spec.priority || 0;
-          }
-          return group;
-        })
-        .sort((a, b) => {
-          return (a.spec?.priority || 0) - (b.spec?.priority || 0);
-        });
-    },
-    refetchOnWindowFocus: false,
-    refetchInterval(data) {
-      const hasDeletingData = data?.some((group) => {
-        return !!group.metadata.deletionTimestamp;
-      });
+      const hasDeletingData = data?.some((link) => !!link.metadata.deletionTimestamp);
       return hasDeletingData ? 1000 : false;
     },
-    onSuccess(data) {
-      groups.value = data;
-    },
   });
-
-  return {
-    groups,
-    isLoading,
-    refetch,
-  };
 }

@@ -1,5 +1,7 @@
 package run.halo.links;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.LinkedHashSet;
@@ -18,11 +20,12 @@ import run.halo.app.extension.GVK;
 @GVK(group = "core.halo.run", version = "v1alpha1", kind = "LinkGroup", plural = "linkgroups", singular = "linkgroup")
 public class LinkGroup extends AbstractExtension {
 
+    @Schema(requiredMode = REQUIRED)
     private LinkGroupSpec spec;
 
     @Data
     public static class LinkGroupSpec {
-        @Schema(required = true)
+        @Schema(requiredMode = REQUIRED)
         private String displayName;
 
         private Integer priority;

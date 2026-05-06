@@ -1,143 +1,109 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
-import { LinkGroup } from "@/api/generated";
-import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
-import { cloneDeep } from "es-toolkit";
-import { computed, nextTick, onMounted, ref, useTemplateRef } from "vue";
+import { ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link, LinkGroup } from "@/api/generated";
+import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { QK_LINKS } from "@/composables/use-link";
+import { GroupFormState } from "@/types";
+import { paginate } from "@halo-dev/api-client";
+import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
+import { chunk } from "es-toolkit";
+import { useTemplateRef } from "vue";
+import GroupForm from "./GroupForm.vue";
 
-const props = withDefaults(
-  defineProps<{
-    group?: LinkGroup;
-  }>(),
-  {
-    group: undefined,
-  },
-);
+const props = defineProps<{
+  group: LinkGroup;
+}>();
 
 const emit = defineEmits<{
   (event: "close"): void;
 }>();
 
-const initialFormState: LinkGroup = {
-  apiVersion: "core.halo.run/v1alpha1",
-  kind: "LinkGroup",
-  metadata: {
-    name: "",
-    generateName: "link-group-",
-  },
-  spec: {
-    displayName: "",
-    priority: 0,
-    links: [],
-  },
-};
+const queryClient = useQueryClient();
 
-const formState = ref<LinkGroup>(cloneDeep(initialFormState));
-const isSubmitting = ref(false);
 const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
-const isUpdateMode = computed(() => {
-  return !!formState.value.metadata.creationTimestamp;
-});
-
-const modalTitle = computed(() => {
-  return isUpdateMode.value ? "编辑分组" : "新建分组";
-});
-
-const annotationsFormRef = ref();
-
-const handleCreateOrUpdateGroup = async () => {
-  annotationsFormRef.value?.handleSubmit();
-  await nextTick();
-
-  const { customAnnotations, annotations, customFormInvalid, specFormInvalid } = annotationsFormRef.value || {};
-  if (customFormInvalid || specFormInvalid) {
-    return;
-  }
-
-  formState.value.metadata.annotations = {
-    ...annotations,
-    ...customAnnotations,
-  };
-
-  try {
-    isSubmitting.value = true;
-    if (isUpdateMode.value) {
-      await linksCoreApiClient.group.updateLinkGroup({
-        name: formState.value.metadata.name,
-        linkGroup: formState.value,
-      });
-    } else {
-      await linksCoreApiClient.group.createLinkGroup({
-        linkGroup: formState.value,
-      });
-    }
-
-    Toast.success("保存成功");
-
+const { mutate, isPending } = useMutation({
+  mutationFn: (data: GroupFormState) => {
+    return linksCoreApiClient.group.patchLinkGroup({
+      name: props.group.metadata.name,
+      jsonPatchInner: [
+        {
+          op: "add",
+          path: "/spec/displayName",
+          value: data.displayName,
+        },
+        {
+          op: "add",
+          path: "/metadata/annotations",
+          value: data.annotations || {},
+        },
+      ],
+    });
+  },
+  onSuccess: () => {
+    Toast.success("编辑分组成功");
     modal.value?.close();
-  } catch (e) {
-    console.error("Failed to create link group", e);
-  } finally {
-    isSubmitting.value = false;
-  }
-};
-
-onMounted(() => {
-  if (props.group) {
-    formState.value = cloneDeep(props.group);
-  }
+    queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+  },
 });
+
+function onSubmit(data: GroupFormState) {
+  mutate(data);
+}
+
+function handleDelete() {
+  Dialog.warning({
+    title: "删除分组",
+    description: "确认删除当前的分组吗，此操作会同时删除分组下的所有链接。",
+    confirmType: "danger",
+    onConfirm: async () => {
+      await linksCoreApiClient.group.deleteLinkGroup({
+        name: props.group.metadata.name,
+      });
+
+      const data = await paginate<ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link>(
+        (params) => linksCoreApiClient.link.listLink(params),
+        {
+          fieldSelector: [`spec.groupName=${props.group.metadata.name}`],
+          size: 1000,
+        },
+      );
+
+      const linkChunks = chunk(data, 5);
+
+      for (const chunk of linkChunks) {
+        await Promise.all(chunk.map((link) => linksCoreApiClient.link.deleteLink({ name: link.metadata.name })));
+      }
+
+      Toast.success("删除成功");
+      modal.value?.close();
+      queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+      queryClient.invalidateQueries({ queryKey: [QK_LINKS] });
+    },
+  });
+}
 </script>
 <template>
-  <VModal ref="modal" :width="600" :title="modalTitle" @close="emit('close')">
-    <FormKit
-      id="link-group-form"
-      v-model="formState.spec"
-      name="link-group-form"
-      type="form"
-      :config="{ validationVisibility: 'submit' }"
-      @submit="handleCreateOrUpdateGroup"
-    >
-      <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
-        <div class=":uno: md:col-span-1">
-          <div class=":uno: sticky top-0">
-            <span class=":uno: text-base text-gray-900 font-medium"> 常规 </span>
-          </div>
-        </div>
-        <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
-          <FormKit name="displayName" label="分组名称" type="text" validation="required"></FormKit>
-        </div>
-      </div>
-    </FormKit>
-
-    <div class=":uno: py-5">
-      <div class=":uno: border-t border-gray-200"></div>
-    </div>
-
-    <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
-      <div class=":uno: md:col-span-1">
-        <div class=":uno: sticky top-0">
-          <span class=":uno: text-base text-gray-900 font-medium"> 元数据 </span>
-        </div>
-      </div>
-      <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
-        <AnnotationsForm
-          :key="formState.metadata.name"
-          ref="annotationsFormRef"
-          :value="formState.metadata.annotations"
-          kind="LinkGroup"
-          group="core.halo.run"
-        />
-      </div>
-    </div>
+  <VModal title="编辑分组" ref="modal" :mount-to-body="true" :width="600" @close="emit('close')">
+    <GroupForm
+      :name="group.metadata.name"
+      :formState="{
+        displayName: group.spec.displayName,
+        annotations: group.metadata.annotations,
+      }"
+      @submit="onSubmit"
+    />
 
     <template #footer>
-      <VSpace>
-        <!-- @vue-ignore -->
-        <VButton :loading="isSubmitting" type="secondary" @click="$formkit.submit('link-group-form')"> 提交 </VButton>
-        <VButton @click="modal?.close()"> 取消</VButton>
-      </VSpace>
+      <div class=":uno: flex items-center justify-between">
+        <VSpace>
+          <!-- @vue-ignore -->
+          <VButton :loading="isPending" type="secondary" @click="$formkit.submit('group-form')"> 提交 </VButton>
+          <VButton @click="modal?.close()">取消</VButton>
+        </VSpace>
+        <VButton type="danger" ghost @click="handleDelete">删除</VButton>
+      </div>
     </template>
   </VModal>
 </template>
