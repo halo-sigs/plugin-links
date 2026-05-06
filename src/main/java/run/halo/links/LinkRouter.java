@@ -6,11 +6,10 @@ import static org.springframework.data.domain.Sort.Order.asc;
 import static org.springframework.data.domain.Sort.Order.desc;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
-import static run.halo.app.extension.index.query.QueryFactory.and;
-import static run.halo.app.extension.index.query.QueryFactory.contains;
-import static run.halo.app.extension.index.query.QueryFactory.equal;
-import static run.halo.app.extension.index.query.QueryFactory.or;
-import static run.halo.app.extension.router.selector.SelectorUtil.labelAndFieldSelectorToListOptions;
+import static run.halo.app.extension.index.query.Queries.and;
+import static run.halo.app.extension.index.query.Queries.contains;
+import static run.halo.app.extension.index.query.Queries.equal;
+import static run.halo.app.extension.index.query.Queries.or;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -136,22 +135,18 @@ public class LinkRouter {
 
         @Override
         public ListOptions toListOptions() {
-            var listOptions =
-                labelAndFieldSelectorToListOptions(getLabelSelector(), getFieldSelector());
-            var query = listOptions.getFieldSelector().query();
+            var builder = ListOptions.builder(super.toListOptions());
             if (StringUtils.isNotBlank(getKeyword())) {
-                query = and(query, or(
+                builder.andQuery(or(
                     contains("spec.displayName", getKeyword()),
                     contains("spec.description", getKeyword()),
                     contains("spec.url", getKeyword())
                 ));
             }
-
             if (StringUtils.isNotBlank(getGroupName())) {
-                query = and(query, equal("spec.groupName", getGroupName()));
+                builder.andQuery(equal("spec.groupName", getGroupName()));
             }
-            listOptions.setFieldSelector(FieldSelector.of(query));
-            return listOptions;
+            return builder.build();
         }
 
         @Override
