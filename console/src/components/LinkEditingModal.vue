@@ -3,7 +3,7 @@ import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import { Link } from "@/api/generated";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import { cloneDeep } from "es-toolkit";
-import { computed, inject, nextTick, onMounted, ref, useTemplateRef, watch, type Ref } from "vue";
+import { computed, inject, nextTick, onMounted, ref, useTemplateRef, type Ref } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 
 const props = withDefaults(
@@ -12,7 +12,7 @@ const props = withDefaults(
   }>(),
   {
     link: undefined,
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -115,7 +115,7 @@ const handleGetLinkDetail = async () => {
     formState.value.spec!.description = data.description;
 
     Toast.info("获取链接详情成功");
-  } catch (e) {
+  } catch {
     Toast.error("获取链接详情失败");
   } finally {
     loading.value = false;

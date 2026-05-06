@@ -11,7 +11,7 @@ const props = withDefaults(
   }>(),
   {
     group: undefined,
-  }
+  },
 );
 
 const emit = defineEmits<{

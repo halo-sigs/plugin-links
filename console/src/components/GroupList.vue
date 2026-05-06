@@ -15,8 +15,8 @@ import {
   VStatusDot,
 } from "@halo-dev/components";
 import { inject, ref, type Ref } from "vue";
-import GroupEditingModal from "./GroupEditingModal.vue";
 import { VueDraggable } from "vue-draggable-plus";
+import GroupEditingModal from "./GroupEditingModal.vue";
 
 const groupQuery = inject<Ref<string>>("groupQuery", ref(""));
 
@@ -69,7 +69,7 @@ const handleDelete = async (group: LinkGroup) => {
         const deleteLinkPromises = data.items.map((link) =>
           linksCoreApiClient.link.deleteLink({
             name: link.metadata.name,
-          })
+          }),
         );
 
         if (deleteLinkPromises) {
