@@ -20,11 +20,11 @@ const LinksSortableCard = defineAsyncComponent(
 );
 
 const props = defineProps<{
-  groupWithLinks?: GroupWithLinks;
+  groupWithLinks: GroupWithLinks;
 }>();
 
-const group = computed(() => props.groupWithLinks?.group);
-const links = computed(() => props.groupWithLinks?.links);
+const group = computed(() => props.groupWithLinks.group);
+const links = computed(() => props.groupWithLinks.links);
 
 const queryClient = useQueryClient();
 
@@ -40,7 +40,7 @@ const enabledSelect = ref(false);
 const selectedLinkNames = ref<string[]>([]);
 
 function handleSelectAll() {
-  selectedLinkNames.value = links.value?.map((link) => link.metadata.name) || [];
+  selectedLinkNames.value = links.value.map((link) => link.metadata.name);
 }
 
 function handleDeleteInBatch() {
@@ -124,8 +124,8 @@ function handleMoveToGroup(group: LinkGroup) {
             <VButton size="sm" @click="enabledSelect = false">取消</VButton>
           </VSpace>
           <VSpace v-else class=":uno: opacity-0 transition-opacity group-hover:opacity-100">
-            <VButton v-if="links?.length && group" size="sm" @click="enabledSort = true">排序</VButton>
-            <VButton v-if="links?.length" size="sm" @click="enabledSelect = true">选择</VButton>
+            <VButton v-if="links.length && group" size="sm" @click="enabledSort = true">排序</VButton>
+            <VButton v-if="links.length" size="sm" @click="enabledSelect = true">选择</VButton>
             <VButton v-if="group" size="sm" @click="groupEditingModalVisible = true">编辑分组</VButton>
           </VSpace>
         </div>
@@ -134,7 +134,7 @@ function handleMoveToGroup(group: LinkGroup) {
         </div>
       </div>
     </template>
-    <VEmpty v-if="!links?.length" title="无数据" message="此分组下暂无链接">
+    <VEmpty v-if="!links.length" title="无数据" message="此分组下暂无链接">
       <template #actions>
         <VButton type="secondary" size="sm" @click="creationModalVisible = true">新建</VButton>
       </template>
