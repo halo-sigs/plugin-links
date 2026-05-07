@@ -1,14 +1,18 @@
 <script lang="ts" setup>
 import LinksCard from "@/components/LinksCard.vue";
-import { useLinkGroupFetch } from "@/composables/use-group-fetch";
+import { useLinksFetch } from "@/composables/use-link-fetch";
 import { IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
 import { defineAsyncComponent, ref } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
 
-const GroupCreationModal = defineAsyncComponent(() => import(/* webpackChunkName: "group-creation-modal" */ "@/components/GroupCreationModal.vue"));
-const GroupSortModal = defineAsyncComponent(() => import(/* webpackChunkName: "group-sort-modal" */ "@/components/GroupSortModal.vue"));
+const GroupCreationModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "group-creation-modal" */ "@/components/GroupCreationModal.vue"),
+);
+const GroupSortModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "group-sort-modal" */ "@/components/GroupSortModal.vue"),
+);
 
-const { data: groups, isLoading } = useLinkGroupFetch();
+const { data, isLoading } = useLinksFetch();
 
 const handleRouteToFront = () => {
   window.open("/links", "_blank");
@@ -39,8 +43,12 @@ const groupSortModalVisible = ref(false);
     <VLoading v-if="isLoading" />
 
     <div class=":uno: space-y-4" v-else>
-      <LinksCard v-for="group in groups" :group="group" :key="group.metadata.name"> </LinksCard>
-      <LinksCard></LinksCard>
+      <LinksCard
+        v-for="groupWithLinks in data"
+        :group-with-links="groupWithLinks"
+        :key="groupWithLinks.group?.metadata.name"
+      >
+      </LinksCard>
     </div>
   </div>
 

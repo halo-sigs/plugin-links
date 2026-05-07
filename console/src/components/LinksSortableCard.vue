@@ -1,16 +1,15 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
-import { ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link, LinkGroup } from "@/api/generated";
-import { QK_LINKS } from "@/composables/use-link";
-import { paginate } from "@halo-dev/api-client";
-import { Toast, VButton, VCard, VLoading, VSpace } from "@halo-dev/components";
+import { Link } from "@/api/generated";
+import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { Toast, VButton, VCard, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, toRaw } from "vue";
 import { VueDraggable } from "vue-draggable-plus";
 import LinkBadge from "./LinkBadge.vue";
 
 const props = defineProps<{
-  group?: LinkGroup;
+  groupWithLinks: GroupWithLinks;
 }>();
 
 const emit = defineEmits<{
@@ -20,30 +19,11 @@ const emit = defineEmits<{
 const queryClient = useQueryClient();
 
 const links = ref<Link[]>([]);
-const isLoading = ref(false);
 
 const isSubmitting = ref(false);
 
-async function fetchLinks() {
-  isLoading.value = true;
-  try {
-    const data = await paginate<ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link>(
-      (params) => linksCoreApiClient.link.listLink(params),
-      {
-        fieldSelector: [`spec.groupName=${props.group?.metadata.name}`],
-        size: 1000,
-        sort: ["spec.priority,asc"],
-      },
-    );
-
-    links.value = data;
-  } finally {
-    isLoading.value = false;
-  }
-}
-
 onMounted(() => {
-  fetchLinks();
+  links.value = toRaw(props.groupWithLinks.links);
 });
 
 async function handleSave() {
@@ -57,19 +37,19 @@ async function handleSave() {
     }
     Toast.success("保存成功");
     emit("close");
-    queryClient.invalidateQueries({ queryKey: [QK_LINKS] });
+    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
   } finally {
     isSubmitting.value = false;
   }
 }
 </script>
 <template>
-  <VCard :title="group?.spec?.displayName || '未分组'">
+  <VCard :title="groupWithLinks.group?.spec?.displayName || '未分组'">
     <template #header>
       <div class=":uno: group h-12 w-full flex items-center justify-between px-4">
         <div class=":uno: flex items-center gap-3">
           <div class=":uno: text-sm text-gray-900 font-semibold">
-            {{ group?.spec?.displayName || "未分组" }}
+            {{ groupWithLinks.group?.spec?.displayName || "未分组" }}
           </div>
           <VSpace>
             <VButton size="sm" type="secondary" :loading="isSubmitting" @click="handleSave">保存</VButton>
@@ -78,8 +58,7 @@ async function handleSave() {
         </div>
       </div>
     </template>
-    <VLoading v-if="isLoading" />
-    <VueDraggable v-model="links" class=":uno: flex flex-wrap gap-2" v-else>
+    <VueDraggable v-model="links" class=":uno: flex flex-wrap gap-2">
       <LinkBadge v-for="link in links" :key="link.metadata.name" :link="link" sort-mode />
     </VueDraggable>
   </VCard>

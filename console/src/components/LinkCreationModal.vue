@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
 import { LinkGroup } from "@/api/generated";
-import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
-import { QK_LINKS } from "@/composables/use-link";
+import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { LinkFormState } from "@/types";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
@@ -54,8 +53,7 @@ const { mutate, isPending } = useMutation({
   onSuccess: () => {
     Toast.success("创建链接成功");
     modal.value?.close();
-    queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
-    queryClient.invalidateQueries({ queryKey: [QK_LINKS] });
+    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
   },
 });
 

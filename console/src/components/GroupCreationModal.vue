@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { GroupFormState } from "@/types";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
@@ -46,6 +47,7 @@ const { mutate, isPending } = useMutation({
     Toast.success("创建分组成功");
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
   },
 });
 

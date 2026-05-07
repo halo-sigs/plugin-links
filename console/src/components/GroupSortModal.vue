@@ -2,6 +2,7 @@
 import { linksCoreApiClient } from "@/api";
 import { LinkGroup, LinkGroupV1alpha1ApiListLinkGroupRequest } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { paginate } from "@halo-dev/api-client";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
@@ -57,6 +58,7 @@ async function handleSave() {
   Toast.success("保存成功");
   modal.value?.close();
   queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+  queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
 }
 </script>
 

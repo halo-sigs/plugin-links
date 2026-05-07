@@ -2,7 +2,7 @@
 import { linksCoreApiClient } from "@/api";
 import { ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link, LinkGroup } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
-import { QK_LINKS } from "@/composables/use-link";
+import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { GroupFormState } from "@/types";
 import { paginate } from "@halo-dev/api-client";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
@@ -45,6 +45,7 @@ const { mutate, isPending } = useMutation({
     Toast.success("编辑分组成功");
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
   },
 });
 
@@ -79,7 +80,7 @@ function handleDelete() {
       Toast.success("删除成功");
       modal.value?.close();
       queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
-      queryClient.invalidateQueries({ queryKey: [QK_LINKS] });
+      queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     },
   });
 }
