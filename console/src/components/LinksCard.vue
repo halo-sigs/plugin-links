@@ -8,15 +8,13 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { chunk } from "es-toolkit";
 import { computed, defineAsyncComponent, ref } from "vue";
 import LinkBadge from "./LinkBadge.vue";
+import LinksSortableCard from "./LinksSortableCard.vue";
 
 const GroupEditingModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "group-editing-modal" */ "./GroupEditingModal.vue"),
 );
 const LinkCreationModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-creation-modal" */ "./LinkCreationModal.vue"),
-);
-const LinksSortableCard = defineAsyncComponent(
-  () => import(/* webpackChunkName: "links-sortable-card" */ "./LinksSortableCard.vue"),
 );
 
 const props = defineProps<{
@@ -99,7 +97,7 @@ function handleMoveToGroup(group: LinkGroup) {
   <LinksSortableCard v-if="enabledSort" :group-with-links="groupWithLinks" @close="enabledSort = false" />
   <VCard v-else>
     <template #header>
-      <div class=":uno: group h-12 w-full flex items-center justify-between px-4">
+      <div class=":uno: group w-full flex flex-wrap items-center justify-between gap-2 px-4 py-2">
         <div class=":uno: flex flex-wrap items-center gap-3">
           <div class=":uno: text-sm text-gray-900 font-semibold">
             {{ group?.spec?.displayName || "未分组" }}
@@ -123,13 +121,16 @@ function handleMoveToGroup(group: LinkGroup) {
             <VButton size="sm" type="danger" @click="handleDeleteInBatch">删除</VButton>
             <VButton size="sm" @click="enabledSelect = false">取消</VButton>
           </VSpace>
-          <VSpace v-else class=":uno: opacity-0 transition-opacity group-hover:opacity-100">
+          <VSpace
+            v-else
+            class=":uno: opacity-0 transition-opacity [@media(hover:none)]:opacity-100 group-hover:opacity-100"
+          >
             <VButton v-if="links.length && group" size="sm" @click="enabledSort = true">排序</VButton>
             <VButton v-if="links.length" size="sm" @click="enabledSelect = true">选择</VButton>
             <VButton v-if="group" size="sm" @click="groupEditingModalVisible = true">编辑分组</VButton>
           </VSpace>
         </div>
-        <div class=":uno: opacity-0 transition-opacity group-hover:opacity-100">
+        <div class=":uno: opacity-0 transition-opacity [@media(hover:none)]:opacity-100 group-hover:opacity-100">
           <VButton type="secondary" size="sm" @click="creationModalVisible = true">新建</VButton>
         </div>
       </div>
