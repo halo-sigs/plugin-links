@@ -182,7 +182,7 @@ public class LinkRouter {
     }
 
     Mono<String> getLinkTitle() {
-        return this.settingFetcher.get("base")
+        return this.settingFetcher.getSettingValue("base")
             .map(setting -> setting.get("title").asText())
             .defaultIfEmpty("链接");
     }
