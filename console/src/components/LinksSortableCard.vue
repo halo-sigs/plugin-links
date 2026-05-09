@@ -4,6 +4,7 @@ import { Link } from "@/api/generated";
 import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { Toast, VButton, VCard, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
+import { chunk } from "es-toolkit";
 import { onMounted, ref, toRaw } from "vue";
 import { VueDraggable } from "vue-draggable-plus";
 import LinkBadge from "./LinkBadge.vue";
@@ -29,11 +30,16 @@ onMounted(() => {
 async function handleSave() {
   isSubmitting.value = true;
   try {
-    for (const [index, link] of links.value.entries()) {
-      await linksCoreApiClient.link.patchLink({
-        name: link.metadata.name,
-        jsonPatchInner: [{ op: "add", path: "/spec/priority", value: index + 1 }],
-      });
+    const batches = chunk(links.value, 5);
+    for (const [batchIndex, batch] of batches.entries()) {
+      await Promise.all(
+        batch.map((link, index) =>
+          linksCoreApiClient.link.patchLink({
+            name: link.metadata.name,
+            jsonPatchInner: [{ op: "add", path: "/spec/priority", value: batchIndex * 5 + index + 1 }],
+          }),
+        ),
+      );
     }
     Toast.success("保存成功");
     emit("close");

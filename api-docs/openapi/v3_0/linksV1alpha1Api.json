@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:56113",
+    "url" : "http://localhost:59015",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -119,6 +119,41 @@
           }
         },
         "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}" : {
+      "delete" : {
+        "description" : "Delete link group.",
+        "operationId" : "DeleteLinkGroup",
+        "parameters" : [ {
+          "description" : "Link group name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Delete links in the group; when false, links become ungrouped",
+          "in" : "query",
+          "name" : "deleteLinks",
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkGroup"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkGroup" ]
       }
     },
     "/apis/core.halo.run/v1alpha1/linkgroups" : {

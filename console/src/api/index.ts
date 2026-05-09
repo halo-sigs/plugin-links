@@ -1,5 +1,10 @@
 import { axiosInstance } from "@halo-dev/api-client";
-import { ApiPluginHaloRunV1alpha1LinkApi, LinkGroupV1alpha1Api, LinkV1alpha1Api } from "./generated";
+import {
+  ApiPluginHaloRunV1alpha1LinkApi,
+  ConsoleApiLinkHaloRunV1alpha1LinkGroupApi,
+  LinkGroupV1alpha1Api,
+  LinkV1alpha1Api,
+} from "./generated";
 
 const linksCoreApiClient = {
   link: new LinkV1alpha1Api(undefined, "", axiosInstance),
@@ -8,6 +13,7 @@ const linksCoreApiClient = {
 
 const linksConsoleApiClient = {
   link: new ApiPluginHaloRunV1alpha1LinkApi(undefined, "", axiosInstance),
+  group: new ConsoleApiLinkHaloRunV1alpha1LinkGroupApi(undefined, "", axiosInstance),
 };
 
 export { linksConsoleApiClient, linksCoreApiClient };

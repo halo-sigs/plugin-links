@@ -62,7 +62,7 @@ function onSubmit(data: GroupFormState) {
     <template #footer>
       <VSpace>
         <!-- @vue-ignore -->
-        <VButton :loading="isPending" type="secondary" @click="$formkit.submit('group-form')"> 提交 </VButton>
+        <VButton :loading="isPending" type="secondary" @click="$formkit.submit('group-form')"> 保存 </VButton>
         <VButton @click="modal?.close()">取消</VButton>
       </VSpace>
     </template>

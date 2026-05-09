@@ -1,10 +1,6 @@
 <script lang="ts" setup>
 import { Link } from "@/api/generated";
-import { defineAsyncComponent, ref } from "vue";
-
-const LinkEditingModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-editing-modal" */ "./LinkEditingModal.vue"),
-);
+import RiExternalLinkLine from "~icons/ri/external-link-line";
 
 const props = defineProps<{
   selectMode?: boolean;
@@ -12,16 +8,19 @@ const props = defineProps<{
   link: Link;
 }>();
 
-const editingModalVisible = ref(false);
+const emit = defineEmits<{
+  (event: "open-edit"): void;
+}>();
 
 function handleClick() {
   if (!props.selectMode && !props.sortMode) {
-    editingModalVisible.value = true;
+    emit("open-edit");
   }
 }
 </script>
 <template>
   <label
+    v-tooltip="link.spec?.url"
     class=":uno: inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gray-100 px-2 py-1 transition-colors hover:bg-gray-200"
     :class="{
       ':uno: animate-flash opacity-50': link.metadata.deletionTimestamp,
@@ -39,7 +38,14 @@ function handleClick() {
     >
       {{ link.spec?.displayName }}
     </span>
+    <a
+      v-if="!selectMode && !sortMode && link.spec?.url"
+      :href="link.spec.url"
+      target="_blank"
+      class=":uno: ml-0.5 opacity-40 transition-opacity hover:opacity-100"
+      @click.stop
+    >
+      <RiExternalLinkLine class=":uno: size-3 text-gray-500" />
+    </a>
   </label>
-
-  <LinkEditingModal v-if="editingModalVisible" :link="link" @close="editingModalVisible = false" />
 </template>

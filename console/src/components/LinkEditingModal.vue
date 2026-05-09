@@ -93,23 +93,26 @@ function handleDelete() {
       <slot name="append-actions" />
     </template>
 
-    <LinkForm
-      :name="link.metadata.name"
-      :formState="{
-        url: link.spec.url,
-        displayName: link.spec.displayName,
-        logo: link.spec.logo,
-        description: link.spec.description,
-        annotations: link.metadata.annotations,
-      }"
-      @submit="onSubmit"
-    />
+    <div>
+      <LinkForm
+        :key="link.metadata.name"
+        :name="link.metadata.name"
+        :formState="{
+          url: link.spec.url,
+          displayName: link.spec.displayName,
+          logo: link.spec.logo,
+          description: link.spec.description,
+          annotations: link.metadata.annotations,
+        }"
+        @submit="onSubmit"
+      />
+    </div>
 
     <template #footer>
       <div class=":uno: flex items-center justify-between">
         <VSpace>
           <!-- @vue-ignore -->
-          <VButton :loading="isPending" type="secondary" @click="$formkit.submit('link-form')"> 提交 </VButton>
+          <VButton :loading="isPending" type="secondary" @click="$formkit.submit('link-form')"> 保存 </VButton>
           <VButton @click="modal?.close()">取消</VButton>
         </VSpace>
         <VButton type="danger" ghost @click="handleDelete">删除</VButton>

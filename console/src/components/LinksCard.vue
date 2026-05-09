@@ -1,9 +1,21 @@
 <script lang="ts" setup>
-import { linksCoreApiClient } from "@/api";
+import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import { LinkGroup } from "@/api/generated";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
-import { Dialog, Toast, VButton, VCard, VDropdown, VDropdownItem, VEmpty, VSpace } from "@halo-dev/components";
+import {
+  Dialog,
+  IconArrowLeft,
+  IconArrowRight,
+  IconMore,
+  Toast,
+  VButton,
+  VCard,
+  VDropdown,
+  VDropdownItem,
+  VEmpty,
+  VSpace,
+} from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { chunk } from "es-toolkit";
 import { computed, defineAsyncComponent, ref } from "vue";
@@ -15,6 +27,9 @@ const GroupEditingModal = defineAsyncComponent(
 );
 const LinkCreationModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-creation-modal" */ "./LinkCreationModal.vue"),
+);
+const LinkEditingModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-editing-modal" */ "./LinkEditingModal.vue"),
 );
 
 const props = defineProps<{
@@ -36,6 +51,45 @@ const enabledSort = ref(false);
 const enabledSelect = ref(false);
 
 const selectedLinkNames = ref<string[]>([]);
+
+const selectedLink = ref<Link | undefined>();
+const linkEditingModalVisible = ref(false);
+
+function handleOpenEdit(link: Link) {
+  selectedLink.value = link;
+  linkEditingModalVisible.value = true;
+}
+
+function handleSelectPrevious() {
+  if (!links.value.length) return;
+  const currentIndex = links.value.findIndex(
+    (link) => link.metadata.name === selectedLink.value?.metadata.name,
+  );
+  if (currentIndex > 0) {
+    selectedLink.value = links.value[currentIndex - 1];
+  } else if (currentIndex <= 0) {
+    selectedLink.value = undefined;
+  }
+}
+
+function handleSelectNext() {
+  if (!links.value.length) return;
+  if (!selectedLink.value) {
+    selectedLink.value = links.value[0];
+    return;
+  }
+  const currentIndex = links.value.findIndex(
+    (link) => link.metadata.name === selectedLink.value?.metadata.name,
+  );
+  if (currentIndex !== links.value.length - 1) {
+    selectedLink.value = links.value[currentIndex + 1];
+  }
+}
+
+function handleEditingModalClose() {
+  linkEditingModalVisible.value = false;
+  selectedLink.value = undefined;
+}
 
 function handleSelectAll() {
   selectedLinkNames.value = links.value.map((link) => link.metadata.name);
@@ -62,6 +116,7 @@ function handleDeleteInBatch() {
       Toast.success("删除成功");
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
       enabledSelect.value = false;
+      selectedLinkNames.value.length = 0;
     },
   });
 }
@@ -89,6 +144,32 @@ function handleMoveToGroup(group: LinkGroup) {
       queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
       enabledSelect.value = false;
+      selectedLinkNames.value.length = 0;
+    },
+  });
+}
+
+function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
+  const title = deleteLinks ? "删除分组及链接" : "仅删除分组";
+  const description = deleteLinks
+    ? `将同时删除该分组下所有链接，此操作不可恢复。`
+    : `该分组下的链接将变为未分组，此操作不可恢复。`;
+
+  Dialog.warning({
+    title,
+    description,
+    confirmType: "danger",
+    onConfirm: async () => {
+      if (!group.value) {
+        return;
+      }
+      await linksConsoleApiClient.group.deleteLinkGroup({
+        name: group.value.metadata.name,
+        deleteLinks,
+      });
+      Toast.success("删除成功");
+      queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+      queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     },
   });
 }
@@ -97,7 +178,7 @@ function handleMoveToGroup(group: LinkGroup) {
   <LinksSortableCard v-if="enabledSort" :group-with-links="groupWithLinks" @close="enabledSort = false" />
   <VCard v-else>
     <template #header>
-      <div class=":uno: group w-full flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+      <div class=":uno: w-full flex flex-wrap items-center justify-between gap-2 px-4 py-2">
         <div class=":uno: flex flex-wrap items-center gap-3">
           <div class=":uno: text-sm text-gray-900 font-semibold">
             {{ group?.spec?.displayName || "未分组" }}
@@ -121,16 +202,31 @@ function handleMoveToGroup(group: LinkGroup) {
             <VButton size="sm" type="danger" @click="handleDeleteInBatch">删除</VButton>
             <VButton size="sm" @click="enabledSelect = false">取消</VButton>
           </VSpace>
-          <VSpace
-            v-else
-            class=":uno: opacity-0 transition-opacity [@media(hover:none)]:opacity-100 group-hover:opacity-100"
-          >
-            <VButton v-if="links.length && group" size="sm" @click="enabledSort = true">排序</VButton>
-            <VButton v-if="links.length" size="sm" @click="enabledSelect = true">选择</VButton>
-            <VButton v-if="group" size="sm" @click="groupEditingModalVisible = true">编辑分组</VButton>
+          <VSpace v-else class=":uno: flex-wrap">
+            <VDropdown v-if="links.length || group">
+              <VButton size="sm" ghost>
+                <IconMore />
+              </VButton>
+              <template #popper>
+                <VDropdownItem v-if="links.length && group" @click="enabledSort = true">排序</VDropdownItem>
+                <VDropdownItem v-if="links.length" @click="enabledSelect = true">批量选择</VDropdownItem>
+                <VDropdownItem v-if="group" @click="groupEditingModalVisible = true">编辑分组</VDropdownItem>
+                <VDropdown>
+                  <VDropdownItem v-if="group" type="danger">删除分组</VDropdownItem>
+                  <template #popper>
+                    <VDropdownItem v-if="group" type="danger" @click="handleDelete({ deleteLinks: false })">
+                      仅删除分组
+                    </VDropdownItem>
+                    <VDropdownItem v-if="group" type="danger" @click="handleDelete({ deleteLinks: true })">
+                      删除分组及链接
+                    </VDropdownItem>
+                  </template>
+                </VDropdown>
+              </template>
+            </VDropdown>
           </VSpace>
         </div>
-        <div class=":uno: opacity-0 transition-opacity [@media(hover:none)]:opacity-100 group-hover:opacity-100">
+        <div>
           <VButton type="secondary" size="sm" @click="creationModalVisible = true">新建</VButton>
         </div>
       </div>
@@ -141,7 +237,13 @@ function handleMoveToGroup(group: LinkGroup) {
       </template>
     </VEmpty>
     <div class=":uno: flex flex-wrap gap-2" v-else>
-      <LinkBadge v-for="link in links" :key="link.metadata.name" :link="link" :select-mode="enabledSelect">
+      <LinkBadge
+        v-for="link in links"
+        :key="link.metadata.name"
+        :link="link"
+        :select-mode="enabledSelect"
+        @open-edit="handleOpenEdit(link)"
+      >
         <template #checkbox>
           <input type="checkbox" v-model="selectedLinkNames" :value="link.metadata.name" />
         </template>
@@ -156,4 +258,19 @@ function handleMoveToGroup(group: LinkGroup) {
     :group="group"
     @close="groupEditingModalVisible = false"
   />
+
+  <LinkEditingModal
+    v-if="linkEditingModalVisible && selectedLink"
+    :link="selectedLink"
+    @close="handleEditingModalClose"
+  >
+    <template #append-actions>
+      <span @click="handleSelectPrevious">
+        <IconArrowLeft />
+      </span>
+      <span @click="handleSelectNext">
+        <IconArrowRight />
+      </span>
+    </template>
+  </LinkEditingModal>
 </template>

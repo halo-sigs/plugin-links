@@ -6,15 +6,10 @@ import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { paginate } from "@halo-dev/api-client";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
+import { chunk } from "es-toolkit";
 import { onMounted, ref } from "vue";
-import { vDraggable, VueDraggable } from "vue-draggable-plus";
+import { VueDraggable } from "vue-draggable-plus";
 import RiDragMove2Line from "~icons/ri/drag-move-2-line";
-
-defineOptions({
-  directives: {
-    Draggable: vDraggable,
-  },
-});
 
 const emit = defineEmits<{
   (event: "close"): void;
@@ -49,11 +44,16 @@ onMounted(() => {
 });
 
 async function handleSave() {
-  for (const [index, group] of groups.value.entries()) {
-    await linksCoreApiClient.group.patchLinkGroup({
-      name: group.metadata.name,
-      jsonPatchInner: [{ op: "add", path: "/spec/priority", value: index + 1 }],
-    });
+  const batches = chunk(groups.value, 5);
+  for (const [batchIndex, batch] of batches.entries()) {
+    await Promise.all(
+      batch.map((group, index) =>
+        linksCoreApiClient.group.patchLinkGroup({
+          name: group.metadata.name,
+          jsonPatchInner: [{ op: "add", path: "/spec/priority", value: batchIndex * 5 + index + 1 }],
+        }),
+      ),
+    );
   }
   Toast.success("保存成功");
   modal.value?.close();

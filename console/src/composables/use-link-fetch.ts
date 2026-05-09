@@ -53,5 +53,24 @@ export function useLinksFetch() {
 
       return [...grouped, ungrouped];
     },
+    refetchInterval(data) {
+      const hasDeletingGroup = data?.some((group) => {
+        return !!group.group?.metadata.deletionTimestamp;
+      });
+
+      if (hasDeletingGroup) {
+        return 1000;
+      }
+
+      const hasDeletingLink = data?.some((group) => {
+        return group.links.some((link) => !!link.metadata.deletionTimestamp);
+      });
+
+      if (hasDeletingLink) {
+        return 1000;
+      }
+
+      return false;
+    },
   });
 }
