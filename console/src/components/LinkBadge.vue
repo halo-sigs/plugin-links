@@ -20,7 +20,10 @@ function handleClick() {
 </script>
 <template>
   <label
-    v-tooltip="link.spec?.url"
+    v-tooltip="{
+      content: link.spec?.url,
+      disabled: selectMode || sortMode,
+    }"
     class=":uno: inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gray-100 px-2 py-1 transition-colors hover:bg-gray-200"
     :class="{
       ':uno: animate-flash opacity-50': link.metadata.deletionTimestamp,

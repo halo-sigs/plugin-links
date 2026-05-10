@@ -88,7 +88,7 @@ function handleDelete() {
 }
 </script>
 <template>
-  <VModal title="编辑链接" ref="modal" :mount-to-body="true" :width="650" @close="emit('close')">
+  <VModal :centered="false" title="编辑链接" ref="modal" :mount-to-body="true" :width="650" @close="emit('close')">
     <template #actions>
       <slot name="append-actions" />
     </template>

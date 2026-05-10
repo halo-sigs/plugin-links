@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
-import { LinkGroup } from "@/api/generated";
+import { Link, LinkGroup } from "@/api/generated";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import {
@@ -43,6 +43,8 @@ const queryClient = useQueryClient();
 
 const { data: groups } = useLinkGroupFetch();
 
+const otherGroups = computed(() => groups.value?.filter((i) => i.metadata.name !== group.value?.metadata.name));
+
 const creationModalVisible = ref(false);
 
 const groupEditingModalVisible = ref(false);
@@ -62,9 +64,7 @@ function handleOpenEdit(link: Link) {
 
 function handleSelectPrevious() {
   if (!links.value.length) return;
-  const currentIndex = links.value.findIndex(
-    (link) => link.metadata.name === selectedLink.value?.metadata.name,
-  );
+  const currentIndex = links.value.findIndex((link) => link.metadata.name === selectedLink.value?.metadata.name);
   if (currentIndex > 0) {
     selectedLink.value = links.value[currentIndex - 1];
   } else if (currentIndex <= 0) {
@@ -78,9 +78,7 @@ function handleSelectNext() {
     selectedLink.value = links.value[0];
     return;
   }
-  const currentIndex = links.value.findIndex(
-    (link) => link.metadata.name === selectedLink.value?.metadata.name,
-  );
+  const currentIndex = links.value.findIndex((link) => link.metadata.name === selectedLink.value?.metadata.name);
   if (currentIndex !== links.value.length - 1) {
     selectedLink.value = links.value[currentIndex + 1];
   }
@@ -181,17 +179,17 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
       <div class=":uno: w-full flex flex-wrap items-center justify-between gap-2 px-4 py-2">
         <div class=":uno: flex flex-wrap items-center gap-3">
           <div class=":uno: text-sm text-gray-900 font-semibold">
-            {{ group?.spec?.displayName || "未分组" }}
+            {{ group?.spec?.displayName || "未分组" }}（{{ links.length }}）
           </div>
           <VSpace v-if="enabledSelect" class=":uno: flex-wrap">
             <VButton size="sm" @click="handleSelectAll">全选</VButton>
             <VButton size="sm" @click="selectedLinkNames.length = 0">清空选择</VButton>
             <VDropdown>
-              <VButton size="sm">移动</VButton>
+              <VButton size="sm" :disabled="selectedLinkNames.length === 0 || !otherGroups?.length">移动</VButton>
               <template #popper>
                 <VDropdownItem
                   @click="handleMoveToGroup(item)"
-                  v-for="item in groups"
+                  v-for="item in otherGroups"
                   :key="item.metadata.name"
                   :value="item.metadata.name"
                 >
@@ -199,7 +197,9 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
                 </VDropdownItem>
               </template>
             </VDropdown>
-            <VButton size="sm" type="danger" @click="handleDeleteInBatch">删除</VButton>
+            <VButton size="sm" type="danger" :disabled="selectedLinkNames.length === 0" @click="handleDeleteInBatch">
+              删除
+            </VButton>
             <VButton size="sm" @click="enabledSelect = false">取消</VButton>
           </VSpace>
           <VSpace v-else class=":uno: flex-wrap">
@@ -208,7 +208,7 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
                 <IconMore />
               </VButton>
               <template #popper>
-                <VDropdownItem v-if="links.length && group" @click="enabledSort = true">排序</VDropdownItem>
+                <VDropdownItem v-if="links.length" @click="enabledSort = true">排序</VDropdownItem>
                 <VDropdownItem v-if="links.length" @click="enabledSelect = true">批量选择</VDropdownItem>
                 <VDropdownItem v-if="group" @click="groupEditingModalVisible = true">编辑分组</VDropdownItem>
                 <VDropdown>

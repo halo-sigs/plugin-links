@@ -56,7 +56,7 @@ function onSubmit(data: GroupFormState) {
 }
 </script>
 <template>
-  <VModal title="新建分组" ref="modal" :mount-to-body="true" :width="600" @close="emit('close')">
+  <VModal :centered="false" title="新建分组" ref="modal" :mount-to-body="true" :width="600" @close="emit('close')">
     <GroupForm @submit="onSubmit" />
 
     <template #footer>

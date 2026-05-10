@@ -66,7 +66,7 @@ const title = computed(() => {
 });
 </script>
 <template>
-  <VModal :title="title" ref="modal" :mount-to-body="true" :width="650" @close="emit('close')">
+  <VModal :centered="false" :title="title" ref="modal" :mount-to-body="true" :width="650" @close="emit('close')">
     <LinkForm @submit="onSubmit" />
 
     <template #footer>

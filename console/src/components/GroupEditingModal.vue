@@ -52,7 +52,7 @@ function onSubmit(data: GroupFormState) {
 }
 </script>
 <template>
-  <VModal title="编辑分组" ref="modal" :mount-to-body="true" :width="600" @close="emit('close')">
+  <VModal :centered="false" title="编辑分组" ref="modal" :mount-to-body="true" :width="600" @close="emit('close')">
     <GroupForm
       :name="group.metadata.name"
       :formState="{
