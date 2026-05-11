@@ -7,15 +7,17 @@ import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
+import run.halo.app.extension.ListResult;
 import run.halo.app.extension.Metadata;
-import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.theme.finders.Finder;
-import run.halo.links.Link;
 import run.halo.links.LinkGroup;
 import run.halo.links.finders.LinkFinder;
+import run.halo.links.finders.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
+import java.util.List;
 
 /**
  * A default implementation for {@link LinkFinder}.
@@ -26,10 +28,10 @@ import run.halo.links.vo.LinkVo;
 @Finder("linkFinder")
 public class LinkFinderImpl implements LinkFinder {
     static final String UNGROUPED_NAME = "ungrouped";
-    private final ReactiveExtensionClient client;
+    private final LinkPublicQueryService linkPublicQueryService;
 
-    public LinkFinderImpl(ReactiveExtensionClient client) {
-        this.client = client;
+    public LinkFinderImpl(LinkPublicQueryService linkPublicQueryService) {
+        this.linkPublicQueryService = linkPublicQueryService;
     }
 
     @Override
@@ -42,14 +44,16 @@ public class LinkFinderImpl implements LinkFinder {
             query = and(query, equal("spec.groupName", groupName));
         }
         listOptions.setFieldSelector(FieldSelector.of(query));
-        return client.listAll(Link.class, listOptions, defaultLinkSort())
-            .map(LinkVo::from);
+        return linkPublicQueryService.listLinks(listOptions,
+            PageRequestImpl.of(1, Integer.MAX_VALUE, defaultLinkSort()))
+            .flatMapIterable(ListResult::getItems);
     }
 
     @Override
     public Flux<LinkGroupVo> groupBy() {
-        return client.listAll(LinkGroup.class, new ListOptions(), defaultGroupSort())
-            .map(LinkGroupVo::from)
+        return linkPublicQueryService.listGroups(ListOptions.builder().build(),
+                PageRequestImpl.of(1, Integer.MAX_VALUE, defaultGroupSort()))
+            .flatMapIterable(ListResult::getItems)
             .concatMap(group -> listBy(group.getMetadata().getName())
                 .collectList()
                 .map(group::withLinks)
@@ -64,6 +68,16 @@ public class LinkFinderImpl implements LinkFinder {
                     .map(group -> group.withLinks(links))
                 )
             ));
+    }
+
+    @Override
+    public Mono<List<LinkVo>> random(Integer maxSize) {
+        return linkPublicQueryService.random(maxSize);
+    }
+
+    @Override
+    public Mono<Integer> count() {
+        return linkPublicQueryService.count();
     }
 
     Mono<LinkGroup> ungrouped() {

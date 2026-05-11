@@ -39,3 +39,16 @@ rules:
     resources: [ "plugins/links" ]
     resourceNames: [ "PluginLinks" ]
     verbs: [ "create", "update" ]
+---
+apiVersion: v1alpha1
+kind: Role
+metadata:
+  name: role-template-link-anonymous
+  labels:
+    halo.run/role-template: "true"
+    halo.run/hidden: "true"
+    rbac.authorization.halo.run/aggregate-to-anonymous: "true"
+rules:
+  - apiGroups: [ "api.link.halo.run" ]
+    resources: [ "links", "linkgroups", "link-random", "link-count" ]
+    verbs: [ "get", "list" ]
