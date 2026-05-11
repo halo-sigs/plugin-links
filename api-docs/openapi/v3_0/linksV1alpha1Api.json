@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:59015",
+    "url" : "http://localhost:58562",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -36,6 +36,27 @@
               }
             },
             "description" : "default response"
+          }
+        },
+        "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-groups/-/sort" : {
+      "post" : {
+        "description" : "Sort link groups by priority",
+        "operationId" : "sortLinkGroups",
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SortRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
           }
         },
         "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
@@ -116,6 +137,27 @@
               }
             },
             "description" : "default response"
+          }
+        },
+        "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links/-/sort" : {
+      "post" : {
+        "description" : "Sort links by priority",
+        "operationId" : "sortLinks",
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SortRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
           }
         },
         "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
@@ -954,6 +996,17 @@
           },
           "value" : {
             "description" : "Value can be any JSON value"
+          }
+        }
+      },
+      "SortRequest" : {
+        "type" : "object",
+        "properties" : {
+          "names" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           }
         }
       },

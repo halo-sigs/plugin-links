@@ -2,6 +2,7 @@ package run.halo.links;
 
 import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
+import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuilder;
 import static org.springframework.data.domain.Sort.Order.asc;
 import static org.springframework.data.domain.Sort.Order.desc;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
@@ -28,6 +29,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import run.halo.app.extension.ListOptions;
@@ -94,7 +96,30 @@ public class LinkRouter {
                         .required(true)
                     )
                     .response(responseBuilder().implementation(LinkDetailDTO.class));
-            }).build();
+            })
+            .POST("links/-/sort", this::sortLinks,
+                builder -> {
+                    builder.operationId("sortLinks")
+                        .description("Sort links by priority")
+                        .tag(tag)
+                        .requestBody(requestBodyBuilder()
+                            .implementation(SortRequest.class))
+                        .response(responseBuilder()
+                            .responseCode("200"));
+                }
+            )
+            .POST("link-groups/-/sort", this::sortLinkGroups,
+                builder -> {
+                    builder.operationId("sortLinkGroups")
+                        .description("Sort link groups by priority")
+                        .tag(tag)
+                        .requestBody(requestBodyBuilder()
+                            .implementation(SortRequest.class))
+                        .response(responseBuilder()
+                            .responseCode("200"));
+                }
+            )
+            .build();
     }
 
     private Mono<ServerResponse> getLinkDetail(ServerRequest request) {
@@ -105,6 +130,50 @@ public class LinkRouter {
             .subscribeOn(Schedulers.boundedElastic())
             .publishOn(Schedulers.parallel())
             .flatMap(dto -> ServerResponse.ok().bodyValue(dto));
+    }
+
+    Mono<ServerResponse> sortLinks(ServerRequest request) {
+        return request.bodyToMono(SortRequest.class)
+            .flatMap(sortRequest -> {
+                var names = sortRequest.getNames();
+                if (names == null || names.isEmpty()) {
+                    return ServerResponse.ok().build();
+                }
+                return Flux.fromIterable(names)
+                    .zipWith(Flux.range(0, Integer.MAX_VALUE))
+                    .concatMap(tuple -> {
+                        String name = tuple.getT1();
+                        int priority = tuple.getT2();
+                        return client.fetch(Link.class, name)
+                            .flatMap(link -> {
+                                link.getSpec().setPriority(priority);
+                                return client.update(link);
+                            });
+                    })
+                    .then(ServerResponse.ok().build());
+            });
+    }
+
+    Mono<ServerResponse> sortLinkGroups(ServerRequest request) {
+        return request.bodyToMono(SortRequest.class)
+            .flatMap(sortRequest -> {
+                var names = sortRequest.getNames();
+                if (names == null || names.isEmpty()) {
+                    return ServerResponse.ok().build();
+                }
+                return Flux.fromIterable(names)
+                    .zipWith(Flux.range(0, Integer.MAX_VALUE))
+                    .concatMap(tuple -> {
+                        String name = tuple.getT1();
+                        int priority = tuple.getT2();
+                        return client.fetch(LinkGroup.class, name)
+                            .flatMap(group -> {
+                                group.getSpec().setPriority(priority);
+                                return client.update(group);
+                            });
+                    })
+                    .then(ServerResponse.ok().build());
+            });
     }
 
     Mono<ServerResponse> listLinkByGroup(ServerRequest request) {

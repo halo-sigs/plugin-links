@@ -25,6 +25,8 @@ import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError
 import type { LinkDetailDTO } from '../models';
 // @ts-ignore
 import type { LinkList } from '../models';
+// @ts-ignore
+import type { SortRequest } from '../models';
 /**
  * ApiPluginHaloRunV1alpha1LinkApi - axios parameter creator
  * @export
@@ -147,6 +149,88 @@ export const ApiPluginHaloRunV1alpha1LinkApiAxiosParamCreator = function (config
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Sort link groups by priority
+         * @param {SortRequest} [sortRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        sortLinkGroups: async (sortRequest?: SortRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-groups/-/sort`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(sortRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Sort links by priority
+         * @param {SortRequest} [sortRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        sortLinks: async (sortRequest?: SortRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links/-/sort`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(sortRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -187,6 +271,30 @@ export const ApiPluginHaloRunV1alpha1LinkApiFp = function(configuration?: Config
             const localVarOperationServerBasePath = operationServerMap['ApiPluginHaloRunV1alpha1LinkApi.listLinks']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * Sort link groups by priority
+         * @param {SortRequest} [sortRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async sortLinkGroups(sortRequest?: SortRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.sortLinkGroups(sortRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ApiPluginHaloRunV1alpha1LinkApi.sortLinkGroups']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Sort links by priority
+         * @param {SortRequest} [sortRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async sortLinks(sortRequest?: SortRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.sortLinks(sortRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ApiPluginHaloRunV1alpha1LinkApi.sortLinks']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -214,6 +322,24 @@ export const ApiPluginHaloRunV1alpha1LinkApiFactory = function (configuration?: 
          */
         listLinks(requestParameters: ApiPluginHaloRunV1alpha1LinkApiListLinksRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkList> {
             return localVarFp.listLinks(requestParameters.keyword, requestParameters.groupName, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Sort link groups by priority
+         * @param {ApiPluginHaloRunV1alpha1LinkApiSortLinkGroupsRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        sortLinkGroups(requestParameters: ApiPluginHaloRunV1alpha1LinkApiSortLinkGroupsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.sortLinkGroups(requestParameters.sortRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Sort links by priority
+         * @param {ApiPluginHaloRunV1alpha1LinkApiSortLinksRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        sortLinks(requestParameters: ApiPluginHaloRunV1alpha1LinkApiSortLinksRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.sortLinks(requestParameters.sortRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -289,6 +415,34 @@ export interface ApiPluginHaloRunV1alpha1LinkApiListLinksRequest {
 }
 
 /**
+ * Request parameters for sortLinkGroups operation in ApiPluginHaloRunV1alpha1LinkApi.
+ * @export
+ * @interface ApiPluginHaloRunV1alpha1LinkApiSortLinkGroupsRequest
+ */
+export interface ApiPluginHaloRunV1alpha1LinkApiSortLinkGroupsRequest {
+    /**
+     * 
+     * @type {SortRequest}
+     * @memberof ApiPluginHaloRunV1alpha1LinkApiSortLinkGroups
+     */
+    readonly sortRequest?: SortRequest
+}
+
+/**
+ * Request parameters for sortLinks operation in ApiPluginHaloRunV1alpha1LinkApi.
+ * @export
+ * @interface ApiPluginHaloRunV1alpha1LinkApiSortLinksRequest
+ */
+export interface ApiPluginHaloRunV1alpha1LinkApiSortLinksRequest {
+    /**
+     * 
+     * @type {SortRequest}
+     * @memberof ApiPluginHaloRunV1alpha1LinkApiSortLinks
+     */
+    readonly sortRequest?: SortRequest
+}
+
+/**
  * ApiPluginHaloRunV1alpha1LinkApi - object-oriented interface
  * @export
  * @class ApiPluginHaloRunV1alpha1LinkApi
@@ -315,6 +469,28 @@ export class ApiPluginHaloRunV1alpha1LinkApi extends BaseAPI {
      */
     public listLinks(requestParameters: ApiPluginHaloRunV1alpha1LinkApiListLinksRequest = {}, options?: RawAxiosRequestConfig) {
         return ApiPluginHaloRunV1alpha1LinkApiFp(this.configuration).listLinks(requestParameters.keyword, requestParameters.groupName, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Sort link groups by priority
+     * @param {ApiPluginHaloRunV1alpha1LinkApiSortLinkGroupsRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ApiPluginHaloRunV1alpha1LinkApi
+     */
+    public sortLinkGroups(requestParameters: ApiPluginHaloRunV1alpha1LinkApiSortLinkGroupsRequest = {}, options?: RawAxiosRequestConfig) {
+        return ApiPluginHaloRunV1alpha1LinkApiFp(this.configuration).sortLinkGroups(requestParameters.sortRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Sort links by priority
+     * @param {ApiPluginHaloRunV1alpha1LinkApiSortLinksRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ApiPluginHaloRunV1alpha1LinkApi
+     */
+    public sortLinks(requestParameters: ApiPluginHaloRunV1alpha1LinkApiSortLinksRequest = {}, options?: RawAxiosRequestConfig) {
+        return ApiPluginHaloRunV1alpha1LinkApiFp(this.configuration).sortLinks(requestParameters.sortRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

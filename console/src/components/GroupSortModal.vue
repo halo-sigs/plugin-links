@@ -1,12 +1,11 @@
 <script lang="ts" setup>
-import { linksCoreApiClient } from "@/api";
+import { linksCoreApiClient, linksConsoleApiClient } from "@/api";
 import { LinkGroup, LinkGroupV1alpha1ApiListLinkGroupRequest } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { paginate } from "@halo-dev/api-client";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { chunk } from "es-toolkit";
 import { onMounted, ref } from "vue";
 import { VueDraggable } from "vue-draggable-plus";
 import RiDragMove2Line from "~icons/ri/drag-move-2-line";
@@ -22,6 +21,8 @@ const modal = ref<InstanceType<typeof VModal> | null>(null);
 const groups = ref<LinkGroup[]>([]);
 
 const isLoading = ref(false);
+
+const isSubmitting = ref(false);
 
 async function fetchGroups() {
   isLoading.value = true;
@@ -44,21 +45,19 @@ onMounted(() => {
 });
 
 async function handleSave() {
-  const batches = chunk(groups.value, 5);
-  for (const [batchIndex, batch] of batches.entries()) {
-    await Promise.all(
-      batch.map((group, index) =>
-        linksCoreApiClient.group.patchLinkGroup({
-          name: group.metadata.name,
-          jsonPatchInner: [{ op: "add", path: "/spec/priority", value: batchIndex * 5 + index + 1 }],
-        }),
-      ),
-    );
+  isSubmitting.value = true;
+  try {
+    const names = groups.value.map((group) => group.metadata.name);
+    await linksConsoleApiClient.link.sortLinkGroups({
+      sortRequest: { names },
+    });
+    Toast.success("保存成功");
+    modal.value?.close();
+    queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+  } finally {
+    isSubmitting.value = false;
   }
-  Toast.success("保存成功");
-  modal.value?.close();
-  queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
-  queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
 }
 </script>
 
@@ -81,7 +80,7 @@ async function handleSave() {
     </div>
     <template #footer>
       <VSpace>
-        <VButton type="secondary" @click="handleSave">保存</VButton>
+        <VButton type="secondary" :loading="isSubmitting" @click="handleSave">保存</VButton>
         <VButton @click="modal?.close()">关闭</VButton>
       </VSpace>
     </template>

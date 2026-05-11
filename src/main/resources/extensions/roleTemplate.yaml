@@ -35,3 +35,7 @@ rules:
   - apiGroups: [ "core.halo.run" ]
     resources: [ "links", "linkgroups" ]
     verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
+  - apiGroups: [ "api.plugin.halo.run" ]
+    resources: [ "plugins/links" ]
+    resourceNames: [ "PluginLinks" ]
+    verbs: [ "create", "update" ]

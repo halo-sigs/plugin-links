@@ -12,4 +12,5 @@ export * from './metadata';
 export * from './move-operation';
 export * from './remove-operation';
 export * from './replace-operation';
+export * from './sort-request';
 export * from './test-operation';
