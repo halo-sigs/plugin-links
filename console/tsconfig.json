@@ -1,13 +1,25 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.web.json",
-  "include": ["./env.d.ts", "./src/**/*", "./src/**/*.vue"],
-  "exclude": ["./src/**/__tests__/*"],
   "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true,
+    "jsx": "preserve",
+    "noImplicitThis": true,
+    "strict": true,
+    "isolatedModules": true,
+    "target": "ESNext",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
     "composite": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["unplugin-icons/types/vue"]
-  }
+    "types": ["unplugin-icons/types/vue"],
+    "lib": ["ES2016", "DOM", "DOM.Iterable"]
+  },
+  "include": ["./env.d.ts", "./src/**/*", "./src/**/*.vue"],
+  "exclude": ["./src/**/__tests__/*"]
 }

@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
+import { axiosInstance } from "@halo-dev/api-client";
+import type { AxiosError } from "axios";
 import { Link, LinkGroup } from "@/api/generated";
 import { useLinkFetch, useLinkGroupFetch } from "@/composables/use-link";
 import {
@@ -25,10 +27,8 @@ import {
   VStatusDot,
 } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { useFileSystemAccess } from "@vueuse/core";
 import { useRouteQuery } from "@vueuse/router";
 import { provide, ref, watch, type Ref } from "vue";
-import yaml from "yaml";
 import RiLinksLine from "~icons/ri/links-line";
 import GroupList from "../components/GroupList.vue";
 import LinkEditingModal from "../components/LinkEditingModal.vue";
@@ -60,6 +60,51 @@ watch(
     checkedAll.value = false;
   }
 );
+
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const handleImportFromYaml = () => {
+  fileInputRef.value?.click();
+};
+
+const handleFileChange = async (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  if (!input.files?.length) return;
+
+  const file = input.files[0];
+  const reader = new FileReader();
+
+  reader.onload = async (event) => {
+    const content = event.target?.result as string;
+    if (!content) return;
+
+    try {
+      const response = await axiosInstance.post(
+        "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/import",
+        content,
+        {
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        }
+      );
+
+      Toast.success(response.data.message || "导入完成");
+    } catch (e: unknown) {
+      console.error(e);
+      const error = e as AxiosError<{ message?: string }>;
+      const message = error.response?.data?.message || error.message || "导入失败";
+      Toast.error(message);
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ["links"] });
+      queryClient.invalidateQueries({ queryKey: ["linkgroups"] });
+      // 重置输入框，以便可以重复导入同一文件
+      input.value = "";
+    }
+  };
+
+  reader.readAsText(file);
+};
 
 const handleSelectPrevious = () => {
   if (!links.value) {
@@ -173,63 +218,30 @@ const handleDeleteInBatch = () => {
 };
 
 const handleExportSelectedLinks = async () => {
-  if (!links.value?.length) {
-    return;
-  }
-  const yamlString = links.value
-    .map((link) => {
-      if (selectedLinks.value.includes(link.metadata.name)) {
-        return yaml.stringify(link);
-      }
-    })
-    .filter((link) => link)
-    .join("---\n");
-  const blob = new Blob([yamlString], { type: "text/yaml" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "links.yaml";
-  link.click();
-};
-
-const handleImportFromYaml = async () => {
-  const res = useFileSystemAccess({
-    dataType: "Text",
-    types: [
-      {
-        description: "yaml",
-        accept: {
-          "text/yaml": [".yaml", ".yml"],
-        },
-      },
-    ],
-    excludeAcceptAllOption: true,
-  });
-
-  await res.open();
-
   try {
-    if (!res.data.value) {
-      return;
-    }
-
-    const parsed = yaml.parseAllDocuments(res.data.value);
-    if (Array.isArray(parsed)) {
-      const promises = parsed.map((link: Link) => {
-        return linksCoreApiClient.link.createLink({ link });
-      });
-      if (promises) {
-        await Promise.all(promises);
+    const response = await axiosInstance.get(
+      "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/export",
+      {
+        responseType: "blob",
       }
-    } else {
-      await linksCoreApiClient.link.createLink({ link: parsed });
-    }
-  } catch (e) {
+    );
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "links.yaml");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (e: unknown) {
     console.error(e);
-  } finally {
-    queryClient.invalidateQueries({ queryKey: ["links"] });
+    const error = e as AxiosError<{ message?: string }>;
+    const message = error.response?.data?.message || error.message || "导出失败";
+    Toast.error(message);
   }
 };
+
+
 
 const handleCheckAllChange = (e: Event) => {
   const { checked } = e.target as HTMLInputElement;
@@ -320,6 +332,7 @@ async function handleMove(link: Link, group: LinkGroup) {
     <template #actions>
       <VSpace v-permission="['plugin:links:manage']">
         <VButton size="sm" type="default" @click="handleImportFromYaml"> 导入 </VButton>
+        <VButton size="sm" type="default" @click="handleExportSelectedLinks"> 导出 </VButton>
       </VSpace>
     </template>
   </VPageHeader>
@@ -363,7 +376,9 @@ async function handleMove(link: Link, group: LinkGroup) {
                     </VDropdown>
                   </VSpace>
                 </div>
-                <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0">
+                <div v-permission="['plugin:links:manage']" class=":uno: mt-4 flex sm:mt-0 gap-2">
+                  <VButton size="xs" type="default" @click="handleImportFromYaml"> 导入 </VButton>
+                  <VButton size="xs" type="default" @click="handleExportSelectedLinks"> 导出 </VButton>
                   <VButton size="xs" @click="editingModal = true"> 新建 </VButton>
                 </div>
               </div>
@@ -375,7 +390,13 @@ async function handleMove(link: Link, group: LinkGroup) {
               <template #actions>
                 <VSpace>
                   <VButton @click="refetch"> 刷新</VButton>
-                  <VButton v-permission="['system:menus:manage']" type="primary" @click="editingModal = true">
+                  <VButton v-permission="['plugin:links:manage']" type="default" @click="handleImportFromYaml">
+                    导入
+                  </VButton>
+                  <VButton v-permission="['plugin:links:manage']" type="default" @click="handleExportSelectedLinks">
+                    导出
+                  </VButton>
+                  <VButton v-permission="['plugin:links:manage']" type="primary" @click="editingModal = true">
                     <template #icon>
                       <IconAddCircle class=":uno: size-full" />
                     </template>
@@ -483,5 +504,13 @@ async function handleMove(link: Link, group: LinkGroup) {
         </VCard>
       </div>
     </div>
+
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept=".yaml,.yml"
+      class=":uno: hidden"
+      @change="handleFileChange"
+    />
   </div>
 </template>
