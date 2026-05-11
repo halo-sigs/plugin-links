@@ -120,13 +120,15 @@ Gradle's `buildFrontend` task (pnpm build) runs before `compileJava`. In product
 
 ## Development Workflow
 
-To develop the plugin against a running Halo instance:
+To run the plugin in development mode:
 
-1. Build the plugin: `./gradlew build`
-2. Configure Halo with `runtime-mode: development` and point `fixedPluginPath` to this repo.
-3. The plugin will be loaded directly from source. Edit Java code and Halo will reload; edit frontend code and the dev build will update.
+```bash
+./gradlew haloServer
+```
 
-See `README.md` for the full Halo YAML configuration snippet.
+This starts a local Halo instance with the plugin loaded directly from source. Edit Java code and Halo will reload; edit frontend code and the dev build will update.
+
+To test the admin UI, navigate to `http://localhost:8090/console/links` in a browser. The default credentials are **admin / admin**.
 
 ## Code Style
 
