@@ -2,10 +2,10 @@
   "openapi" : "3.0.1",
   "info" : {
     "title" : "Halo",
-    "version" : "2.17.2"
+    "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:31788",
+    "url" : "http://localhost:59015",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -119,6 +119,41 @@
           }
         },
         "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}" : {
+      "delete" : {
+        "description" : "Delete link group.",
+        "operationId" : "DeleteLinkGroup",
+        "parameters" : [ {
+          "description" : "Link group name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Delete links in the group; when false, links become ungrouped",
+          "in" : "query",
+          "name" : "deleteLinks",
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkGroup"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkGroup" ]
       }
     },
     "/apis/core.halo.run/v1alpha1/linkgroups" : {
@@ -609,7 +644,7 @@
         }
       },
       "Link" : {
-        "required" : [ "apiVersion", "kind", "metadata" ],
+        "required" : [ "apiVersion", "kind", "metadata", "spec" ],
         "type" : "object",
         "properties" : {
           "apiVersion" : {
@@ -624,7 +659,8 @@
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
           }
-        }
+        },
+        "description" : "A chunk of items."
       },
       "LinkDetailDTO" : {
         "required" : [ "title" ],
@@ -645,7 +681,7 @@
         }
       },
       "LinkGroup" : {
-        "required" : [ "apiVersion", "kind", "metadata" ],
+        "required" : [ "apiVersion", "kind", "metadata", "spec" ],
         "type" : "object",
         "properties" : {
           "apiVersion" : {
@@ -816,15 +852,18 @@
             "type" : "object",
             "additionalProperties" : {
               "type" : "string"
-            }
+            },
+            "description" : "Annotations are like key-value format."
           },
           "creationTimestamp" : {
             "type" : "string",
+            "description" : "Creation timestamp of the Extension.",
             "format" : "date-time",
             "nullable" : true
           },
           "deletionTimestamp" : {
             "type" : "string",
+            "description" : "Deletion timestamp of the Extension.",
             "format" : "date-time",
             "nullable" : true
           },
@@ -845,7 +884,8 @@
             "type" : "object",
             "additionalProperties" : {
               "type" : "string"
-            }
+            },
+            "description" : "Labels are like key-value format."
           },
           "name" : {
             "type" : "string",
@@ -853,10 +893,12 @@
           },
           "version" : {
             "type" : "integer",
+            "description" : "Current version of the Extension. It will be bumped up every update.",
             "format" : "int64",
             "nullable" : true
           }
-        }
+        },
+        "description" : "Metadata of Extension."
       },
       "MoveOperation" : {
         "required" : [ "op", "from", "path" ],

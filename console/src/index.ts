@@ -11,7 +11,7 @@ export default definePlugin({
       route: {
         path: "/links",
         name: "Links",
-        component: () => import("@/views/LinkList.vue"),
+        component: () => import(/* webpackChunkName: "links-list" */ "@/views/LinkList.vue"),
         meta: {
           permissions: ["plugin:links:view"],
           menu: {

@@ -104,6 +104,14 @@ pnpm prettier
 - **State**: Vue Query (`@tanstack/vue-query`) for server state; no global client-side store
 - **Icons**: `unplugin-icons` with Iconify (`~icons/ri/...`)
 - **API Client**: Auto-generated from the backend OpenAPI spec into `console/src/api/generated/`. The `haloPlugin.openApi.generator` block in `build.gradle` controls output.
+
+> **Important**: After modifying backend APIs (e.g., adding a `CustomEndpoint` or changing request/response schemas), regenerate the TypeScript client before using it in the frontend:
+>
+> ```bash
+> ./gradlew generateApiClient
+> ```
+>
+> If the new endpoints use a different path prefix (e.g., `/apis/console.api.link.halo.run/v1alpha1/**`), add the prefix to `haloPlugin.openApi.groupingRules.pathsToMatch` in `build.gradle` first, otherwise the generator will skip them.
 - **Plugin Integration**: `console/src/index.ts` exports a plugin definition using `@halo-dev/ui-shared`'s `definePlugin`. It registers a route under `content` group and a `comment:subject-ref:create` extension point.
 
 ### Build Integration
