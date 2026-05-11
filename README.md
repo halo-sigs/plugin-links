@@ -181,6 +181,39 @@ List<[#LinkGroupVo](#linkgroupvo)>
 </th:block>
 ```
 
+#### listBy(groupNames, limit)
+
+##### 描述
+
+同时获取指定多个分组下的链接，并限制返回的总数量。
+
+##### 参数
+
+1. `groupNames:List<string>` - 分组 `metadata.name` 列表。传入 `null` 时不限制分组。
+2. `limit:int` - 限制返回的链接数量，`0` 时不限制。
+
+##### 返回值
+
+List<[#LinkVo](#linkvo)>
+
+##### 示例
+
+```html
+<!-- 获取 friends 和 tools 两个分组，最多显示 10 条链接 -->
+<th:block th:each="link : ${linkFinder.listBy({'friends','tools'}, 10)}">
+    <a th:href="${link.spec.url}" target="_blank">
+        <span th:text="${link.spec.displayName}"></span>
+    </a>
+</th:block>
+
+<!-- 获取所有链接，最多显示 20 条 -->
+<th:block th:each="link : ${linkFinder.listBy(null, 20)}">
+    <a th:href="${link.spec.url}" target="_blank">
+        <span th:text="${link.spec.displayName}"></span>
+    </a>
+</th:block>
+```
+
 ### 评论适配
 
 主题开发者可以参考 [自定义标签](https://docs.halo.run/developer-guide/theme/template-tag/#halocomment)，来为友情链接接入评论功能。
