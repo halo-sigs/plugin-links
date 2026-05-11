@@ -264,3 +264,39 @@ name: ${pluginName}
 | ---------- | ---------------- | ---------- |
 | 链接       | core.halo.run | Link       |
 | 链接分组 | core.halo.run | LinkGroup |
+
+## 批量导入/导出
+
+插件支持使用 YAML 格式进行链接的批量导入和导出。
+
+### YAML 格式示例
+
+```yaml
+class1:
+  class_name: "友情链接"        # 分组名称
+  link_list:
+    1:
+      name: "Halo"             # 链接名称
+      link: "https://halo.run" # 链接地址
+      avatar: "https://halo.run/logo.png" # 头像/Logo
+      descr: "强大易用的开源建站工具"       # 描述
+    2:
+      name: "Google"
+      link: "https://google.com"
+      avatar: ""
+      descr: ""
+class2:
+  class_name: "推荐链接"
+  link_list:
+    1:
+      name: "GitHub"
+      link: "https://github.com"
+      avatar: ""
+      descr: ""
+```
+
+### 说明
+
+- **分组处理**：导入时会根据 `class_name` 自动匹配已有的分组，若不存在则会自动创建。
+- **链接处理**：导入时会作为新链接创建，不会覆盖已有链接。
+- **导出**：导出功能会按照上述格式生成完整的 YAML 文件，方便备份或迁移。
