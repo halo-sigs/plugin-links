@@ -22,7 +22,7 @@ import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObj
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError, operationServerMap } from '../base';
 // @ts-ignore
-import type { LinkGroupVoList } from '../models';
+import type { LinkGroupVo } from '../models';
 /**
  * ApiLinkHaloRunV1alpha1LinkGroupApi - axios parameter creator
  * @export
@@ -81,7 +81,7 @@ export const ApiLinkHaloRunV1alpha1LinkGroupApiFp = function(configuration?: Con
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async queryLinkGroups(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkGroupVoList>> {
+        async queryLinkGroups(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<LinkGroupVo>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.queryLinkGroups(options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ApiLinkHaloRunV1alpha1LinkGroupApi.queryLinkGroups']?.[localVarOperationServerIndex]?.url;
@@ -102,7 +102,7 @@ export const ApiLinkHaloRunV1alpha1LinkGroupApiFactory = function (configuration
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        queryLinkGroups(options?: RawAxiosRequestConfig): AxiosPromise<LinkGroupVoList> {
+        queryLinkGroups(options?: RawAxiosRequestConfig): AxiosPromise<Array<LinkGroupVo>> {
             return localVarFp.queryLinkGroups(options).then((request) => request(axios, basePath));
         },
     };

@@ -7,7 +7,6 @@ export * from './link-group';
 export * from './link-group-list';
 export * from './link-group-spec';
 export * from './link-group-vo';
-export * from './link-group-vo-list';
 export * from './link-list';
 export * from './link-spec';
 export * from './link-vo';

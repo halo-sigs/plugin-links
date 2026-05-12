@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { linksCoreApiClient, linksConsoleApiClient } from "@/api";
-import { LinkGroup, LinkGroupV1alpha1ApiListLinkGroupRequest } from "@/api/generated";
+import { linksConsoleApiClient, linksPublicApiClient } from "@/api";
+import { LinkGroupVo } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
-import { paginate } from "@halo-dev/api-client";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { onMounted, ref } from "vue";
@@ -18,7 +17,7 @@ const queryClient = useQueryClient();
 
 const modal = ref<InstanceType<typeof VModal> | null>(null);
 
-const groups = ref<LinkGroup[]>([]);
+const groups = ref<LinkGroupVo[]>([]);
 
 const isLoading = ref(false);
 
@@ -27,13 +26,7 @@ const isSubmitting = ref(false);
 async function fetchGroups() {
   isLoading.value = true;
   try {
-    const data = await paginate<LinkGroupV1alpha1ApiListLinkGroupRequest, LinkGroup>(
-      (params) => linksCoreApiClient.group.listLinkGroup(params),
-      {
-        size: 1000,
-        sort: ["spec.priority,asc"],
-      },
-    );
+    const { data } = await linksPublicApiClient.linkGroup.queryLinkGroups();
     groups.value = data;
   } finally {
     isLoading.value = false;
@@ -73,7 +66,7 @@ async function handleSave() {
         >
           <RiDragMove2Line class=":uno: size-4" />
           <div>
-            {{ group.spec.displayName }}
+            {{ group.spec?.displayName }}
           </div>
         </div>
       </VueDraggable>

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
-import { Link, LinkGroup } from "@/api/generated";
+import { Link, LinkGroupVo } from "@/api/generated";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import {
@@ -119,7 +119,7 @@ function handleDeleteInBatch() {
   });
 }
 
-function handleMoveToGroup(group: LinkGroup) {
+function handleMoveToGroup(group: LinkGroupVo) {
   Dialog.warning({
     title: "移动到分组",
     description: `确认将选中的链接移动到${group.spec?.displayName}分组吗？`,

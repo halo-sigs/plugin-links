@@ -28,6 +28,13 @@ public interface LinkPublicQueryService {
      */
     Mono<ListResult<LinkGroupVo>> listGroups(ListOptions options, PageRequest page);
 
+    /**
+     * List all link groups without pagination.
+     *
+     * @param options list options
+     * @return a mono of list of link group vos
+     */
+    Mono<List<LinkGroupVo>> listAllGroups(ListOptions options);
 
     Mono<List<LinkVo>> random(Integer maxSize);
 

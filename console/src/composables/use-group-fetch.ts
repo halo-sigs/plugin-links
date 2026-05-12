@@ -1,22 +1,14 @@
-import { linksCoreApiClient } from "@/api";
-import { LinkGroup, type LinkGroupV1alpha1ApiListLinkGroupRequest } from "@/api/generated";
-import { paginate } from "@halo-dev/api-client";
+import { linksPublicApiClient } from "@/api";
+import { LinkGroupVo } from "@/api/generated";
 import { useQuery } from "@tanstack/vue-query";
 
 export const QK_LINK_GROUPS = "plugin:links:link-groups";
 
 export function useLinkGroupFetch() {
-  return useQuery<LinkGroup[]>({
+  return useQuery<LinkGroupVo[]>({
     queryKey: [QK_LINK_GROUPS],
     queryFn: async () => {
-      const data = await paginate<LinkGroupV1alpha1ApiListLinkGroupRequest, LinkGroup>(
-        (params) => linksCoreApiClient.group.listLinkGroup(params),
-        {
-          size: 1000,
-          sort: ["spec.priority,asc"],
-        },
-      );
-
+      const { data } = await linksPublicApiClient.linkGroup.queryLinkGroups();
       return data;
     },
     refetchInterval(data) {

@@ -12,7 +12,6 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
-import run.halo.app.extension.ListResult;
 import run.halo.links.finders.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 
@@ -34,14 +33,14 @@ public class LinkGroupQueryEndpoint implements CustomEndpoint {
                     .description("List link groups.")
                     .tag(tag)
                     .response(responseBuilder()
-                        .implementation(ListResult.generateGenericClass(LinkGroupVo.class)))
+                        .implementationArray(LinkGroupVo.class))
             )
             .build();
     }
 
     private Mono<ServerResponse> listGroups(ServerRequest request) {
         LinkPublicQuery query = new LinkPublicQuery(request.exchange());
-        return linkPublicQueryService.listGroups(query.toListOptions(), query.toPageRequest())
+        return linkPublicQueryService.listAllGroups(query.toListOptions())
             .flatMap(result -> ServerResponse.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(result));

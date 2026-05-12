@@ -63,6 +63,14 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     }
 
     @Override
+    public Mono<List<LinkGroupVo>> listAllGroups(ListOptions options) {
+        return client.listAll(LinkGroup.class, options, Sort.unsorted())
+            .sort(groupComparator())
+            .concatMap(this::toGroupVo)
+            .collectList();
+    }
+
+    @Override
     public Mono<List<LinkVo>> random(Integer maxSize) {
         Assert.isTrue(maxSize > 0 && maxSize <= 100, "Size must be between 1 and 100");
         return client.countBy(Link.class, new ListOptions())

@@ -24,7 +24,7 @@ import type { LinkVo } from './link-vo';
 import type { Metadata } from './metadata';
 
 /**
- * A chunk of items.
+ * 
  * @export
  * @interface LinkGroupVo
  */
