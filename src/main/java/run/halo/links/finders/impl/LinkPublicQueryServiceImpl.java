@@ -102,7 +102,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
             isNull("metadata.deletionTimestamp")
         ));
         return client.listBy(Link.class, listOptions, PageRequestImpl.ofSize(1))
-            .flatMap(allComments -> Mono.just((int)allComments.getTotal()));
+            .flatMap(links -> Mono.just((int)links.getTotal()));
     }
 
 
