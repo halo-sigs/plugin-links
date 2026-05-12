@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.comment;
 
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;

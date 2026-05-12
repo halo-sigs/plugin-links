@@ -5,7 +5,7 @@ import lombok.Value;
 import lombok.With;
 import run.halo.app.extension.MetadataOperator;
 import run.halo.app.theme.finders.vo.ExtensionVoOperator;
-import run.halo.links.LinkGroup;
+import run.halo.links.extension.LinkGroup;
 
 import java.util.List;
 

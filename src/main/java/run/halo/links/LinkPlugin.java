@@ -8,6 +8,8 @@ import run.halo.app.extension.Scheme;
 import run.halo.app.extension.SchemeManager;
 import run.halo.app.plugin.BasePlugin;
 import run.halo.app.plugin.PluginContext;
+import run.halo.links.extension.Link;
+import run.halo.links.extension.LinkGroup;
 
 /**
  * @author guqing

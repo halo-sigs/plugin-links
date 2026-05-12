@@ -1,4 +1,4 @@
-package run.halo.links.finders.impl;
+package run.halo.links.service.impl;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.springframework.data.domain.Sort;
@@ -12,9 +12,9 @@ import run.halo.app.extension.PageRequest;
 import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.router.selector.FieldSelector;
-import run.halo.links.Link;
-import run.halo.links.LinkGroup;
-import run.halo.links.finders.LinkPublicQueryService;
+import run.halo.links.extension.Link;
+import run.halo.links.extension.LinkGroup;
+import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package run.halo.links.finders;
+package run.halo.links.service;
 
 import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Mono;

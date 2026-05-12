@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.route;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
@@ -24,7 +24,7 @@ import run.halo.app.extension.ListOptions;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.finders.LinkFinder;
-import run.halo.links.finders.LinkPublicQueryService;
+import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
 

@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.query;
 
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
 import static run.halo.app.extension.index.query.Queries.and;
@@ -20,6 +20,7 @@ import run.halo.app.extension.index.query.Condition;
 import run.halo.app.extension.router.IListRequest;
 import run.halo.app.extension.router.SortableRequest;
 import run.halo.app.extension.router.selector.FieldSelector;
+import run.halo.links.extension.Link;
 
 /**
  * A query object for public {@link Link} list.

@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

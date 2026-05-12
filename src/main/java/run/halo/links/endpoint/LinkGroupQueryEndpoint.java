@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.endpoint;
 
 import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
@@ -12,7 +12,8 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
-import run.halo.links.finders.LinkPublicQueryService;
+import run.halo.links.service.LinkPublicQueryService;
+import run.halo.links.query.LinkPublicQuery;
 import run.halo.links.vo.LinkGroupVo;
 
 /**

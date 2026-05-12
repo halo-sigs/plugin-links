@@ -1,7 +1,7 @@
 package run.halo.links.service;
 
 import reactor.core.publisher.Mono;
-import run.halo.links.LinkGroup;
+import run.halo.links.extension.LinkGroup;
 
 /**
  * A service for {@link LinkGroup}.

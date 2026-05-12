@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.query;
 
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
 import static run.halo.app.extension.index.query.Queries.and;
@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.web.server.ServerWebExchange;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.router.SortableRequest;
+import run.halo.links.extension.Link;
 
 /**
  * A query object for {@link Link} list in console API.

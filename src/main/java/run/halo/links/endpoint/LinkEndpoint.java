@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.endpoint;
 
 import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
@@ -19,7 +19,12 @@ import run.halo.app.extension.GroupVersion;
 import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.infra.utils.PathUtils;
-import run.halo.links.SortRequest;
+import run.halo.links.dto.LinkDetailDTO;
+import run.halo.links.dto.SortRequest;
+import run.halo.links.extension.Link;
+import run.halo.links.extension.LinkGroup;
+import run.halo.links.dto.LinkRequest;
+import run.halo.links.query.LinkQuery;
 
 /**
  * Console endpoint for {@link Link} management.

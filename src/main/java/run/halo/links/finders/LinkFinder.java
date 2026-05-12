@@ -2,7 +2,7 @@ package run.halo.links.finders;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import run.halo.links.Link;
+import run.halo.links.extension.Link;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
 import java.util.List;

@@ -1,4 +1,4 @@
-package run.halo.links;
+package run.halo.links.dto;
 
 import java.util.List;
 import lombok.Data;
