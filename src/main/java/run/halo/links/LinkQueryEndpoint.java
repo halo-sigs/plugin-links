@@ -77,9 +77,8 @@ public class LinkQueryEndpoint implements CustomEndpoint {
     }
 
     Mono<ServerResponse> linkCount(ServerRequest request) {
-        LinkQuery linkQuery = new LinkQuery(request.exchange());
-        return linkPublicQueryService.listLinks(linkQuery.toListOptions(), linkQuery.toPageRequest())
-            .flatMap(links -> ServerResponse.ok().bodyValue(links));
+        return linkPublicQueryService.count()
+            .flatMap(count -> ServerResponse.ok().bodyValue(count));
     }
 
     private Mono<ServerResponse> listLinks(ServerRequest request) {
