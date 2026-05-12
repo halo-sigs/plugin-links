@@ -1,6 +1,6 @@
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import {
-  ApiPluginHaloRunV1alpha1LinkApiListLinksRequest,
+  ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest,
   Link,
   LinkGroup,
   LinkGroupV1alpha1ApiListLinkGroupRequest,
@@ -27,7 +27,7 @@ export function useLinksFetch() {
         },
       );
 
-      const links = await paginate<ApiPluginHaloRunV1alpha1LinkApiListLinksRequest, Link>(
+      const links = await paginate<ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest, Link>(
         (params) => linksConsoleApiClient.link.listLinks(params),
         {
           size: 1000,

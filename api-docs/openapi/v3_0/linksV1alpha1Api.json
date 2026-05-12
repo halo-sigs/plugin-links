@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:58562",
+    "url" : "http://localhost:57305",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -13,15 +13,76 @@
     "bearerAuth" : [ ]
   } ],
   "paths" : {
-    "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-detail" : {
+    "/apis/api.link.halo.run/v1alpha1/linkgroups" : {
       "get" : {
-        "description" : "Get link detail by id",
-        "operationId" : "GetLinkDetail",
+        "description" : "List link groups.",
+        "operationId" : "queryLinkGroups",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkGroupVoList"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/LinkGroup" ]
+      }
+    },
+    "/apis/api.link.halo.run/v1alpha1/links" : {
+      "get" : {
+        "description" : "List links.",
+        "operationId" : "queryLinks",
         "parameters" : [ {
-          "description" : "Link url",
+          "description" : "Page number. Default is 0.",
           "in" : "query",
-          "name" : "url",
-          "required" : true,
+          "name" : "page",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Size number. Default is 0.",
+          "in" : "query",
+          "name" : "size",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Label selector. e.g.: hidden!=true",
+          "in" : "query",
+          "name" : "labelSelector",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "description" : "Field selector. e.g.: metadata.name==halo",
+          "in" : "query",
+          "name" : "fieldSelector",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "description" : "Links filtered by keyword.",
+          "in" : "query",
+          "name" : "keyword",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "link group name",
+          "in" : "query",
+          "name" : "group",
           "schema" : {
             "type" : "string"
           }
@@ -31,17 +92,68 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/LinkDetailDTO"
+                  "$ref" : "#/components/schemas/LinkVoList"
                 }
               }
             },
             "description" : "default response"
           }
         },
-        "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+        "tags" : [ "api.link.halo.run/v1alpha1/Link" ]
       }
     },
-    "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/link-groups/-/sort" : {
+    "/apis/api.link.halo.run/v1alpha1/links/-/count" : {
+      "get" : {
+        "description" : "link count",
+        "operationId" : "queryLinkCount",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "integer",
+                  "format" : "int32"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/api.link.halo.run/v1alpha1/links/-/random" : {
+      "get" : {
+        "description" : "link random",
+        "operationId" : "queryRandomLink",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maxSize",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkVo"
+                  }
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/link-groups/-/sort" : {
       "post" : {
         "description" : "Sort link groups by priority",
         "operationId" : "sortLinkGroups",
@@ -59,10 +171,45 @@
             "description" : "OK"
           }
         },
-        "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+        "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
       }
     },
-    "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links" : {
+    "/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}" : {
+      "delete" : {
+        "description" : "Delete link group.",
+        "operationId" : "DeleteLinkGroup",
+        "parameters" : [ {
+          "description" : "Link group name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Delete links in the group; when false, links become ungrouped",
+          "in" : "query",
+          "name" : "deleteLinks",
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkGroup"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkGroup" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links" : {
       "get" : {
         "description" : "Lists link by query parameters",
         "operationId" : "listLinks",
@@ -139,10 +286,38 @@
             "description" : "default response"
           }
         },
-        "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
+        "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
       }
     },
-    "/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/links/-/sort" : {
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/detail" : {
+      "get" : {
+        "description" : "Get link detail by url",
+        "operationId" : "GetLinkDetail",
+        "parameters" : [ {
+          "description" : "Link url",
+          "in" : "query",
+          "name" : "url",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkDetailDTO"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/sort" : {
       "post" : {
         "description" : "Sort links by priority",
         "operationId" : "sortLinks",
@@ -160,42 +335,7 @@
             "description" : "OK"
           }
         },
-        "tags" : [ "api.plugin.halo.run/v1alpha1/Link" ]
-      }
-    },
-    "/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}" : {
-      "delete" : {
-        "description" : "Delete link group.",
-        "operationId" : "DeleteLinkGroup",
-        "parameters" : [ {
-          "description" : "Link group name",
-          "in" : "path",
-          "name" : "name",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "description" : "Delete links in the group; when false, links become ungrouped",
-          "in" : "query",
-          "name" : "deleteLinks",
-          "schema" : {
-            "type" : "boolean"
-          }
-        } ],
-        "responses" : {
-          "default" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/LinkGroup"
-                }
-              }
-            },
-            "description" : "default response"
-          }
-        },
-        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkGroup" ]
+        "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
       }
     },
     "/apis/core.halo.run/v1alpha1/linkgroups" : {
@@ -812,6 +952,74 @@
           }
         }
       },
+      "LinkGroupVo" : {
+        "required" : [ "metadata" ],
+        "type" : "object",
+        "properties" : {
+          "links" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkVo"
+            }
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/Metadata"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/LinkGroupSpec"
+          }
+        },
+        "description" : "A chunk of items."
+      },
+      "LinkGroupVoList" : {
+        "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "first" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page is the first page."
+          },
+          "hasNext" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page has previous page."
+          },
+          "hasPrevious" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page has previous page."
+          },
+          "items" : {
+            "type" : "array",
+            "description" : "A chunk of items.",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkGroupVo"
+            }
+          },
+          "last" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page is the last page."
+          },
+          "page" : {
+            "type" : "integer",
+            "description" : "Page number, starts from 1. If not set or equal to 0, it means no pagination.",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "description" : "Size of each page. If not set or equal to 0, it means no pagination.",
+            "format" : "int32"
+          },
+          "total" : {
+            "type" : "integer",
+            "description" : "Total elements.",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "description" : "Indicates total pages.",
+            "format" : "int64"
+          }
+        }
+      },
       "LinkList" : {
         "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
         "type" : "object",
@@ -883,6 +1091,67 @@
           },
           "url" : {
             "type" : "string"
+          }
+        }
+      },
+      "LinkVo" : {
+        "required" : [ "metadata" ],
+        "type" : "object",
+        "properties" : {
+          "metadata" : {
+            "$ref" : "#/components/schemas/Metadata"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/LinkSpec"
+          }
+        }
+      },
+      "LinkVoList" : {
+        "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "first" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page is the first page."
+          },
+          "hasNext" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page has previous page."
+          },
+          "hasPrevious" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page has previous page."
+          },
+          "items" : {
+            "type" : "array",
+            "description" : "A chunk of items.",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkVo"
+            }
+          },
+          "last" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page is the last page."
+          },
+          "page" : {
+            "type" : "integer",
+            "description" : "Page number, starts from 1. If not set or equal to 0, it means no pagination.",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "description" : "Size of each page. If not set or equal to 0, it means no pagination.",
+            "format" : "int32"
+          },
+          "total" : {
+            "type" : "integer",
+            "description" : "Total elements.",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "description" : "Indicates total pages.",
+            "format" : "int64"
           }
         }
       },

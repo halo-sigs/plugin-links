@@ -41,7 +41,7 @@ public class LinkQueryEndpoint implements CustomEndpoint {
                     LinkPublicQuery.buildParameters(builder);
                 }
             )
-            .GET("link-random", this::linkRandom,
+            .GET("links/-/random", this::linkRandom,
                 builder -> {
                     builder.operationId("queryRandomLink")
                         .description("link random")
@@ -56,7 +56,7 @@ public class LinkQueryEndpoint implements CustomEndpoint {
                             .implementationArray(LinkVo.class));
                 }
             )
-            .GET("link-count", this::linkCount,
+            .GET("links/-/count", this::linkCount,
                 builder -> {
                     builder.operationId("queryLinkCount")
                         .description("link count")
@@ -77,7 +77,7 @@ public class LinkQueryEndpoint implements CustomEndpoint {
     }
 
     Mono<ServerResponse> linkCount(ServerRequest request) {
-        LinkRouter.LinkQuery linkQuery = new LinkRouter.LinkQuery(request.exchange());
+        LinkQuery linkQuery = new LinkQuery(request.exchange());
         return linkPublicQueryService.listLinks(linkQuery.toListOptions(), linkQuery.toPageRequest())
             .flatMap(links -> ServerResponse.ok().bodyValue(links));
     }

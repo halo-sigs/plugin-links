@@ -62,8 +62,8 @@ haloPlugin {
                 pathsToMatch = [
                     '/apis/core.halo.run/v1alpha1/links/**',
                     '/apis/core.halo.run/v1alpha1/linkgroups/**',
-                    '/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks/**',
-                    '/apis/console.api.link.halo.run/v1alpha1/**'
+                    '/apis/console.api.link.halo.run/v1alpha1/**',
+                    '/apis/api.link.halo.run/v1alpha1/**'
                 ]
             }
         }

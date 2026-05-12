@@ -14,7 +14,9 @@
 
 
 
-export * from './api/api-plugin-halo-run-v1alpha1-link-api';
+export * from './api/api-link-halo-run-v1alpha1-link-api';
+export * from './api/api-link-halo-run-v1alpha1-link-group-api';
+export * from './api/console-api-link-halo-run-v1alpha1-link-api';
 export * from './api/console-api-link-halo-run-v1alpha1-link-group-api';
 export * from './api/link-group-v1alpha1-api';
 export * from './api/link-v1alpha1-api';

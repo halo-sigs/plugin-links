@@ -1,43 +1,16 @@
 package run.halo.links;
 
-import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
-import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
-import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuilder;
-import static org.springframework.data.domain.Sort.Order.asc;
-import static org.springframework.data.domain.Sort.Order.desc;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
-import static run.halo.app.extension.index.query.Queries.and;
-import static run.halo.app.extension.index.query.Queries.contains;
-import static run.halo.app.extension.index.query.Queries.equal;
-import static run.halo.app.extension.index.query.Queries.or;
 
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
-import org.springdoc.core.fn.builders.operation.Builder;
-import org.springdoc.webflux.core.fn.SpringdocRouteBuilder;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.server.RequestPredicates;
 import org.springframework.web.reactive.function.server.RouterFunction;
-import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.ServerWebInputException;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import run.halo.app.extension.ListOptions;
-import run.halo.app.extension.ListResult;
-import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.router.SortableRequest;
-import run.halo.app.extension.router.selector.FieldSelector;
-import run.halo.app.infra.utils.PathUtils;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.finders.LinkFinder;
@@ -48,8 +21,6 @@ import run.halo.links.vo.LinkGroupVo;
 public class LinkRouter {
 
     private final LinkFinder linkFinder;
-    private final ReactiveExtensionClient client;
-    private final String tag = "api.plugin.halo.run/v1alpha1/Link";
     private final PluginContext pluginContext;
     private final ReactiveSettingFetcher settingFetcher;
 
@@ -60,189 +31,6 @@ public class LinkRouter {
                 Map.of("groups", linkGroups(),
                     "pluginName", pluginContext.getName(),
                     "linksTitle", getLinkTitle())));
-    }
-
-    @Bean
-    RouterFunction<ServerResponse> linkRoute() {
-        return SpringdocRouteBuilder.route()
-            .nest(
-                RequestPredicates.path("/apis/api.plugin.halo.run/v1alpha1/plugins/PluginLinks"),
-                this::nested
-            )
-            .build();
-    }
-
-    RouterFunction<ServerResponse> nested() {
-        return SpringdocRouteBuilder.route()
-            .GET("links", this::listLinkByGroup,
-                builder -> {
-                    builder.operationId("listLinks")
-                        .description("Lists link by query parameters")
-                        .tag(tag)
-                        .response(responseBuilder()
-                            .implementation(ListResult.generateGenericClass(Link.class)));
-                    LinkQuery.buildParameters(builder);
-                }
-            )
-            .GET("link-detail", this::getLinkDetail, builder -> {
-                builder.operationId("GetLinkDetail")
-                    .description("Get link detail by id")
-                    .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("url")
-                        .description("Link url")
-                        .in(ParameterIn.QUERY)
-                        .implementation(String.class)
-                        .required(true)
-                    )
-                    .response(responseBuilder().implementation(LinkDetailDTO.class));
-            })
-            .POST("links/-/sort", this::sortLinks,
-                builder -> {
-                    builder.operationId("sortLinks")
-                        .description("Sort links by priority")
-                        .tag(tag)
-                        .requestBody(requestBodyBuilder()
-                            .implementation(SortRequest.class))
-                        .response(responseBuilder()
-                            .responseCode("200"));
-                }
-            )
-            .POST("link-groups/-/sort", this::sortLinkGroups,
-                builder -> {
-                    builder.operationId("sortLinkGroups")
-                        .description("Sort link groups by priority")
-                        .tag(tag)
-                        .requestBody(requestBodyBuilder()
-                            .implementation(SortRequest.class))
-                        .response(responseBuilder()
-                            .responseCode("200"));
-                }
-            )
-            .build();
-    }
-
-    private Mono<ServerResponse> getLinkDetail(ServerRequest request) {
-        final var url = request.queryParam("url")
-            .filter(PathUtils::isAbsoluteUri)
-            .orElseThrow(() -> new ServerWebInputException("Invalid url."));
-        return Mono.fromSupplier(() -> LinkRequest.getLinkDetail(url))
-            .subscribeOn(Schedulers.boundedElastic())
-            .publishOn(Schedulers.parallel())
-            .flatMap(dto -> ServerResponse.ok().bodyValue(dto));
-    }
-
-    Mono<ServerResponse> sortLinks(ServerRequest request) {
-        return request.bodyToMono(SortRequest.class)
-            .flatMap(sortRequest -> {
-                var names = sortRequest.getNames();
-                if (names == null || names.isEmpty()) {
-                    return ServerResponse.ok().build();
-                }
-                return Flux.fromIterable(names)
-                    .zipWith(Flux.range(0, Integer.MAX_VALUE))
-                    .concatMap(tuple -> {
-                        String name = tuple.getT1();
-                        int priority = tuple.getT2();
-                        return client.fetch(Link.class, name)
-                            .flatMap(link -> {
-                                link.getSpec().setPriority(priority);
-                                return client.update(link);
-                            });
-                    })
-                    .then(ServerResponse.ok().build());
-            });
-    }
-
-    Mono<ServerResponse> sortLinkGroups(ServerRequest request) {
-        return request.bodyToMono(SortRequest.class)
-            .flatMap(sortRequest -> {
-                var names = sortRequest.getNames();
-                if (names == null || names.isEmpty()) {
-                    return ServerResponse.ok().build();
-                }
-                return Flux.fromIterable(names)
-                    .zipWith(Flux.range(0, Integer.MAX_VALUE))
-                    .concatMap(tuple -> {
-                        String name = tuple.getT1();
-                        int priority = tuple.getT2();
-                        return client.fetch(LinkGroup.class, name)
-                            .flatMap(group -> {
-                                group.getSpec().setPriority(priority);
-                                return client.update(group);
-                            });
-                    })
-                    .then(ServerResponse.ok().build());
-            });
-    }
-
-    Mono<ServerResponse> listLinkByGroup(ServerRequest request) {
-        LinkQuery linkQuery = new LinkQuery(request.exchange());
-        return listLink(linkQuery)
-            .flatMap(links -> ServerResponse.ok().bodyValue(links));
-    }
-
-    private Mono<ListResult<Link>> listLink(LinkQuery query) {
-        return client.listBy(Link.class, query.toListOptions(), query.toPageRequest());
-    }
-
-    static class LinkQuery extends SortableRequest {
-
-        public LinkQuery(ServerWebExchange exchange) {
-            super(exchange);
-        }
-
-        @Schema(description = "Keyword to search links under the group")
-        public String getKeyword() {
-            return queryParams.getFirst("keyword");
-        }
-
-        @Schema(description = "Link group name")
-        public String getGroupName() {
-            return queryParams.getFirst("groupName");
-        }
-
-        @Override
-        public ListOptions toListOptions() {
-            var builder = ListOptions.builder(super.toListOptions());
-            if (StringUtils.isNotBlank(getKeyword())) {
-                builder.andQuery(or(
-                    contains("spec.displayName", getKeyword()),
-                    contains("spec.description", getKeyword()),
-                    contains("spec.url", getKeyword())
-                ));
-            }
-            if (StringUtils.isNotBlank(getGroupName())) {
-                builder.andQuery(equal("spec.groupName", getGroupName()));
-            }
-            return builder.build();
-        }
-
-        @Override
-        public Sort getSort() {
-            return super.getSort()
-                .and(Sort.by(desc("metadata.creationTimestamp"),
-                    asc("metadata.name"))
-                );
-        }
-
-        public static void buildParameters(Builder builder) {
-            builder.parameter(parameterBuilder()
-                    .name("keyword")
-                    .description("Keyword to search links under the group")
-                    .in(ParameterIn.QUERY)
-                    .implementation(String.class)
-                    .required(false)
-                )
-                .parameter(parameterBuilder()
-                    .name("groupName")
-                    .description("Link group name")
-                    .in(ParameterIn.QUERY)
-                    .implementation(String.class)
-                    .required(false)
-                );
-            SortableRequest.buildParameters(builder);
-        }
     }
 
     private Mono<List<LinkGroupVo>> linkGroups() {
