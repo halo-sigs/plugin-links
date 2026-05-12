@@ -1,5 +1,6 @@
 package run.halo.links.finders;
 
+import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ListResult;
@@ -18,6 +19,15 @@ public interface LinkPublicQueryService {
      * @return a mono of list result
      */
     Mono<ListResult<LinkVo>> listLinks(ListOptions options, PageRequest page);
+
+    /**
+     * List all links without pagination.
+     *
+     * @param options list options
+     * @param sort    sort order
+     * @return a mono of list of link vos
+     */
+    Mono<List<LinkVo>> listAll(ListOptions options, Sort sort);
 
     /**
      * List all link groups without pagination.

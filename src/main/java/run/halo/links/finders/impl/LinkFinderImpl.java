@@ -7,9 +7,7 @@ import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
-import run.halo.app.extension.ListResult;
 import run.halo.app.extension.Metadata;
-import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.theme.finders.Finder;
 import run.halo.links.LinkGroup;
@@ -44,9 +42,8 @@ public class LinkFinderImpl implements LinkFinder {
             query = and(query, equal("spec.groupName", groupName));
         }
         listOptions.setFieldSelector(FieldSelector.of(query));
-        return linkPublicQueryService.listLinks(listOptions,
-            PageRequestImpl.of(1, Integer.MAX_VALUE, defaultLinkSort()))
-            .flatMapIterable(ListResult::getItems);
+        return linkPublicQueryService.listAll(listOptions, defaultLinkSort())
+            .flatMapIterable(list -> list);
     }
 
     @Override

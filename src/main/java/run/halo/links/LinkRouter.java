@@ -21,8 +21,6 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import org.thymeleaf.context.LazyContextVariable;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
-import run.halo.app.extension.ListResult;
-import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.finders.LinkFinder;
@@ -98,10 +96,7 @@ public class LinkRouter {
         if (StringUtils.isNotBlank(group)) {
             options.andQuery(equal("spec.groupName", group));
         }
-        return linkPublicQueryService.listLinks(
-                options.build(),
-                PageRequestImpl.of(1, Integer.MAX_VALUE, defaultLinkSort()))
-            .map(ListResult::getItems);
+        return linkPublicQueryService.listAll(options.build(), defaultLinkSort());
     }
 
     private static String queryParam(ServerRequest request, String name) {

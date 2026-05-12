@@ -48,6 +48,13 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     }
 
     @Override
+    public Mono<List<LinkVo>> listAll(ListOptions options, Sort sort) {
+        return client.listAll(Link.class, options, sort)
+            .concatMap(this::toLinkVo)
+            .collectList();
+    }
+
+    @Override
     public Mono<List<LinkGroupVo>> listAllGroups(ListOptions options) {
         return client.listAll(LinkGroup.class, options, Sort.unsorted())
             .sort(groupComparator())
