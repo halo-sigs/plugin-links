@@ -14,6 +14,7 @@ export default definePlugin({
         component: () => import(/* webpackChunkName: "links-list" */ "@/views/LinkList.vue"),
         meta: {
           permissions: ["plugin:links:view"],
+          title: "链接",
           menu: {
             name: "链接",
             group: "content",
