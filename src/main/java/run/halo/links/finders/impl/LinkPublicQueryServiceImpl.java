@@ -48,21 +48,6 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     }
 
     @Override
-    public Mono<ListResult<LinkGroupVo>> listGroups(ListOptions options, PageRequest page) {
-        return client.listAll(LinkGroup.class, options, Sort.unsorted())
-            .sort(groupComparator())
-            .collectList()
-            .flatMap(groups -> {
-                int total = groups.size();
-                var pageItems = ListResult.subList(groups, page.getPageNumber(), page.getPageSize());
-                return Flux.fromIterable(pageItems)
-                    .concatMap(this::toGroupVo)
-                    .collectList()
-                    .map(items -> new ListResult<>(page.getPageNumber(), page.getPageSize(), total, items));
-            });
-    }
-
-    @Override
     public Mono<List<LinkGroupVo>> listAllGroups(ListOptions options) {
         return client.listAll(LinkGroup.class, options, Sort.unsorted())
             .sort(groupComparator())

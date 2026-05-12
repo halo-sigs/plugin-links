@@ -51,9 +51,8 @@ public class LinkFinderImpl implements LinkFinder {
 
     @Override
     public Flux<LinkGroupVo> groupBy() {
-        return linkPublicQueryService.listGroups(ListOptions.builder().build(),
-                PageRequestImpl.of(1, Integer.MAX_VALUE, defaultGroupSort()))
-            .flatMapIterable(ListResult::getItems)
+        return linkPublicQueryService.listAllGroups(ListOptions.builder().build())
+            .flatMapIterable(list -> list)
             .concatMap(group -> listBy(group.getMetadata().getName())
                 .collectList()
                 .map(group::withLinks)
@@ -88,13 +87,6 @@ public class LinkFinderImpl implements LinkFinder {
         linkGroup.getSpec().setDisplayName("");
         linkGroup.getSpec().setPriority(0);
         return Mono.just(linkGroup);
-    }
-
-    static Sort defaultGroupSort() {
-        return Sort.by(asc("spec.priority"),
-            asc("metadata.creationTimestamp"),
-            asc("metadata.name")
-        );
     }
 
     static Sort defaultLinkSort() {

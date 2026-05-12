@@ -20,15 +20,6 @@ public interface LinkPublicQueryService {
     Mono<ListResult<LinkVo>> listLinks(ListOptions options, PageRequest page);
 
     /**
-     * List link groups without inline photos.
-     *
-     * @param options list options
-     * @param page    page request
-     * @return a mono of list result
-     */
-    Mono<ListResult<LinkGroupVo>> listGroups(ListOptions options, PageRequest page);
-
-    /**
      * List all link groups without pagination.
      *
      * @param options list options
