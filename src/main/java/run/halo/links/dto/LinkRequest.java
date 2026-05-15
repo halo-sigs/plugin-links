@@ -1,8 +1,10 @@
 package run.halo.links.dto;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import org.jsoup.Connection;
@@ -30,21 +32,29 @@ public class LinkRequest {
             throw new ServerErrorException("Invalid URL", e);
         }
 
+        InetAddress validatedAddress;
         try {
-            LinkSecurityUtils.validateUrl(url);
+            validatedAddress = LinkSecurityUtils.validateUrl(url);
         } catch (IllegalArgumentException e) {
             throw new ServerErrorException("URL blocked for security reasons", e);
         }
 
-        Map<String, String> headers = Map.of(
+        String connectUrl = "http".equalsIgnoreCase(url.getProtocol())
+            ? LinkSecurityUtils.toConnectUrl(url, validatedAddress)
+            : url.toExternalForm();
+
+        Map<String, String> headers = new HashMap<>(Map.of(
             "User-Agent", USER_AGENT,
             "Referer", linkUrl,
             "Accept", "text/html,application/xhtml+xml,application/xml"
-        );
+        ));
+        if ("http".equalsIgnoreCase(url.getProtocol())) {
+            headers.put("Host", url.getHost());
+        }
 
         Document document;
         try {
-            Connection.Response response = Jsoup.connect(url.toExternalForm())
+            Connection.Response response = Jsoup.connect(connectUrl)
                 .followRedirects(false)
                 .maxBodySize(MAX_BODY_SIZE)
                 .timeout(TIMEOUT_MS)

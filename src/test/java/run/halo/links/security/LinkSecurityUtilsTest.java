@@ -100,4 +100,22 @@ class LinkSecurityUtilsTest {
         InetAddress apipa = InetAddress.getByName("169.254.1.1");
         assertThat(LinkSecurityUtils.isPrivateAddress(apipa)).isTrue();
     }
+
+    @Test
+    void shouldBlockIpv6UlaFc00() throws Exception {
+        InetAddress ula = InetAddress.getByName("fc00::1");
+        assertThat(LinkSecurityUtils.isPrivateAddress(ula)).isTrue();
+    }
+
+    @Test
+    void shouldBlockIpv6UlaFd00() throws Exception {
+        InetAddress ula = InetAddress.getByName("fd00::1");
+        assertThat(LinkSecurityUtils.isPrivateAddress(ula)).isTrue();
+    }
+
+    @Test
+    void shouldAllowIpv6PublicAddress() throws Exception {
+        InetAddress publicAddr = InetAddress.getByName("2001:db8::1");
+        assertThat(LinkSecurityUtils.isPrivateAddress(publicAddr)).isFalse();
+    }
 }

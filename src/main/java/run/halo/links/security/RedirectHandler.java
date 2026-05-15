@@ -1,8 +1,10 @@
 package run.halo.links.security;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -65,18 +67,28 @@ public class RedirectHandler {
                     "Invalid redirect URL: " + location, e);
             }
 
+            InetAddress validatedAddress;
             try {
-                LinkSecurityUtils.validateUrl(redirectUrl);
+                validatedAddress = LinkSecurityUtils.validateUrl(redirectUrl);
             } catch (IllegalArgumentException e) {
                 throw new ServerErrorException(
                     "Redirect blocked for security reasons", e);
             }
 
-            current = Jsoup.connect(redirectUrl.toExternalForm())
+            String connectUrl = "http".equalsIgnoreCase(redirectUrl.getProtocol())
+                ? LinkSecurityUtils.toConnectUrl(redirectUrl, validatedAddress)
+                : redirectUrl.toExternalForm();
+
+            Map<String, String> requestHeaders = new HashMap<>(headers);
+            if ("http".equalsIgnoreCase(redirectUrl.getProtocol())) {
+                requestHeaders.put("Host", redirectUrl.getHost());
+            }
+
+            current = Jsoup.connect(connectUrl)
                 .followRedirects(false)
                 .timeout(timeout)
                 .maxBodySize(maxBodySize)
-                .headers(headers)
+                .headers(requestHeaders)
                 .execute();
         }
         return current.parse();

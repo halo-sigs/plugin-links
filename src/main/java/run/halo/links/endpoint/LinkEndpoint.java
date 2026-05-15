@@ -6,11 +6,14 @@ import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuil
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ServerErrorException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -103,13 +106,28 @@ public class LinkEndpoint implements CustomEndpoint {
     }
 
     private Mono<ServerResponse> getLinkDetail(ServerRequest request) {
-        final var url = request.queryParam("url")
-            .filter(PathUtils::isAbsoluteUri)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid url."));
-        return Mono.fromSupplier(() -> LinkRequest.getLinkDetail(url))
-            .subscribeOn(Schedulers.boundedElastic())
-            .publishOn(Schedulers.parallel())
-            .flatMap(dto -> ServerResponse.ok().bodyValue(dto));
+        return Mono.fromSupplier(() -> request.queryParam("url")
+                .filter(PathUtils::isAbsoluteUri)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid url.")))
+            .flatMap(url -> Mono.fromSupplier(() -> LinkRequest.getLinkDetail(url))
+                .subscribeOn(Schedulers.boundedElastic())
+                .publishOn(Schedulers.parallel()))
+            .flatMap(dto -> ServerResponse.ok().bodyValue(dto))
+            .onErrorResume(IllegalArgumentException.class,
+                e -> badRequest(e.getMessage()))
+            .onErrorResume(ServerErrorException.class, e -> {
+                var msg = e.getMessage();
+                if (msg != null
+                    && (msg.contains("Invalid URL") || msg.contains("blocked"))) {
+                    return badRequest(msg);
+                }
+                return Mono.error(e);
+            });
+    }
+
+    private static Mono<ServerResponse> badRequest(String message) {
+        return ServerResponse.badRequest()
+            .bodyValue(Map.of("error", message));
     }
 
     Mono<ServerResponse> sortLinks(ServerRequest request) {

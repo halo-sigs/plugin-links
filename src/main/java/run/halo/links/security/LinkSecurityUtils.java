@@ -23,24 +23,25 @@ public final class LinkSecurityUtils {
      * @throws IllegalArgumentException if the URL is malformed, uses an invalid scheme,
      *                                  or resolves to a private/reserved address
      */
-    public static void validateUrl(String urlString) {
+    public static InetAddress validateUrl(String urlString) {
         URL url;
         try {
             url = new URL(urlString);
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException("Invalid URL: " + urlString, e);
         }
-        validateUrl(url);
+        return validateUrl(url);
     }
 
     /**
      * Validates that the given URL is safe to connect to.
      *
      * @param url the URL to validate
+     * @return the validated public {@link InetAddress}
      * @throws IllegalArgumentException if the URL uses an invalid scheme
      *                                  or resolves to a private/reserved address
      */
-    public static void validateUrl(URL url) {
+    public static InetAddress validateUrl(URL url) {
         String protocol = url.getProtocol().toLowerCase();
         if (!"http".equals(protocol) && !"https".equals(protocol)) {
             throw new IllegalArgumentException(
@@ -61,11 +62,12 @@ public final class LinkSecurityUtils {
         }
 
         for (InetAddress address : addresses) {
-            if (isPrivateAddress(address)) {
-                throw new IllegalArgumentException(
-                    "Access to private/reserved address is not allowed: " + address.getHostAddress());
+            if (!isPrivateAddress(address)) {
+                return address;
             }
         }
+        throw new IllegalArgumentException(
+            "Access to private/reserved address is not allowed");
     }
 
     /**
@@ -93,10 +95,42 @@ public final class LinkSecurityUtils {
             }
         }
 
+        // fc00::/7 (IPv6 Unique Local Address / ULA) — not covered by isSiteLocalAddress
+        if (address.getAddress().length == 16) {
+            byte[] bytes = address.getAddress();
+            if ((bytes[0] & 0xFE) == 0xFC) {
+                return true;
+            }
+        }
+
         return false;
     }
 
     public static int getMaxRedirects() {
         return MAX_REDIRECTS;
     }
+
+    /**
+     * Builds a connection URL using the validated IP address while preserving
+     * the original protocol, port, and path. IPv6 addresses are wrapped in brackets.
+     *
+     * @param originalUrl the original URL
+     * @param address     the validated public IP address
+     * @return a URL string suitable for direct IP connection
+     */
+    public static String toConnectUrl(URL originalUrl, InetAddress address) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(originalUrl.getProtocol()).append("://");
+        if (address instanceof java.net.Inet6Address) {
+            sb.append('[').append(address.getHostAddress()).append(']');
+        } else {
+            sb.append(address.getHostAddress());
+        }
+        if (originalUrl.getPort() != -1) {
+            sb.append(':').append(originalUrl.getPort());
+        }
+        sb.append(originalUrl.getFile());
+        return sb.toString();
+    }
+
 }

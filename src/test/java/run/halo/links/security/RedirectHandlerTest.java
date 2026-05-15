@@ -6,11 +6,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Map;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -29,18 +31,25 @@ class RedirectHandlerTest {
     void shouldBlockRedirectToPrivateIp() throws IOException {
         Connection.Response firstResponse = mockResponse(302, "http://192.168.1.1/secret");
 
-        RedirectHandler handler = new RedirectHandler(HEADERS, TIMEOUT, MAX_BODY);
+        try (MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class)) {
+            security.when(() -> LinkSecurityUtils.validateUrl(any(java.net.URL.class)))
+                .thenThrow(new IllegalArgumentException("private"));
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
 
-        assertThatThrownBy(() -> handler.followRedirects(firstResponse))
-            .isInstanceOf(ServerErrorException.class)
-            .hasMessageContaining("Redirect blocked");
+            RedirectHandler handler = new RedirectHandler(HEADERS, TIMEOUT, MAX_BODY);
+
+            assertThatThrownBy(() -> handler.followRedirects(firstResponse))
+                .isInstanceOf(ServerErrorException.class)
+                .hasMessageContaining("Redirect blocked");
+        }
     }
 
     @Test
     void shouldBlockTooManyRedirects() throws IOException {
         Connection.Response response = mockResponse(302, "http://example.com/next");
 
-        try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
+        try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class);
+             MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class)) {
             Connection mockConn = mock(Connection.class);
             when(mockConn.followRedirects(false)).thenReturn(mockConn);
             when(mockConn.timeout(anyInt())).thenReturn(mockConn);
@@ -49,6 +58,15 @@ class RedirectHandlerTest {
             when(mockConn.execute()).thenReturn(response);
 
             jsoup.when(() -> Jsoup.connect(anyString())).thenReturn(mockConn);
+
+            InetAddress mockAddr = mock(InetAddress.class);
+            when(mockAddr.getHostAddress()).thenReturn("1.2.3.4");
+            security.when(() -> LinkSecurityUtils.validateUrl(any(java.net.URL.class)))
+                .thenReturn(mockAddr);
+            security.when(() -> LinkSecurityUtils.toConnectUrl(
+                    any(java.net.URL.class), any(InetAddress.class)))
+                .thenReturn("http://1.2.3.4/next");
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
 
             RedirectHandler handler = new RedirectHandler(HEADERS, TIMEOUT, MAX_BODY);
 
@@ -67,7 +85,11 @@ class RedirectHandlerTest {
         when(finalResponse.statusCode()).thenReturn(200);
         when(finalResponse.parse()).thenReturn(expectedDoc);
 
-        try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
+        InetAddress mockAddr = mock(InetAddress.class);
+        when(mockAddr.getHostAddress()).thenReturn("93.184.216.34");
+
+        try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class);
+             MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class)) {
             Connection mockConn = mock(Connection.class);
             when(mockConn.followRedirects(false)).thenReturn(mockConn);
             when(mockConn.timeout(anyInt())).thenReturn(mockConn);
@@ -76,6 +98,12 @@ class RedirectHandlerTest {
             when(mockConn.execute()).thenReturn(finalResponse);
 
             jsoup.when(() -> Jsoup.connect(anyString())).thenReturn(mockConn);
+            security.when(() -> LinkSecurityUtils.validateUrl(any(java.net.URL.class)))
+                .thenReturn(mockAddr);
+            security.when(() -> LinkSecurityUtils.toConnectUrl(
+                    any(java.net.URL.class), eq(mockAddr)))
+                .thenReturn("https://93.184.216.34/final");
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
 
             RedirectHandler handler = new RedirectHandler(HEADERS, TIMEOUT, MAX_BODY);
             Document result = handler.followRedirects(redirectResponse);
@@ -88,11 +116,17 @@ class RedirectHandlerTest {
     void shouldBlockSchemeDowngradeInRedirect() throws IOException {
         Connection.Response firstResponse = mockResponse(302, "ftp://evil.com/file");
 
-        RedirectHandler handler = new RedirectHandler(HEADERS, TIMEOUT, MAX_BODY);
+        try (MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class)) {
+            security.when(() -> LinkSecurityUtils.validateUrl(any(java.net.URL.class)))
+                .thenThrow(new IllegalArgumentException("scheme"));
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
 
-        assertThatThrownBy(() -> handler.followRedirects(firstResponse))
-            .isInstanceOf(ServerErrorException.class)
-            .hasMessageContaining("Redirect blocked");
+            RedirectHandler handler = new RedirectHandler(HEADERS, TIMEOUT, MAX_BODY);
+
+            assertThatThrownBy(() -> handler.followRedirects(firstResponse))
+                .isInstanceOf(ServerErrorException.class)
+                .hasMessageContaining("Redirect blocked");
+        }
     }
 
     private Connection.Response mockResponse(int statusCode, String location)
