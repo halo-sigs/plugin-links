@@ -17,6 +17,8 @@ import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * A default implementation for {@link LinkFinder}.
@@ -49,22 +51,42 @@ public class LinkFinderImpl implements LinkFinder {
 
     @Override
     public Flux<LinkGroupVo> groupBy() {
-        return linkPublicQueryService.listAllGroups(ListOptions.builder().build())
-            .flatMapIterable(list -> list)
-            .concatMap(group -> listBy(group.getMetadata().getName())
-                .collectList()
-                .map(group::withLinks)
-                .defaultIfEmpty(group)
+        var linkOptions = new ListOptions();
+        linkOptions.setFieldSelector(
+            FieldSelector.of(isNull("metadata.deletionTimestamp")));
+
+        return Mono.zip(
+                linkPublicQueryService.listAllGroups(ListOptions.builder().build()),
+                linkPublicQueryService.listAll(linkOptions, defaultLinkSort())
             )
-            .concatWith(Mono.defer(() -> listBy(UNGROUPED_NAME)
-                .collectList()
-                // do not return ungrouped group if no links
-                .filter(links -> !links.isEmpty())
-                .flatMap(links -> ungrouped()
-                    .map(LinkGroupVo::from)
-                    .map(group -> group.withLinks(links))
-                )
-            ));
+            .flatMapMany(tuple -> {
+                var groups = tuple.getT1();
+                var allLinks = tuple.getT2();
+
+                Map<String, List<LinkVo>> linksByGroup = allLinks.stream()
+                    .collect(Collectors.groupingBy(link ->
+                        link.getSpec() != null
+                            && link.getSpec().getGroupName() != null
+                            ? link.getSpec().getGroupName()
+                            : UNGROUPED_NAME));
+
+                var result = groups.stream()
+                    .map(group -> {
+                        var links = linksByGroup.getOrDefault(
+                            group.getMetadata().getName(), List.of());
+                        return group.withLinks(links);
+                    })
+                    .toList();
+
+                var ungroupedLinks = linksByGroup.get(UNGROUPED_NAME);
+                if (ungroupedLinks != null && !ungroupedLinks.isEmpty()) {
+                    return Flux.fromIterable(result)
+                        .concatWith(ungrouped()
+                            .map(LinkGroupVo::from)
+                            .map(group -> group.withLinks(ungroupedLinks)));
+                }
+                return Flux.fromIterable(result);
+            });
     }
 
     @Override
