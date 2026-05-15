@@ -127,7 +127,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
                 ? g1.getSpec().getPriority() : 0;
             var p2 = g2.getSpec() != null && g2.getSpec().getPriority() != null
                 ? g2.getSpec().getPriority() : 0;
-            int priorityCompare = Integer.compare(p2, p1);
+            int priorityCompare = Integer.compare(p1, p2);
             if (priorityCompare != 0) {
                 return priorityCompare;
             }
@@ -142,7 +142,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
             if (t2 == null) {
                 return -1;
             }
-            int timeCompare = t2.compareTo(t1);
+            int timeCompare = t1.compareTo(t2);
             if (timeCompare != 0) {
                 return timeCompare;
             }
