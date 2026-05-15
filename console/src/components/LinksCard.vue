@@ -236,7 +236,7 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
         <VButton type="secondary" size="sm" @click="creationModalVisible = true">新建</VButton>
       </template>
     </VEmpty>
-    <div class=":uno: flex flex-wrap gap-2.5" v-else>
+    <div class=":uno: grid grid-cols-2 gap-2.5 2xl:grid-cols-7 lg:grid-cols-4 md:grid-cols-3 xl:grid-cols-6" v-else>
       <LinkBadge
         v-for="link in links"
         :key="link.metadata.name"

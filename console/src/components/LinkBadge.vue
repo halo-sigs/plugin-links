@@ -20,7 +20,7 @@ function handleClick() {
 </script>
 <template>
   <label
-    class=":uno: max-w-56 inline-flex cursor-pointer items-center gap-2.5 rounded-lg bg-gray-100 px-2 py-1 transition-colors hover:bg-gray-200"
+    class=":uno: min-w-0 w-full inline-flex cursor-pointer items-center gap-2.5 rounded-lg bg-gray-100 px-2 py-1 transition-colors hover:bg-gray-200"
     :class="{
       ':uno: animate-flash opacity-50': link.metadata.deletionTimestamp,
       ':uno: cursor-move': sortMode,
@@ -28,10 +28,10 @@ function handleClick() {
     @click="handleClick"
   >
     <slot name="checkbox" v-if="selectMode"></slot>
-    <img v-else :src="link.spec?.logo" class=":uno: size-4 flex-none shrink-0" />
+    <img v-else :src="link.spec?.logo" class=":uno: size-4 flex-none shrink-0 rounded-sm" />
     <div class=":uno: min-w-0 flex flex-1 shrink flex-col">
       <span
-        class=":uno: truncate text-sm text-gray-900"
+        class=":uno: truncate text-xs text-gray-900"
         :class="{
           ':uno: line-through': link.metadata.deletionTimestamp,
         }"
