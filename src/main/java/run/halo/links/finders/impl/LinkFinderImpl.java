@@ -56,7 +56,7 @@ public class LinkFinderImpl implements LinkFinder {
                 .map(group::withLinks)
                 .defaultIfEmpty(group)
             )
-            .mergeWith(Mono.defer(() -> listBy(UNGROUPED_NAME)
+            .concatWith(Mono.defer(() -> listBy(UNGROUPED_NAME)
                 .collectList()
                 // do not return ungrouped group if no links
                 .filter(links -> !links.isEmpty())
