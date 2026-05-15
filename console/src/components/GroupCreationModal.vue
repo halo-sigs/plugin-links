@@ -19,12 +19,12 @@ const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 const { mutate, isPending } = useMutation({
   mutationFn: async (data: GroupFormState) => {
     // query the max priority
-    const {
-      data: { total },
-    } = await linksCoreApiClient.group.listLinkGroup({
+    const { data: groupList } = await linksCoreApiClient.group.listLinkGroup({
       page: 1,
       size: 1,
+      sort: ["spec.priority,desc"],
     });
+    const maxPriority = groupList.items[0]?.spec?.priority || 0;
 
     return linksCoreApiClient.group.createLinkGroup({
       linkGroup: {
@@ -37,7 +37,7 @@ const { mutate, isPending } = useMutation({
         },
         spec: {
           displayName: data.displayName,
-          priority: total + 1,
+          priority: maxPriority + 1,
           links: [],
         },
       },
