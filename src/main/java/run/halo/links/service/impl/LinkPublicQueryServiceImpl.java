@@ -41,7 +41,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     public Mono<ListResult<LinkVo>> listLinks(ListOptions options, PageRequest page) {
         return client.listBy(Link.class, options, page)
             .flatMap(result -> Flux.fromIterable(result.getItems())
-                .flatMap(this::toLinkVo)
+                .map(this::toLinkVo)
                 .collectList()
                 .map(items -> new ListResult<>(
                     result.getPage(), result.getSize(), result.getTotal(), items)));
@@ -50,7 +50,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     @Override
     public Mono<List<LinkVo>> listAll(ListOptions options, Sort sort) {
         return client.listAll(Link.class, options, sort)
-            .concatMap(this::toLinkVo)
+            .map(this::toLinkVo)
             .collectList();
     }
 
@@ -58,7 +58,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     public Mono<List<LinkGroupVo>> listAllGroups(ListOptions options) {
         return client.listAll(LinkGroup.class, options, Sort.unsorted())
             .sort(groupComparator())
-            .concatMap(this::toGroupVo)
+            .map(this::toGroupVo)
             .collectList();
     }
 
@@ -96,7 +96,7 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
                 var randomItems = new ArrayList<>(items);
                 Collections.shuffle(randomItems, ThreadLocalRandom.current());
                 return Flux.fromIterable(randomItems)
-                    .concatMap(this::toLinkVo)
+                    .map(this::toLinkVo)
                     .collectList();
             })
             .switchIfEmpty(Mono.fromSupplier(List::of));
@@ -113,12 +113,12 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     }
 
 
-    private Mono<LinkGroupVo> toGroupVo(LinkGroup group) {
-        return Mono.fromSupplier(() -> LinkGroupVo.from(group));
+    private LinkGroupVo toGroupVo(LinkGroup group) {
+        return LinkGroupVo.from(group);
     }
 
-    public Mono<LinkVo> toLinkVo(Link link) {
-        return Mono.fromSupplier(() -> LinkVo.from(link));
+    public LinkVo toLinkVo(Link link) {
+        return LinkVo.from(link);
     }
 
     static Comparator<LinkGroup> groupComparator() {
