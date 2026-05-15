@@ -108,8 +108,8 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
         listOptions.setFieldSelector(FieldSelector.of(
             isNull("metadata.deletionTimestamp")
         ));
-        return client.listBy(Link.class, listOptions, PageRequestImpl.ofSize(1))
-            .flatMap(links -> Mono.just((int)links.getTotal()));
+        return client.countBy(Link.class, listOptions)
+            .map(Long::intValue);
     }
 
 
