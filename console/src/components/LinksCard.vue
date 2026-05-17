@@ -13,7 +13,6 @@ import {
   VCard,
   VDropdown,
   VDropdownItem,
-  VEmpty,
   VSpace,
 } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
@@ -231,11 +230,7 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
         </div>
       </div>
     </template>
-    <VEmpty v-if="!links.length" title="无数据" message="此分组下暂无链接">
-      <template #actions>
-        <VButton type="secondary" size="sm" @click="creationModalVisible = true">新建</VButton>
-      </template>
-    </VEmpty>
+    <div v-if="!links.length" class=":uno: px-4 py-3 text-center text-sm text-gray-500">此分组下暂无链接</div>
     <div class=":uno: grid grid-cols-2 gap-2.5 2xl:grid-cols-7 lg:grid-cols-4 md:grid-cols-3 xl:grid-cols-6" v-else>
       <LinkBadge
         v-for="link in links"
