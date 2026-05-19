@@ -75,11 +75,13 @@ function handleImport() {
 
         <FormKit
           v-model="rawText"
-          type="textarea"
+          type="code"
           label="链接列表"
           help="每行一个，格式：URL|名称|描述|图标"
-          :rows="10"
+          language="yaml"
+          height="260px"
           placeholder="https://example.com|示例网站|这是一个示例网站|https://example.com/favicon.ico"
+          :classes="{ inner: '!max-w-none' }"
         />
 
         <FormKit
