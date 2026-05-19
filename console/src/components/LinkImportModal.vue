@@ -2,11 +2,12 @@
 import { linksCoreApiClient } from "@/api";
 import type { LinkGroup } from "@/api/generated";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import type { LinkImportSubmitData } from "@/composables/use-link-import";
 import { Toast, VModal } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { chunk } from "es-toolkit";
-import { ref, useTemplateRef } from "vue";
-import LinkImportBody, { type ParsedItem } from "./LinkImportBody.vue";
+import { shallowRef, useTemplateRef } from "vue";
+import LinkImportBody from "./LinkImportBody.vue";
 
 defineProps<{
   group?: LinkGroup;
@@ -17,11 +18,11 @@ const emit = defineEmits<{
 }>();
 
 const queryClient = useQueryClient();
-const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
+const modal = useTemplateRef<InstanceType<typeof VModal>>("modal");
 
-const isImporting = ref(false);
+const isImporting = shallowRef(false);
 
-async function handleSubmit(data: { items: ParsedItem[]; groupName: string }) {
+async function handleSubmit(data: LinkImportSubmitData) {
   const items = data.items;
   if (items.length === 0) {
     Toast.warning("没有可导入的链接");
@@ -77,7 +78,7 @@ async function handleSubmit(data: { items: ParsedItem[]; groupName: string }) {
 </script>
 
 <template>
-  <VModal :centered="false" title="批量导入链接" ref="modal" :mount-to-body="true" :width="720" @close="emit('close')">
+  <VModal :centered="false" title="批量导入链接" ref="modal" :mount-to-body="true" :width="860" @close="emit('close')">
     <LinkImportBody :group="group" :is-importing="isImporting" @submit="handleSubmit" />
   </VModal>
 </template>
