@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Link } from "@/api/generated";
+import type { Link } from "@/api/generated";
 import { IconExternalLinkLine } from "@halo-dev/components";
 
 const props = defineProps<{

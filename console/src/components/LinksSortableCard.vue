@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient } from "@/api";
-import { Link } from "@/api/generated";
-import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import type { Link } from "@/api/generated";
+import type { GroupWithLinks } from "@/composables/use-link-fetch";
+import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { Toast, VButton, VCard, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { onMounted, ref, toRaw } from "vue";

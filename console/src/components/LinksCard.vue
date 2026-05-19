@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
-import { Link, LinkGroupVo } from "@/api/generated";
+import type { Link, LinkGroupVo } from "@/api/generated";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
-import { GroupWithLinks, QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import type { GroupWithLinks } from "@/composables/use-link-fetch";
+import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import {
   Dialog,
   IconArrowLeft,
