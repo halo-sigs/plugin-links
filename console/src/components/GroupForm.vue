@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { GroupFormState } from "@/types";
+import type { GroupFormState } from "@/types";
 import { nextTick, ref } from "vue";
 
 defineProps<{

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient } from "@/api";
-import { LinkGroup } from "@/api/generated";
+import type { LinkGroup } from "@/api/generated";
 import { useLinkGroupFetch } from "@/composables/use-group-fetch";
-import { Toast } from "@halo-dev/components";
+import { Toast, VButton, VSpace } from "@halo-dev/components";
 import { computed, ref, watch } from "vue";
 
 const props = defineProps<{
@@ -16,13 +16,15 @@ const emit = defineEmits<{
 
 const { data: groups } = useLinkGroupFetch();
 
+type ParsedItemStatus = "manual" | "scraping" | "success" | "error";
+
 export interface ParsedItem {
   id: number;
   url: string;
   displayName: string;
   description: string;
   logo: string;
-  status: "pending" | "scraping" | "success" | "error";
+  status: ParsedItemStatus;
   errorMessage: string;
   checked: boolean;
 }
@@ -42,7 +44,81 @@ const groupOptions = computed(() => [
   })),
 ]);
 
-const importableCount = computed(() => parsedItems.value.filter((i) => i.checked && i.status !== "error").length);
+const previewSummary = computed(() => {
+  const selected = parsedItems.value.filter((item) => item.checked).length;
+  const scraped = parsedItems.value.filter((item) => item.status === "success").length;
+  const manual = parsedItems.value.filter((item) => item.status === "manual").length;
+  const failed = parsedItems.value.filter((item) => item.status === "error").length;
+
+  return {
+    total: parsedItems.value.length,
+    selected,
+    scraped,
+    manual,
+    failed,
+  };
+});
+
+const importableCount = computed(() => {
+  return parsedItems.value.filter((item) => item.checked && !getItemErrorMessage(item)).length;
+});
+
+const allItemsChecked = computed(() => parsedItems.value.length > 0 && parsedItems.value.every((item) => item.checked));
+const isPartiallyChecked = computed(() => {
+  const checkedCount = parsedItems.value.filter((item) => item.checked).length;
+  return checkedCount > 0 && checkedCount < parsedItems.value.length;
+});
+
+function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function getItemErrorMessage(item: ParsedItem, { requireDisplayName = true } = {}) {
+  if (!item.url.trim()) {
+    return "URL 不能为空";
+  }
+  if (!isHttpUrl(item.url.trim())) {
+    return "URL 格式不正确";
+  }
+  if (requireDisplayName && !item.displayName.trim()) {
+    return "名称不能为空";
+  }
+  return "";
+}
+
+function applyItemValidation(item: ParsedItem, options?: { requireDisplayName?: boolean }) {
+  if (item.status === "scraping") {
+    return false;
+  }
+
+  const errorMessage = getItemErrorMessage(item, options);
+  if (errorMessage) {
+    item.status = "error";
+    item.errorMessage = errorMessage;
+    return false;
+  }
+
+  if (item.status === "error") {
+    item.status = "manual";
+  }
+  item.errorMessage = "";
+  return true;
+}
+
+function normalizeItem(item: ParsedItem): ParsedItem {
+  return {
+    ...item,
+    url: item.url.trim(),
+    displayName: item.displayName.trim(),
+    description: item.description.trim(),
+    logo: item.logo.trim(),
+  };
+}
 
 function parseLines() {
   const lines = rawText.value
@@ -60,30 +136,16 @@ function parseLines() {
       displayName: segments[1] || "",
       description: segments[2] || "",
       logo: segments[3] || "",
-      status: "pending",
+      status: "manual",
       errorMessage: "",
       checked: true,
     };
   });
 }
 
-function validateItems() {
+function validateItems(options?: { requireDisplayName?: boolean }) {
   for (const item of parsedItems.value) {
-    if (!item.url) {
-      item.status = "error";
-      item.errorMessage = "URL 不能为空";
-      continue;
-    }
-    if (!/^https?:\/\//i.test(item.url)) {
-      item.status = "error";
-      item.errorMessage = "URL 格式不正确";
-      continue;
-    }
-    if (!item.displayName && !enableScraping.value) {
-      item.status = "error";
-      item.errorMessage = "名称为空且未启用在线解析";
-      continue;
-    }
+    applyItemValidation(item, options);
   }
 }
 
@@ -111,7 +173,7 @@ async function scrapeItems() {
         item.status = "success";
       } catch {
         item.status = "error";
-        item.errorMessage = "获取链接详情失败";
+        item.errorMessage = "获取链接详情失败，请手动补充名称";
       }
     }
   }
@@ -127,7 +189,7 @@ async function handleParse() {
   }
 
   parseLines();
-  validateItems();
+  validateItems({ requireDisplayName: !enableScraping.value });
 
   if (enableScraping.value) {
     isParsing.value = true;
@@ -135,6 +197,7 @@ async function handleParse() {
     isParsing.value = false;
   }
 
+  validateItems();
   step.value = "preview";
 }
 
@@ -147,30 +210,25 @@ function handleToggleAll(e: Event) {
   parsedItems.value.forEach((item) => (item.checked = checked));
 }
 
-function revalidateItem(item: ParsedItem) {
-  if (item.status !== "error") return;
-  if (item.url && /^https?:\/\//i.test(item.url) && item.displayName) {
-    item.status = "pending";
-    item.errorMessage = "";
-  }
-}
-
 watch(
   parsedItems,
   (items) => {
+    if (step.value !== "preview") {
+      return;
+    }
     for (const item of items) {
-      revalidateItem(item);
+      applyItemValidation(item);
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 function handleImport() {
-  for (const item of parsedItems.value) {
-    revalidateItem(item);
-  }
+  validateItems();
 
-  const itemsToImport = parsedItems.value.filter((item) => item.checked && item.status !== "error");
+  const itemsToImport = parsedItems.value
+    .filter((item) => item.checked && !getItemErrorMessage(item))
+    .map((item) => normalizeItem(item));
   if (itemsToImport.length === 0) {
     Toast.warning("没有可导入的链接");
     return;
@@ -185,12 +243,7 @@ function handleImport() {
       <!-- Paste Step -->
       <div v-show="step === 'paste'" class=":uno: space-y-4">
         <div v-if="!group">
-          <FormKit
-            v-model="selectedGroupName"
-            type="select"
-            label="导入到分组"
-            :options="groupOptions"
-          />
+          <FormKit v-model="selectedGroupName" type="select" label="导入到分组" :options="groupOptions" />
         </div>
 
         <FormKit
@@ -212,42 +265,53 @@ function handleImport() {
 
       <!-- Preview Step -->
       <div v-show="step === 'preview'" class=":uno: space-y-4">
-        <div class=":uno: text-sm text-gray-500">
-          共解析 {{ parsedItems.length }} 条，成功 {{ parsedItems.filter((i) => i.status === "success").length }} 条，失败
-          {{ parsedItems.filter((i) => i.status === "error").length }} 条，选中
-          {{ parsedItems.filter((i) => i.checked).length }}
-          条
+        <div class=":uno: rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          共解析 {{ previewSummary.total }} 条，在线解析 {{ previewSummary.scraped }} 条，手动
+          {{ previewSummary.manual }} 条，失败 {{ previewSummary.failed }} 条，已选
+          {{ previewSummary.selected }} 条，可导入 {{ importableCount }} 条
         </div>
 
-        <div class=":uno: border rounded-md">
-          <table class=":uno: min-w-full divide-y divide-gray-200">
+        <div class=":uno: overflow-x-auto border border-gray-200 rounded-md">
+          <table class=":uno: min-w-[720px] w-full divide-y divide-gray-200">
             <thead class=":uno: bg-gray-50">
               <tr>
-                <th
-                  class=":uno: px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"
-                >
+                <th class=":uno: w-10 px-3 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
                   <input
                     type="checkbox"
-                    :checked="parsedItems.every((i) => i.checked)"
+                    :checked="allItemsChecked"
+                    :indeterminate.prop="isPartiallyChecked"
                     @change="handleToggleAll"
-                    class=":uno: h-4 w-4 rounded border-gray-300 text-indigo-600"
+                    class=":uno: h-4 w-4 border-gray-300 rounded text-indigo-600"
                   />
                 </th>
-                <th class=":uno: px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
-                <th class=":uno: px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
-                <th class=":uno: px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                <th class=":uno: px-3 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+                  名称
+                </th>
+                <th class=":uno: px-3 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+                  URL
+                </th>
+                <th class=":uno: px-3 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+                  状态
+                </th>
               </tr>
             </thead>
             <tbody class=":uno: bg-white divide-y divide-gray-200">
-              <tr v-for="item in parsedItems" :key="item.id" :class="item.checked ? '' : 'opacity-50'">
-                <td class=":uno: px-3 py-2">
+              <tr
+                v-for="item in parsedItems"
+                :key="item.id"
+                :class="{
+                  ':uno: opacity-50': !item.checked,
+                  ':uno: bg-red-50/40': item.status === 'error',
+                }"
+              >
+                <td class=":uno: px-3 py-3 align-top">
                   <input
                     type="checkbox"
                     v-model="item.checked"
-                    class=":uno: h-4 w-4 rounded border-gray-300 text-indigo-600"
+                    class=":uno: h-4 w-4 border-gray-300 rounded text-indigo-600"
                   />
                 </td>
-                <td class=":uno: px-3 py-2">
+                <td class=":uno: min-w-[220px] px-3 py-3 align-top">
                   <FormKit
                     :id="`displayName-${item.id}`"
                     :name="`displayName-${item.id}`"
@@ -271,7 +335,7 @@ function handleImport() {
                     }"
                   />
                 </td>
-                <td class=":uno: px-3 py-2">
+                <td class=":uno: min-w-[280px] px-3 py-3 align-top">
                   <FormKit
                     :id="`url-${item.id}`"
                     :name="`url-${item.id}`"
@@ -295,31 +359,31 @@ function handleImport() {
                     }"
                   />
                 </td>
-                <td class=":uno: px-3 py-2 whitespace-nowrap">
+                <td class=":uno: max-w-[160px] px-3 py-3 align-top">
                   <span
                     v-if="item.status === 'scraping'"
-                    class=":uno: inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                    class=":uno: inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800 font-medium"
                   >
                     解析中...
                   </span>
                   <span
                     v-else-if="item.status === 'success'"
-                    class=":uno: inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+                    class=":uno: inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs text-green-800 font-medium"
                   >
-                    成功
+                    已解析
                   </span>
                   <span
                     v-else-if="item.status === 'error'"
-                    class=":uno: inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800"
+                    class=":uno: max-w-full inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-xs text-red-800 font-medium"
                     :title="item.errorMessage"
                   >
-                    {{ item.errorMessage }}
+                    <span class=":uno: truncate">{{ item.errorMessage }}</span>
                   </span>
                   <span
                     v-else
-                    class=":uno: inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                    class=":uno: inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 font-medium"
                   >
-                    待处理
+                    手动
                   </span>
                 </td>
               </tr>
@@ -330,30 +394,17 @@ function handleImport() {
     </div>
 
     <!-- Footer -->
-    <div class=":uno: pt-4 flex gap-2 justify-end">
+    <div class=":uno: flex justify-end border-t border-gray-100 pt-4">
       <template v-if="step === 'paste'">
-        <button
-          :disabled="isParsing"
-          class=":uno: px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800 disabled:opacity-50"
-          @click="handleParse"
-        >
-          {{ isParsing ? "解析中..." : "解析" }}
-        </button>
+        <VButton type="secondary" :loading="isParsing" @click="handleParse">解析</VButton>
       </template>
       <template v-else>
-        <button
-          :disabled="props.isImporting"
-          class=":uno: px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800 disabled:opacity-50"
-          @click="handleImport"
-        >
-          {{ props.isImporting ? "导入中..." : `确认导入 (${importableCount})` }}
-        </button>
-        <button
-          class=":uno: px-4 py-2 border border-gray-300 text-sm rounded-md hover:bg-gray-50"
-          @click="handleBack"
-        >
-          返回
-        </button>
+        <VSpace>
+          <VButton type="secondary" :loading="props.isImporting" @click="handleImport">
+            确认导入（{{ importableCount }}）
+          </VButton>
+          <VButton :disabled="props.isImporting" @click="handleBack">返回</VButton>
+        </VSpace>
       </template>
     </div>
   </div>

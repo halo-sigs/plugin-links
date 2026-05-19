@@ -2,7 +2,7 @@
 import { linksCoreApiClient } from "@/api";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
-import { GroupFormState } from "@/types";
+import type { GroupFormState } from "@/types";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useTemplateRef } from "vue";

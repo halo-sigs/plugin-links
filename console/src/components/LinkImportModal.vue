@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
-import { LinkGroup } from "@/api/generated";
+import type { LinkGroup } from "@/api/generated";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { Toast, VModal } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
@@ -8,7 +8,7 @@ import { chunk } from "es-toolkit";
 import { ref, useTemplateRef } from "vue";
 import LinkImportBody, { type ParsedItem } from "./LinkImportBody.vue";
 
-const props = defineProps<{
+defineProps<{
   group?: LinkGroup;
 }>();
 
@@ -50,9 +50,9 @@ async function handleSubmit(data: { items: ParsedItem[]; groupName: string }) {
               spec: {
                 url: item.url,
                 displayName: item.displayName,
-                logo: item.logo,
-                description: item.description,
-                groupName: data.groupName,
+                logo: item.logo || undefined,
+                description: item.description || undefined,
+                groupName: data.groupName || undefined,
                 priority: maxPriority,
               },
               metadata: {
@@ -68,6 +68,8 @@ async function handleSubmit(data: { items: ParsedItem[]; groupName: string }) {
     Toast.success(`成功导入 ${items.length} 个链接`);
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     modal.value?.close();
+  } catch {
+    Toast.error("导入失败，请稍后重试");
   } finally {
     isImporting.value = false;
   }
@@ -75,14 +77,7 @@ async function handleSubmit(data: { items: ParsedItem[]; groupName: string }) {
 </script>
 
 <template>
-  <VModal
-    :centered="false"
-    title="批量导入链接"
-    ref="modal"
-    :mount-to-body="true"
-    :width="720"
-    @close="emit('close')"
-  >
+  <VModal :centered="false" title="批量导入链接" ref="modal" :mount-to-body="true" :width="720" @close="emit('close')">
     <LinkImportBody :group="group" :is-importing="isImporting" @submit="handleSubmit" />
   </VModal>
 </template>

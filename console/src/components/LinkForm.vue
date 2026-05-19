@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient } from "@/api";
-import { LinkFormState } from "@/types";
+import type { LinkFormState } from "@/types";
 import { Toast, VLoading } from "@halo-dev/components";
 import { nextTick, onMounted, ref, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";

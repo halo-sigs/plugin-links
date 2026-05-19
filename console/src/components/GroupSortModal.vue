@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient, linksPublicApiClient } from "@/api";
-import { LinkGroupVo } from "@/api/generated";
+import type { LinkGroupVo } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { Toast, VButton, VLoading, VModal, VSpace } from "@halo-dev/components";

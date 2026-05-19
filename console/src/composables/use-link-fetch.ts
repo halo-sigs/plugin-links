@@ -1,5 +1,5 @@
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
-import {
+import type {
   ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest,
   Link,
   LinkGroup,

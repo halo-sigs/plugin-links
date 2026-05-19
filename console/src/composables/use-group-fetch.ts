@@ -1,5 +1,5 @@
 import { linksPublicApiClient } from "@/api";
-import { LinkGroupVo } from "@/api/generated";
+import type { LinkGroupVo } from "@/api/generated";
 import { useQuery } from "@tanstack/vue-query";
 
 export const QK_LINK_GROUPS = "plugin:links:link-groups";
