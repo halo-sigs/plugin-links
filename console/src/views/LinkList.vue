@@ -11,6 +11,9 @@ const GroupCreationModal = defineAsyncComponent(
 const GroupSortModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "group-sort-modal" */ "@/components/GroupSortModal.vue"),
 );
+const LinkImportModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-import-modal" */ "@/components/LinkImportModal.vue"),
+);
 
 const { data, isLoading } = useLinksFetch();
 
@@ -20,6 +23,7 @@ const handleRouteToFront = () => {
 
 const groupCreationModalVisible = ref(false);
 const groupSortModalVisible = ref(false);
+const linkImportModalVisible = ref(false);
 </script>
 <template>
   <VPageHeader title="链接">
@@ -28,6 +32,7 @@ const groupSortModalVisible = ref(false);
     </template>
     <template #actions>
       <VSpace>
+        <VButton size="sm" @click="linkImportModalVisible = true">批量导入</VButton>
         <VButton size="sm" @click="groupCreationModalVisible = true">新建分组</VButton>
         <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>
         <VButton @click="handleRouteToFront" size="sm" ghost>
@@ -54,4 +59,5 @@ const groupSortModalVisible = ref(false);
 
   <GroupCreationModal v-if="groupCreationModalVisible" @close="groupCreationModalVisible = false" />
   <GroupSortModal v-if="groupSortModalVisible" @close="groupSortModalVisible = false" />
+  <LinkImportModal v-if="linkImportModalVisible" @close="linkImportModalVisible = false" />
 </template>
