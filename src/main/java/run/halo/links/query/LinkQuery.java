@@ -26,12 +26,12 @@ public class LinkQuery extends SortableRequest {
         super(exchange);
     }
 
-    @Schema(description = "Keyword to search links under the group")
+    @Schema(description = "Keyword used to search link display names, descriptions, and URLs.")
     public String getKeyword() {
         return queryParams.getFirst("keyword");
     }
 
-    @Schema(description = "Link group name")
+    @Schema(description = "Metadata name of the link group to filter by.")
     public String getGroupName() {
         return queryParams.getFirst("groupName");
     }
@@ -64,14 +64,14 @@ public class LinkQuery extends SortableRequest {
     public static void buildParameters(Builder builder) {
         builder.parameter(parameterBuilder()
                 .name("keyword")
-                .description("Keyword to search links under the group")
+                .description("Keyword used to search link display names, descriptions, and URLs.")
                 .in(ParameterIn.QUERY)
                 .implementation(String.class)
                 .required(false)
             )
             .parameter(parameterBuilder()
                 .name("groupName")
-                .description("Link group name")
+                .description("Metadata name of the link group to filter by.")
                 .in(ParameterIn.QUERY)
                 .implementation(String.class)
                 .required(false)

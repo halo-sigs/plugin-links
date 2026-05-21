@@ -17,22 +17,26 @@ import run.halo.app.extension.GVK;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@Schema(description = "Link group extension that groups links for display and sorting.")
 @GVK(group = "core.halo.run", version = "v1alpha1", kind = "LinkGroup", plural = "linkgroups", singular = "linkgroup")
 public class LinkGroup extends AbstractExtension {
 
-    @Schema(requiredMode = REQUIRED)
+    @Schema(description = "Desired state of the link group.", requiredMode = REQUIRED)
     private LinkGroupSpec spec;
 
     @Data
+    @Schema(description = "Configurable fields of a link group.")
     public static class LinkGroupSpec {
-        @Schema(requiredMode = REQUIRED)
+        @Schema(description = "Human-readable name displayed for the link group.", requiredMode = REQUIRED)
         private String displayName;
 
+        @Schema(description = "Sort order of the link group; lower values appear earlier.")
         private Integer priority;
 
         @Deprecated(since = "1.2.0", forRemoval = true)
-        @Schema(description = "Names of links below this group.")
-        @ArraySchema(arraySchema = @Schema(description = "Links of this group."), schema = @Schema(description = "Name of link."))
+        @Schema(description = "Deprecated names of links below this group; use Link.spec.groupName instead.")
+        @ArraySchema(arraySchema = @Schema(description = "Deprecated links of this group."),
+            schema = @Schema(description = "Metadata name of a Link."))
         private LinkedHashSet<String> links;
     }
 }

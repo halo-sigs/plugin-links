@@ -15,43 +15,43 @@
 
 
 /**
- * 
+ * Configurable fields of a link.
  * @export
  * @interface LinkSpec
  */
 export interface LinkSpec {
     /**
-     * 
+     * Short text that introduces the linked website.
      * @type {string}
      * @memberof LinkSpec
      */
     'description'?: string;
     /**
-     * 
+     * Human-readable name displayed for the link.
      * @type {string}
      * @memberof LinkSpec
      */
     'displayName': string;
     /**
-     * 
+     * Metadata name of the LinkGroup that this link belongs to.
      * @type {string}
      * @memberof LinkSpec
      */
     'groupName'?: string;
     /**
-     * 
+     * Logo or icon URL displayed with the link.
      * @type {string}
      * @memberof LinkSpec
      */
     'logo'?: string;
     /**
-     * 
+     * Sort order of the link; lower values appear earlier.
      * @type {number}
      * @memberof LinkSpec
      */
     'priority'?: number;
     /**
-     * 
+     * Absolute URL that the link points to.
      * @type {string}
      * @memberof LinkSpec
      */

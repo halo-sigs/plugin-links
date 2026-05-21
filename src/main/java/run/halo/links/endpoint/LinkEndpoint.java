@@ -45,7 +45,7 @@ public class LinkEndpoint implements CustomEndpoint {
             .GET("links", this::listLinkByGroup,
                 builder -> {
                     builder.operationId("listLinks")
-                        .description("Lists link by query parameters")
+                        .description("List links for the console, with optional keyword search and group filtering.")
                         .tag(tag)
                         .response(responseBuilder()
                             .implementation(ListResult.generateGenericClass(Link.class)));
@@ -54,11 +54,11 @@ public class LinkEndpoint implements CustomEndpoint {
             )
             .GET("links/-/detail", this::getLinkDetail, builder -> {
                 builder.operationId("GetLinkDetail")
-                    .description("Get link detail by url")
+                    .description("Fetch title, description, favicon, and preview image metadata from a website URL.")
                     .tag(tag)
                     .parameter(parameterBuilder()
                         .name("url")
-                        .description("Link url")
+                        .description("Absolute HTTP or HTTPS URL to inspect.")
                         .in(ParameterIn.QUERY)
                         .implementation(String.class)
                         .required(true)
@@ -68,9 +68,10 @@ public class LinkEndpoint implements CustomEndpoint {
             .POST("links/-/sort", this::sortLinks,
                 builder -> {
                     builder.operationId("sortLinks")
-                        .description("Sort links by priority")
+                        .description("Update link priorities according to the provided ordered link names.")
                         .tag(tag)
                         .requestBody(requestBodyBuilder()
+                            .description("Ordered metadata names of links.")
                             .implementation(SortRequest.class))
                         .response(responseBuilder()
                             .responseCode("200"));
@@ -79,9 +80,10 @@ public class LinkEndpoint implements CustomEndpoint {
             .POST("link-groups/-/sort", this::sortLinkGroups,
                 builder -> {
                     builder.operationId("sortLinkGroups")
-                        .description("Sort link groups by priority")
+                        .description("Update link group priorities according to the provided ordered group names.")
                         .tag(tag)
                         .requestBody(requestBodyBuilder()
+                            .description("Ordered metadata names of link groups.")
                             .implementation(SortRequest.class))
                         .response(responseBuilder()
                             .responseCode("200"));

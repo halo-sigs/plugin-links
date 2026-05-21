@@ -21,7 +21,7 @@ import type { LinkSpec } from './link-spec';
 import type { Metadata } from './metadata';
 
 /**
- * 
+ * Public view of a link returned by theme-facing APIs and finder APIs.
  * @export
  * @interface LinkVo
  */

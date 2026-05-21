@@ -21,7 +21,7 @@ import type { LinkSpec } from './link-spec';
 import type { Metadata } from './metadata';
 
 /**
- * A chunk of items.
+ * Link extension that represents one website entry displayed by the Links plugin.
  * @export
  * @interface Link
  */

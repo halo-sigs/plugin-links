@@ -31,7 +31,7 @@ public class LinkGroupQueryEndpoint implements CustomEndpoint {
         return route()
             .GET("linkgroups", this::listGroups,
                 builder -> builder.operationId("queryLinkGroups")
-                    .description("List link groups.")
+                    .description("List public link groups for themes, sorted by group priority.")
                     .tag(tag)
                     .response(responseBuilder()
                         .implementationArray(LinkGroupVo.class))

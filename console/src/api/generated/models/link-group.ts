@@ -21,7 +21,7 @@ import type { LinkGroupSpec } from './link-group-spec';
 import type { Metadata } from './metadata';
 
 /**
- * 
+ * Link group extension that groups links for display and sorting.
  * @export
  * @interface LinkGroup
  */

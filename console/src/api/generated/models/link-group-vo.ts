@@ -24,13 +24,13 @@ import type { LinkVo } from './link-vo';
 import type { Metadata } from './metadata';
 
 /**
- * 
+ * Public view of a link group returned by theme-facing APIs and finder APIs.
  * @export
  * @interface LinkGroupVo
  */
 export interface LinkGroupVo {
     /**
-     * 
+     * Links that belong to this group when the API response includes grouped links.
      * @type {Array<LinkVo>}
      * @memberof LinkGroupVo
      */

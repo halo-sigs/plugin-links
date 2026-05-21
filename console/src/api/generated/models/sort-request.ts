@@ -15,13 +15,13 @@
 
 
 /**
- * 
+ * Request body used to reorder links or link groups.
  * @export
  * @interface SortRequest
  */
 export interface SortRequest {
     /**
-     * 
+     * Ordered metadata names; each item is assigned a priority matching its position.
      * @type {Array<string>}
      * @memberof SortRequest
      */

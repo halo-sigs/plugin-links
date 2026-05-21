@@ -15,26 +15,26 @@
 
 
 /**
- * 
+ * Configurable fields of a link group.
  * @export
  * @interface LinkGroupSpec
  */
 export interface LinkGroupSpec {
     /**
-     * 
+     * Human-readable name displayed for the link group.
      * @type {string}
      * @memberof LinkGroupSpec
      */
     'displayName': string;
     /**
-     * Names of links below this group.
+     * Deprecated names of links below this group; use Link.spec.groupName instead.
      * @type {Array<string>}
      * @memberof LinkGroupSpec
      * @deprecated
      */
     'links'?: Array<string>;
     /**
-     * 
+     * Sort order of the link group; lower values appear earlier.
      * @type {number}
      * @memberof LinkGroupSpec
      */

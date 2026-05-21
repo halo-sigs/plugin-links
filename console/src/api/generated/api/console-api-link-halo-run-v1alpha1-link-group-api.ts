@@ -30,9 +30,9 @@ import type { LinkGroup } from '../models';
 export const ConsoleApiLinkHaloRunV1alpha1LinkGroupApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Delete link group.
-         * @param {string} name Link group name
-         * @param {boolean} [deleteLinks] Delete links in the group; when false, links become ungrouped
+         * Delete a link group and optionally delete the links assigned to it.
+         * @param {string} name Metadata name of the link group to delete.
+         * @param {boolean} [deleteLinks] Whether to delete links in the group; when false, links become ungrouped.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -86,9 +86,9 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkGroupApiFp = function(configuratio
     const localVarAxiosParamCreator = ConsoleApiLinkHaloRunV1alpha1LinkGroupApiAxiosParamCreator(configuration)
     return {
         /**
-         * Delete link group.
-         * @param {string} name Link group name
-         * @param {boolean} [deleteLinks] Delete links in the group; when false, links become ungrouped
+         * Delete a link group and optionally delete the links assigned to it.
+         * @param {string} name Metadata name of the link group to delete.
+         * @param {boolean} [deleteLinks] Whether to delete links in the group; when false, links become ungrouped.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -109,7 +109,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkGroupApiFactory = function (config
     const localVarFp = ConsoleApiLinkHaloRunV1alpha1LinkGroupApiFp(configuration)
     return {
         /**
-         * Delete link group.
+         * Delete a link group and optionally delete the links assigned to it.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkGroupApiDeleteLinkGroupRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -127,14 +127,14 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkGroupApiFactory = function (config
  */
 export interface ConsoleApiLinkHaloRunV1alpha1LinkGroupApiDeleteLinkGroupRequest {
     /**
-     * Link group name
+     * Metadata name of the link group to delete.
      * @type {string}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkGroupApiDeleteLinkGroup
      */
     readonly name: string
 
     /**
-     * Delete links in the group; when false, links become ungrouped
+     * Whether to delete links in the group; when false, links become ungrouped.
      * @type {boolean}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkGroupApiDeleteLinkGroup
      */
@@ -149,7 +149,7 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkGroupApiDeleteLinkGroupRequest
  */
 export class ConsoleApiLinkHaloRunV1alpha1LinkGroupApi extends BaseAPI {
     /**
-     * Delete link group.
+     * Delete a link group and optionally delete the links assigned to it.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkGroupApiDeleteLinkGroupRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}

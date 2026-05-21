@@ -32,7 +32,7 @@ import type { LinkVoList } from '../models';
 export const ApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * link count
+         * Return the total number of non-deleted links.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -69,13 +69,13 @@ export const ApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (configur
             };
         },
         /**
-         * List links.
+         * List public links for themes, with optional keyword search and group filtering.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
          * @param {Array<string>} [fieldSelector] Field selector. e.g.: metadata.name&#x3D;&#x3D;halo
-         * @param {string} [keyword] Links filtered by keyword.
-         * @param {string} [group] link group name
+         * @param {string} [keyword] Keyword used to search link display names, descriptions, and URLs.
+         * @param {string} [group] Metadata name of the link group to filter by.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -136,8 +136,8 @@ export const ApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (configur
             };
         },
         /**
-         * link random
-         * @param {number} maxSize 
+         * Return a random selection of public links.
+         * @param {number} maxSize Maximum number of random links to return. Must be between 1 and 100.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -190,7 +190,7 @@ export const ApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: Configur
     const localVarAxiosParamCreator = ApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator(configuration)
     return {
         /**
-         * link count
+         * Return the total number of non-deleted links.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -201,13 +201,13 @@ export const ApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: Configur
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * List links.
+         * List public links for themes, with optional keyword search and group filtering.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
          * @param {Array<string>} [fieldSelector] Field selector. e.g.: metadata.name&#x3D;&#x3D;halo
-         * @param {string} [keyword] Links filtered by keyword.
-         * @param {string} [group] link group name
+         * @param {string} [keyword] Keyword used to search link display names, descriptions, and URLs.
+         * @param {string} [group] Metadata name of the link group to filter by.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -218,8 +218,8 @@ export const ApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: Configur
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * link random
-         * @param {number} maxSize 
+         * Return a random selection of public links.
+         * @param {number} maxSize Maximum number of random links to return. Must be between 1 and 100.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -240,7 +240,7 @@ export const ApiLinkHaloRunV1alpha1LinkApiFactory = function (configuration?: Co
     const localVarFp = ApiLinkHaloRunV1alpha1LinkApiFp(configuration)
     return {
         /**
-         * link count
+         * Return the total number of non-deleted links.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -248,7 +248,7 @@ export const ApiLinkHaloRunV1alpha1LinkApiFactory = function (configuration?: Co
             return localVarFp.queryLinkCount(options).then((request) => request(axios, basePath));
         },
         /**
-         * List links.
+         * List public links for themes, with optional keyword search and group filtering.
          * @param {ApiLinkHaloRunV1alpha1LinkApiQueryLinksRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -257,7 +257,7 @@ export const ApiLinkHaloRunV1alpha1LinkApiFactory = function (configuration?: Co
             return localVarFp.queryLinks(requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.keyword, requestParameters.group, options).then((request) => request(axios, basePath));
         },
         /**
-         * link random
+         * Return a random selection of public links.
          * @param {ApiLinkHaloRunV1alpha1LinkApiQueryRandomLinkRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -303,14 +303,14 @@ export interface ApiLinkHaloRunV1alpha1LinkApiQueryLinksRequest {
     readonly fieldSelector?: Array<string>
 
     /**
-     * Links filtered by keyword.
+     * Keyword used to search link display names, descriptions, and URLs.
      * @type {string}
      * @memberof ApiLinkHaloRunV1alpha1LinkApiQueryLinks
      */
     readonly keyword?: string
 
     /**
-     * link group name
+     * Metadata name of the link group to filter by.
      * @type {string}
      * @memberof ApiLinkHaloRunV1alpha1LinkApiQueryLinks
      */
@@ -324,7 +324,7 @@ export interface ApiLinkHaloRunV1alpha1LinkApiQueryLinksRequest {
  */
 export interface ApiLinkHaloRunV1alpha1LinkApiQueryRandomLinkRequest {
     /**
-     * 
+     * Maximum number of random links to return. Must be between 1 and 100.
      * @type {number}
      * @memberof ApiLinkHaloRunV1alpha1LinkApiQueryRandomLink
      */
@@ -339,7 +339,7 @@ export interface ApiLinkHaloRunV1alpha1LinkApiQueryRandomLinkRequest {
  */
 export class ApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     /**
-     * link count
+     * Return the total number of non-deleted links.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ApiLinkHaloRunV1alpha1LinkApi
@@ -349,7 +349,7 @@ export class ApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     }
 
     /**
-     * List links.
+     * List public links for themes, with optional keyword search and group filtering.
      * @param {ApiLinkHaloRunV1alpha1LinkApiQueryLinksRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -360,7 +360,7 @@ export class ApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     }
 
     /**
-     * link random
+     * Return a random selection of public links.
      * @param {ApiLinkHaloRunV1alpha1LinkApiQueryRandomLinkRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}

@@ -15,7 +15,7 @@
   "paths" : {
     "/apis/api.link.halo.run/v1alpha1/linkgroups" : {
       "get" : {
-        "description" : "List link groups.",
+        "description" : "List public link groups for themes, sorted by group priority.",
         "operationId" : "queryLinkGroups",
         "responses" : {
           "default" : {
@@ -37,7 +37,7 @@
     },
     "/apis/api.link.halo.run/v1alpha1/links" : {
       "get" : {
-        "description" : "List links.",
+        "description" : "List public links for themes, with optional keyword search and group filtering.",
         "operationId" : "queryLinks",
         "parameters" : [ {
           "description" : "Page number. Default is 0.",
@@ -76,14 +76,14 @@
             }
           }
         }, {
-          "description" : "Links filtered by keyword.",
+          "description" : "Keyword used to search link display names, descriptions, and URLs.",
           "in" : "query",
           "name" : "keyword",
           "schema" : {
             "type" : "string"
           }
         }, {
-          "description" : "link group name",
+          "description" : "Metadata name of the link group to filter by.",
           "in" : "query",
           "name" : "group",
           "schema" : {
@@ -107,7 +107,7 @@
     },
     "/apis/api.link.halo.run/v1alpha1/links/-/count" : {
       "get" : {
-        "description" : "link count",
+        "description" : "Return the total number of non-deleted links.",
         "operationId" : "queryLinkCount",
         "responses" : {
           "default" : {
@@ -127,9 +127,10 @@
     },
     "/apis/api.link.halo.run/v1alpha1/links/-/random" : {
       "get" : {
-        "description" : "link random",
+        "description" : "Return a random selection of public links.",
         "operationId" : "queryRandomLink",
         "parameters" : [ {
+          "description" : "Maximum number of random links to return. Must be between 1 and 100.",
           "in" : "query",
           "name" : "maxSize",
           "required" : true,
@@ -158,7 +159,7 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/link-groups/-/sort" : {
       "post" : {
-        "description" : "Sort link groups by priority",
+        "description" : "Update link group priorities according to the provided ordered group names.",
         "operationId" : "sortLinkGroups",
         "requestBody" : {
           "content" : {
@@ -167,7 +168,8 @@
                 "$ref" : "#/components/schemas/SortRequest"
               }
             }
-          }
+          },
+          "description" : "Ordered metadata names of link groups."
         },
         "responses" : {
           "200" : {
@@ -179,10 +181,10 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}" : {
       "delete" : {
-        "description" : "Delete link group.",
+        "description" : "Delete a link group and optionally delete the links assigned to it.",
         "operationId" : "DeleteLinkGroup",
         "parameters" : [ {
-          "description" : "Link group name",
+          "description" : "Metadata name of the link group to delete.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -190,7 +192,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "Delete links in the group; when false, links become ungrouped",
+          "description" : "Whether to delete links in the group; when false, links become ungrouped.",
           "in" : "query",
           "name" : "deleteLinks",
           "schema" : {
@@ -214,17 +216,17 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/links" : {
       "get" : {
-        "description" : "Lists link by query parameters",
+        "description" : "List links for the console, with optional keyword search and group filtering.",
         "operationId" : "listLinks",
         "parameters" : [ {
-          "description" : "Keyword to search links under the group",
+          "description" : "Keyword used to search link display names, descriptions, and URLs.",
           "in" : "query",
           "name" : "keyword",
           "schema" : {
             "type" : "string"
           }
         }, {
-          "description" : "Link group name",
+          "description" : "Metadata name of the link group to filter by.",
           "in" : "query",
           "name" : "groupName",
           "schema" : {
@@ -294,10 +296,10 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/detail" : {
       "get" : {
-        "description" : "Get link detail by url",
+        "description" : "Fetch title, description, favicon, and preview image metadata from a website URL.",
         "operationId" : "GetLinkDetail",
         "parameters" : [ {
-          "description" : "Link url",
+          "description" : "Absolute HTTP or HTTPS URL to inspect.",
           "in" : "query",
           "name" : "url",
           "required" : true,
@@ -322,7 +324,7 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/sort" : {
       "post" : {
-        "description" : "Sort links by priority",
+        "description" : "Update link priorities according to the provided ordered link names.",
         "operationId" : "sortLinks",
         "requestBody" : {
           "content" : {
@@ -331,7 +333,8 @@
                 "$ref" : "#/components/schemas/SortRequest"
               }
             }
-          }
+          },
+          "description" : "Ordered metadata names of links."
         },
         "responses" : {
           "200" : {
@@ -845,25 +848,30 @@
             "$ref" : "#/components/schemas/LinkSpec"
           }
         },
-        "description" : "A chunk of items."
+        "description" : "Link extension that represents one website entry displayed by the Links plugin."
       },
       "LinkDetailDTO" : {
         "required" : [ "title" ],
         "type" : "object",
         "properties" : {
           "description" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Description discovered from the website meta description."
           },
           "icon" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Icon URL discovered from the website favicon metadata."
           },
           "image" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Preview image URL discovered from Open Graph metadata."
           },
           "title" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Title discovered from the website document."
           }
-        }
+        },
+        "description" : "Metadata discovered from a remote website URL."
       },
       "LinkGroup" : {
         "required" : [ "apiVersion", "kind", "metadata", "spec" ],
@@ -881,7 +889,8 @@
           "spec" : {
             "$ref" : "#/components/schemas/LinkGroupSpec"
           }
-        }
+        },
+        "description" : "Link group extension that groups links for display and sorting."
       },
       "LinkGroupList" : {
         "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
@@ -937,23 +946,26 @@
         "type" : "object",
         "properties" : {
           "displayName" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Human-readable name displayed for the link group."
           },
           "links" : {
             "type" : "array",
-            "description" : "Names of links below this group.",
+            "description" : "Deprecated names of links below this group; use Link.spec.groupName instead.",
             "deprecated" : true,
             "items" : {
               "type" : "string",
-              "description" : "Names of links below this group.",
+              "description" : "Deprecated names of links below this group; use Link.spec.groupName instead.",
               "deprecated" : true
             }
           },
           "priority" : {
             "type" : "integer",
+            "description" : "Sort order of the link group; lower values appear earlier.",
             "format" : "int32"
           }
-        }
+        },
+        "description" : "Configurable fields of a link group."
       },
       "LinkGroupVo" : {
         "required" : [ "metadata" ],
@@ -961,6 +973,7 @@
         "properties" : {
           "links" : {
             "type" : "array",
+            "description" : "Links that belong to this group when the API response includes grouped links.",
             "items" : {
               "$ref" : "#/components/schemas/LinkVo"
             }
@@ -971,7 +984,8 @@
           "spec" : {
             "$ref" : "#/components/schemas/LinkGroupSpec"
           }
-        }
+        },
+        "description" : "Public view of a link group returned by theme-facing APIs and finder APIs."
       },
       "LinkList" : {
         "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
@@ -1027,25 +1041,32 @@
         "type" : "object",
         "properties" : {
           "description" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Short text that introduces the linked website."
           },
           "displayName" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Human-readable name displayed for the link."
           },
           "groupName" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Metadata name of the LinkGroup that this link belongs to."
           },
           "logo" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Logo or icon URL displayed with the link."
           },
           "priority" : {
             "type" : "integer",
+            "description" : "Sort order of the link; lower values appear earlier.",
             "format" : "int32"
           },
           "url" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "Absolute URL that the link points to."
           }
-        }
+        },
+        "description" : "Configurable fields of a link."
       },
       "LinkVo" : {
         "required" : [ "metadata" ],
@@ -1057,7 +1078,8 @@
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
           }
-        }
+        },
+        "description" : "Public view of a link returned by theme-facing APIs and finder APIs."
       },
       "LinkVoList" : {
         "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
@@ -1226,11 +1248,14 @@
         "properties" : {
           "names" : {
             "type" : "array",
+            "description" : "Ordered metadata names; each item is assigned a priority matching its position.",
             "items" : {
-              "type" : "string"
+              "type" : "string",
+              "description" : "Ordered metadata names; each item is assigned a priority matching its position."
             }
           }
-        }
+        },
+        "description" : "Request body used to reorder links or link groups."
       },
       "TestOperation" : {
         "required" : [ "op", "path", "value" ],

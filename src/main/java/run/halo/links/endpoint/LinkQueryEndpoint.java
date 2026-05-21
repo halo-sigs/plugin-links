@@ -35,7 +35,7 @@ public class LinkQueryEndpoint implements CustomEndpoint {
             .GET("links", this::listLinks,
                 builder -> {
                     builder.operationId("queryLinks")
-                        .description("List links.")
+                        .description("List public links for themes, with optional keyword search and group filtering.")
                         .tag(tag)
                         .response(responseBuilder()
                             .implementation(ListResult.generateGenericClass(LinkVo.class)));
@@ -45,10 +45,11 @@ public class LinkQueryEndpoint implements CustomEndpoint {
             .GET("links/-/random", this::linkRandom,
                 builder -> {
                     builder.operationId("queryRandomLink")
-                        .description("link random")
+                        .description("Return a random selection of public links.")
                         .tag(tag)
                         .parameter(parameterBuilder()
                             .name("maxSize")
+                            .description("Maximum number of random links to return. Must be between 1 and 100.")
                             .in(ParameterIn.QUERY)
                             .implementation(Integer.class)
                             .required(true)
@@ -60,7 +61,7 @@ public class LinkQueryEndpoint implements CustomEndpoint {
             .GET("links/-/count", this::linkCount,
                 builder -> {
                     builder.operationId("queryLinkCount")
-                        .description("link count")
+                        .description("Return the total number of non-deleted links.")
                         .tag(tag)
                         .response(responseBuilder()
                             .implementation(Integer.class));

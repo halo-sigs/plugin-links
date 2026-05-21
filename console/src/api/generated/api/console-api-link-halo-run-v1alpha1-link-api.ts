@@ -34,8 +34,8 @@ import type { SortRequest } from '../models';
 export const ConsoleApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * Get link detail by url
-         * @param {string} url Link url
+         * Fetch title, description, favicon, and preview image metadata from a website URL.
+         * @param {string} url Absolute HTTP or HTTPS URL to inspect.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -78,9 +78,9 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (c
             };
         },
         /**
-         * Lists link by query parameters
-         * @param {string} [keyword] Keyword to search links under the group
-         * @param {string} [groupName] Link group name
+         * List links for the console, with optional keyword search and group filtering.
+         * @param {string} [keyword] Keyword used to search link display names, descriptions, and URLs.
+         * @param {string} [groupName] Metadata name of the link group to filter by.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
@@ -150,8 +150,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (c
             };
         },
         /**
-         * Sort link groups by priority
-         * @param {SortRequest} [sortRequest] 
+         * Update link group priorities according to the provided ordered group names.
+         * @param {SortRequest} [sortRequest] Ordered metadata names of link groups.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -191,8 +191,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (c
             };
         },
         /**
-         * Sort links by priority
-         * @param {SortRequest} [sortRequest] 
+         * Update link priorities according to the provided ordered link names.
+         * @param {SortRequest} [sortRequest] Ordered metadata names of links.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -242,8 +242,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: C
     const localVarAxiosParamCreator = ConsoleApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator(configuration)
     return {
         /**
-         * Get link detail by url
-         * @param {string} url Link url
+         * Fetch title, description, favicon, and preview image metadata from a website URL.
+         * @param {string} url Absolute HTTP or HTTPS URL to inspect.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -254,9 +254,9 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: C
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Lists link by query parameters
-         * @param {string} [keyword] Keyword to search links under the group
-         * @param {string} [groupName] Link group name
+         * List links for the console, with optional keyword search and group filtering.
+         * @param {string} [keyword] Keyword used to search link display names, descriptions, and URLs.
+         * @param {string} [groupName] Metadata name of the link group to filter by.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
@@ -272,8 +272,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: C
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Sort link groups by priority
-         * @param {SortRequest} [sortRequest] 
+         * Update link group priorities according to the provided ordered group names.
+         * @param {SortRequest} [sortRequest] Ordered metadata names of link groups.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -284,8 +284,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: C
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Sort links by priority
-         * @param {SortRequest} [sortRequest] 
+         * Update link priorities according to the provided ordered link names.
+         * @param {SortRequest} [sortRequest] Ordered metadata names of links.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -306,7 +306,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFactory = function (configurati
     const localVarFp = ConsoleApiLinkHaloRunV1alpha1LinkApiFp(configuration)
     return {
         /**
-         * Get link detail by url
+         * Fetch title, description, favicon, and preview image metadata from a website URL.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiGetLinkDetailRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -315,7 +315,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFactory = function (configurati
             return localVarFp.getLinkDetail(requestParameters.url, options).then((request) => request(axios, basePath));
         },
         /**
-         * Lists link by query parameters
+         * List links for the console, with optional keyword search and group filtering.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -324,7 +324,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFactory = function (configurati
             return localVarFp.listLinks(requestParameters.keyword, requestParameters.groupName, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
         },
         /**
-         * Sort link groups by priority
+         * Update link group priorities according to the provided ordered group names.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -333,7 +333,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFactory = function (configurati
             return localVarFp.sortLinkGroups(requestParameters.sortRequest, options).then((request) => request(axios, basePath));
         },
         /**
-         * Sort links by priority
+         * Update link priorities according to the provided ordered link names.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinksRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -351,7 +351,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFactory = function (configurati
  */
 export interface ConsoleApiLinkHaloRunV1alpha1LinkApiGetLinkDetailRequest {
     /**
-     * Link url
+     * Absolute HTTP or HTTPS URL to inspect.
      * @type {string}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApiGetLinkDetail
      */
@@ -365,14 +365,14 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApiGetLinkDetailRequest {
  */
 export interface ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest {
     /**
-     * Keyword to search links under the group
+     * Keyword used to search link display names, descriptions, and URLs.
      * @type {string}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApiListLinks
      */
     readonly keyword?: string
 
     /**
-     * Link group name
+     * Metadata name of the link group to filter by.
      * @type {string}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApiListLinks
      */
@@ -421,7 +421,7 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest {
  */
 export interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest {
     /**
-     * 
+     * Ordered metadata names of link groups.
      * @type {SortRequest}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroups
      */
@@ -435,7 +435,7 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest {
  */
 export interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinksRequest {
     /**
-     * 
+     * Ordered metadata names of links.
      * @type {SortRequest}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinks
      */
@@ -450,7 +450,7 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinksRequest {
  */
 export class ConsoleApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     /**
-     * Get link detail by url
+     * Fetch title, description, favicon, and preview image metadata from a website URL.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiGetLinkDetailRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -461,7 +461,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     }
 
     /**
-     * Lists link by query parameters
+     * List links for the console, with optional keyword search and group filtering.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -472,7 +472,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     }
 
     /**
-     * Sort link groups by priority
+     * Update link group priorities according to the provided ordered group names.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -483,7 +483,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
     }
 
     /**
-     * Sort links by priority
+     * Update link priorities according to the provided ordered link names.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinksRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}

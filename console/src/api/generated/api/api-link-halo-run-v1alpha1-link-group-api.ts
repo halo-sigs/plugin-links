@@ -30,7 +30,7 @@ import type { LinkGroupVo } from '../models';
 export const ApiLinkHaloRunV1alpha1LinkGroupApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * List link groups.
+         * List public link groups for themes, sorted by group priority.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -77,7 +77,7 @@ export const ApiLinkHaloRunV1alpha1LinkGroupApiFp = function(configuration?: Con
     const localVarAxiosParamCreator = ApiLinkHaloRunV1alpha1LinkGroupApiAxiosParamCreator(configuration)
     return {
         /**
-         * List link groups.
+         * List public link groups for themes, sorted by group priority.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -98,7 +98,7 @@ export const ApiLinkHaloRunV1alpha1LinkGroupApiFactory = function (configuration
     const localVarFp = ApiLinkHaloRunV1alpha1LinkGroupApiFp(configuration)
     return {
         /**
-         * List link groups.
+         * List public link groups for themes, sorted by group priority.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -116,7 +116,7 @@ export const ApiLinkHaloRunV1alpha1LinkGroupApiFactory = function (configuration
  */
 export class ApiLinkHaloRunV1alpha1LinkGroupApi extends BaseAPI {
     /**
-     * List link groups.
+     * List public link groups for themes, sorted by group priority.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ApiLinkHaloRunV1alpha1LinkGroupApi

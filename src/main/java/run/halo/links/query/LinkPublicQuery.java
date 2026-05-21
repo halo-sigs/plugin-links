@@ -73,16 +73,16 @@ public class LinkPublicQuery extends SortableRequest {
 
     public static void buildParameters(Builder builder) {
         IListRequest.buildParameters(builder);
-        builder.parameter(parameterBuilder()
+            builder.parameter(parameterBuilder()
                 .in(ParameterIn.QUERY)
                 .name("keyword")
-                .description("Links filtered by keyword.")
+                .description("Keyword used to search link display names, descriptions, and URLs.")
                 .implementation(String.class)
                 .required(false))
             .parameter(parameterBuilder()
                 .in(ParameterIn.QUERY)
                 .name("group")
-                .description("link group name")
+                .description("Metadata name of the link group to filter by.")
                 .implementation(String.class)
                 .required(false));
     }

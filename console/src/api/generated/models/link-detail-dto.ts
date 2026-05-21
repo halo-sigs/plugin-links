@@ -15,31 +15,31 @@
 
 
 /**
- * 
+ * Metadata discovered from a remote website URL.
  * @export
  * @interface LinkDetailDTO
  */
 export interface LinkDetailDTO {
     /**
-     * 
+     * Description discovered from the website meta description.
      * @type {string}
      * @memberof LinkDetailDTO
      */
     'description'?: string;
     /**
-     * 
+     * Icon URL discovered from the website favicon metadata.
      * @type {string}
      * @memberof LinkDetailDTO
      */
     'icon'?: string;
     /**
-     * 
+     * Preview image URL discovered from Open Graph metadata.
      * @type {string}
      * @memberof LinkDetailDTO
      */
     'image'?: string;
     /**
-     * 
+     * Title discovered from the website document.
      * @type {string}
      * @memberof LinkDetailDTO
      */
