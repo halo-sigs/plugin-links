@@ -3,6 +3,8 @@ import LinksCard from "@/components/LinksCard.vue";
 import { useLinksFetch } from "@/composables/use-link-fetch";
 import { IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
 import { defineAsyncComponent, ref } from "vue";
+import { useRouter } from "vue-router";
+import MdiRss from "~icons/mdi/rss";
 import RiLinksLine from "~icons/ri/links-line";
 
 const GroupCreationModal = defineAsyncComponent(
@@ -16,6 +18,7 @@ const LinkImportModal = defineAsyncComponent(
 );
 
 const { data, isLoading } = useLinksFetch();
+const router = useRouter();
 
 const handleRouteToFront = () => {
   window.open("/links", "_blank");
@@ -32,6 +35,12 @@ const linkImportModalVisible = ref(false);
     </template>
     <template #actions>
       <VSpace>
+        <VButton size="sm" @click="router.push({ name: 'LinkFeedItems' })">
+          <template #icon>
+            <MdiRss class=":uno: size-full" />
+          </template>
+          友链动态
+        </VButton>
         <VButton size="sm" @click="linkImportModalVisible = true">批量导入</VButton>
         <VButton size="sm" @click="groupCreationModalVisible = true">新建分组</VButton>
         <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>

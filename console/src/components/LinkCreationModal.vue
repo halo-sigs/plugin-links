@@ -41,6 +41,13 @@ const { mutate, isPending } = useMutation({
           description: data.description,
           groupName: props.group?.metadata.name,
           priority: maxPriority + 1,
+          rss:
+            data.rss?.enabled || data.rss?.feedUrl
+              ? {
+                  enabled: data.rss.enabled ?? false,
+                  feedUrl: data.rss.feedUrl || undefined,
+                }
+              : undefined,
         },
         metadata: {
           name: "",

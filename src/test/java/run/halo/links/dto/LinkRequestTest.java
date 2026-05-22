@@ -60,8 +60,12 @@ class LinkRequestTest {
         when(mockResponse.statusCode()).thenReturn(200);
         Document doc = new Document("http://example.com");
         when(mockResponse.parse()).thenReturn(doc);
+        when(mockResponse.header("Content-Length")).thenReturn(null);
+        when(mockResponse.body()).thenReturn("");
 
         when(mockConn.followRedirects(false)).thenReturn(mockConn);
+        when(mockConn.ignoreHttpErrors(true)).thenReturn(mockConn);
+        when(mockConn.ignoreContentType(false)).thenReturn(mockConn);
         when(mockConn.maxBodySize(anyInt())).thenReturn(mockConn);
         when(mockConn.timeout(anyInt())).thenReturn(mockConn);
         when(mockConn.headers(anyMap())).thenReturn(mockConn);

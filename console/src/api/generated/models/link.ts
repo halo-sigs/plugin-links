@@ -18,6 +18,9 @@
 import type { LinkSpec } from './link-spec';
 // May contain unused imports in some cases
 // @ts-ignore
+import type { LinkStatus } from './link-status';
+// May contain unused imports in some cases
+// @ts-ignore
 import type { Metadata } from './metadata';
 
 /**
@@ -50,5 +53,11 @@ export interface Link {
      * @memberof Link
      */
     'spec': LinkSpec;
+    /**
+     * 
+     * @type {LinkStatus}
+     * @memberof Link
+     */
+    'status'?: LinkStatus;
 }
 

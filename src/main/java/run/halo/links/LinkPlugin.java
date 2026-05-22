@@ -46,6 +46,12 @@ public class LinkPlugin extends BasePlugin {
             indexSpecs.add(IndexSpecs.<Link, Integer>single("spec.priority", Integer.class)
                 .indexFunc(link -> link.getSpec().getPriority())
             );
+            indexSpecs.add(IndexSpecs.<Link, Boolean>single("spec.rss.enabled", Boolean.class)
+                .indexFunc(link -> {
+                    var rss = link.getSpec().getRss();
+                    return rss == null ? null : rss.getEnabled();
+                })
+            );
         });
         schemeManager.register(LinkGroup.class, indexSpecs -> {
             indexSpecs.add(IndexSpecs.<LinkGroup, Integer>single("spec.priority", Integer.class)

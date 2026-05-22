@@ -1,72 +1,15 @@
 package run.halo.links.dto;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.springframework.web.server.ServerErrorException;
-import run.halo.links.security.LinkSecurityUtils;
-import run.halo.links.security.RedirectHandler;
+import run.halo.links.security.SafeUrlFetcher;
 
 public class LinkRequest {
 
-    private final static String USER_AGENT =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-            + "Chrome/58.0.3029.110 Safari/537.3";
-
-    private final static int TIMEOUT_MS = 10_000;
-    private final static int MAX_BODY_SIZE = 1024 * 1024 * 20;
-
     public static LinkDetailDTO getLinkDetail(String linkUrl) {
-        URL url;
-        try {
-            url = new URL(linkUrl);
-        } catch (MalformedURLException e) {
-            throw new ServerErrorException("Invalid URL", e);
-        }
-
-        InetAddress validatedAddress;
-        try {
-            validatedAddress = LinkSecurityUtils.validateUrl(url);
-        } catch (IllegalArgumentException e) {
-            throw new ServerErrorException("URL blocked for security reasons", e);
-        }
-
-        String connectUrl = "http".equalsIgnoreCase(url.getProtocol())
-            ? LinkSecurityUtils.toConnectUrl(url, validatedAddress)
-            : url.toExternalForm();
-
-        Map<String, String> headers = new HashMap<>(Map.of(
-            "User-Agent", USER_AGENT,
-            "Referer", linkUrl,
-            "Accept", "text/html,application/xhtml+xml,application/xml"
-        ));
-        if ("http".equalsIgnoreCase(url.getProtocol())) {
-            headers.put("Host", url.getHost());
-        }
-
-        Document document;
-        try {
-            Connection.Response response = Jsoup.connect(connectUrl)
-                .followRedirects(false)
-                .maxBodySize(MAX_BODY_SIZE)
-                .timeout(TIMEOUT_MS)
-                .headers(headers)
-                .execute();
-
-            RedirectHandler redirectHandler =
-                new RedirectHandler(headers, TIMEOUT_MS, MAX_BODY_SIZE);
-            document = redirectHandler.followRedirects(response);
-        } catch (IOException e) {
-            throw new ServerErrorException("Failed to get link detail", e);
-        }
+        Document document = SafeUrlFetcher.fetch(linkUrl, SafeUrlFetcher.FetchOptions.html(linkUrl))
+            .document();
 
         LinkDetailDTO linkDetailDTO = new LinkDetailDTO();
         linkDetailDTO.setTitle(document.title());

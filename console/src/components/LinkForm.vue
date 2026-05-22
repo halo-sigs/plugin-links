@@ -2,7 +2,8 @@
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFormState } from "@/types";
 import { Toast, VLoading } from "@halo-dev/components";
-import { nextTick, onMounted, ref, toRaw } from "vue";
+import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
+import MdiRss from "~icons/mdi/rss";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 
 const props = defineProps<{
@@ -14,18 +15,37 @@ const emit = defineEmits<{
   (event: "submit", data: LinkFormState): void;
 }>();
 
-const data = ref<LinkFormState>({
+type LinkFormData = LinkFormState & {
+  rss: {
+    enabled: boolean;
+    feedUrl: string;
+  };
+};
+
+const data = ref<LinkFormData>({
   url: "",
   displayName: "",
+  rss: {
+    enabled: false,
+    feedUrl: "",
+  },
 });
 
 onMounted(() => {
   if (props.formState) {
-    data.value = toRaw(props.formState);
+    const formState = toRaw(props.formState);
+    data.value = {
+      ...formState,
+      rss: {
+        enabled: formState.rss?.enabled ?? false,
+        feedUrl: formState.rss?.feedUrl || "",
+      },
+    };
   }
 });
 
-const isFetchingLinkDetail = ref(false);
+const isFetchingLinkDetail = shallowRef(false);
+const isDiscoveringFeed = shallowRef(false);
 
 const handleGetLinkDetail = async () => {
   if (isFetchingLinkDetail.value) {
@@ -50,9 +70,37 @@ const handleGetLinkDetail = async () => {
   }
 };
 
+const handleDiscoverFeed = async () => {
+  if (isDiscoveringFeed.value) {
+    return;
+  }
+  if (!data.value.url) {
+    return;
+  }
+  isDiscoveringFeed.value = true;
+  try {
+    const { data: result } = await linksConsoleApiClient.feed.discoverLinkFeed({
+      url: data.value.url,
+    });
+    if (result.feedUrl) {
+      data.value.rss = {
+        enabled: true,
+        feedUrl: result.feedUrl,
+      };
+      Toast.success("发现订阅地址");
+      return;
+    }
+    Toast.info("未发现订阅地址");
+  } catch {
+    Toast.error("发现订阅地址失败");
+  } finally {
+    isDiscoveringFeed.value = false;
+  }
+};
+
 const annotationsForm = ref();
 
-async function onSubmit(data: LinkFormState) {
+async function onSubmit(formData: LinkFormState) {
   annotationsForm.value?.handleSubmit();
   await nextTick();
 
@@ -62,7 +110,11 @@ async function onSubmit(data: LinkFormState) {
   }
 
   emit("submit", {
-    ...data,
+    ...formData,
+    rss: {
+      enabled: data.value.rss.enabled,
+      feedUrl: data.value.rss.feedUrl,
+    },
     annotations: {
       ...annotations,
       ...customAnnotations,
@@ -81,16 +133,18 @@ async function onSubmit(data: LinkFormState) {
       <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
         <FormKit type="url" name="url" v-model="data.url" validation="required" label="网站地址">
           <template #suffix>
-            <div
+            <button
+              type="button"
+              aria-label="获取网站信息"
               v-tooltip="{
                 content: '获取网站信息',
               }"
-              class=":uno: group h-full flex cursor-pointer items-center px-3 transition-all"
+              class=":uno: group h-full flex cursor-pointer items-center border-0 bg-transparent px-3 transition-all"
               @click="handleGetLinkDetail"
             >
               <VLoading v-if="isFetchingLinkDetail" class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
               <MdiWebRefresh v-else class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
-            </div>
+            </button>
           </template>
         </FormKit>
         <FormKit
@@ -102,6 +156,37 @@ async function onSubmit(data: LinkFormState) {
         ></FormKit>
         <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
         <FormKit type="textarea" name="description" v-model="data.description" label="描述"></FormKit>
+      </div>
+    </div>
+
+    <div class=":uno: py-5">
+      <div class=":uno: border-t border-gray-200"></div>
+    </div>
+
+    <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+      <div class=":uno: md:col-span-1">
+        <div class=":uno: sticky top-0">
+          <span class=":uno: text-base text-gray-900 font-medium"> RSS 订阅 </span>
+        </div>
+      </div>
+      <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+        <FormKit type="checkbox" name="rssEnabled" v-model="data.rss.enabled" label="启用 RSS 订阅"></FormKit>
+        <FormKit type="url" name="rssFeedUrl" v-model="data.rss.feedUrl" label="订阅地址">
+          <template #suffix>
+            <button
+              type="button"
+              aria-label="发现订阅地址"
+              v-tooltip="{
+                content: '发现订阅地址',
+              }"
+              class=":uno: group h-full flex cursor-pointer items-center border-0 bg-transparent px-3 transition-all"
+              @click="handleDiscoverFeed"
+            >
+              <VLoading v-if="isDiscoveringFeed" class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
+              <MdiRss v-else class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
+            </button>
+          </template>
+        </FormKit>
       </div>
     </div>
   </FormKit>

@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:62847",
+    "url" : "http://localhost:58682",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -342,6 +342,137 @@
           }
         },
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/{name}/rss/refresh" : {
+      "post" : {
+        "description" : "Refresh RSS or Atom items for an enabled link.",
+        "operationId" : "refreshLinkFeed",
+        "parameters" : [ {
+          "description" : "Metadata name of the link.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedRefreshResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/-/cleanup" : {
+      "post" : {
+        "description" : "Apply RSS item retention cleanup and compact the embedded feed cache.",
+        "operationId" : "cleanupLinkFeedItems",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedCleanupResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/discovery" : {
+      "get" : {
+        "description" : "Discover an RSS or Atom feed URL from a link website URL.",
+        "operationId" : "discoverLinkFeed",
+        "parameters" : [ {
+          "description" : "Absolute HTTP or HTTPS website URL to inspect.",
+          "in" : "query",
+          "name" : "url",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedDiscoveryResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items" : {
+      "get" : {
+        "description" : "List cached RSS or Atom feed items with cursor pagination.",
+        "operationId" : "listLinkFeedItems",
+        "parameters" : [ {
+          "description" : "Filter items by link metadata name.",
+          "in" : "query",
+          "name" : "linkName",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Filter items by current link group metadata name.",
+          "in" : "query",
+          "name" : "groupName",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Cursor published time boundary.",
+          "in" : "query",
+          "name" : "beforePublishedAt",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Cursor stable item id boundary.",
+          "in" : "query",
+          "name" : "beforeId",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of items to return.",
+          "in" : "query",
+          "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedItemPage"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
       }
     },
     "/apis/core.halo.run/v1alpha1/linkgroups" : {
@@ -846,12 +977,14 @@
           },
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/LinkStatus"
           }
         },
         "description" : "Link extension that represents one website entry displayed by the Links plugin."
       },
       "LinkDetailDTO" : {
-        "required" : [ "title" ],
         "type" : "object",
         "properties" : {
           "description" : {
@@ -872,6 +1005,123 @@
           }
         },
         "description" : "Metadata discovered from a remote website URL."
+      },
+      "LinkFeedCleanupResult" : {
+        "type" : "object",
+        "properties" : {
+          "itemCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "LinkFeedDiscoveryResult" : {
+        "type" : "object",
+        "properties" : {
+          "feedUrl" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkFeedItem" : {
+        "type" : "object",
+        "properties" : {
+          "author" : {
+            "type" : "string"
+          },
+          "contentHash" : {
+            "type" : "string"
+          },
+          "feedUrl" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "guid" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "linkName" : {
+            "type" : "string"
+          },
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkFeedItemPage" : {
+        "type" : "object",
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkFeedItem"
+            }
+          },
+          "nextBeforeId" : {
+            "type" : "string"
+          },
+          "nextBeforePublishedAt" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkFeedRefreshResult" : {
+        "type" : "object",
+        "properties" : {
+          "etag" : {
+            "type" : "string"
+          },
+          "feedUrl" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "fetchedItemCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "itemCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastModified" : {
+            "type" : "string"
+          },
+          "latestPublishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "linkName" : {
+            "type" : "string"
+          },
+          "notModified" : {
+            "type" : "boolean"
+          }
+        }
       },
       "LinkGroup" : {
         "required" : [ "apiVersion", "kind", "metadata", "spec" ],
@@ -1061,12 +1311,24 @@
             "description" : "Sort order of the link; lower values appear earlier.",
             "format" : "int32"
           },
+          "rss" : {
+            "$ref" : "#/components/schemas/RssSpec"
+          },
           "url" : {
             "type" : "string",
             "description" : "Absolute URL that the link points to."
           }
         },
         "description" : "Configurable fields of a link."
+      },
+      "LinkStatus" : {
+        "type" : "object",
+        "properties" : {
+          "rss" : {
+            "$ref" : "#/components/schemas/RssStatus"
+          }
+        },
+        "description" : "Observed state of a link."
       },
       "LinkVo" : {
         "required" : [ "metadata" ],
@@ -1242,6 +1504,67 @@
             "description" : "Value can be any JSON value"
           }
         }
+      },
+      "RssSpec" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean",
+            "description" : "Whether RSS or Atom tracking is enabled for this link."
+          },
+          "feedUrl" : {
+            "type" : "string",
+            "description" : "Absolute HTTP or HTTPS URL of the RSS or Atom feed."
+          }
+        },
+        "description" : "RSS or Atom feed tracking settings."
+      },
+      "RssStatus" : {
+        "type" : "object",
+        "properties" : {
+          "effectiveFeedUrl" : {
+            "type" : "string",
+            "description" : "Feed URL currently used for refreshes."
+          },
+          "etag" : {
+            "type" : "string",
+            "description" : "ETag returned by the feed server for conditional requests."
+          },
+          "failureCount" : {
+            "type" : "integer",
+            "description" : "Number of consecutive feed refresh failures.",
+            "format" : "int32"
+          },
+          "itemCount" : {
+            "type" : "integer",
+            "description" : "Number of cached feed items for this link.",
+            "format" : "int64"
+          },
+          "lastError" : {
+            "type" : "string",
+            "description" : "Last feed refresh failure message."
+          },
+          "lastFetchedAt" : {
+            "type" : "string",
+            "description" : "Last time a feed refresh was attempted.",
+            "format" : "date-time"
+          },
+          "lastModified" : {
+            "type" : "string",
+            "description" : "Last-Modified value returned by the feed server for conditional requests."
+          },
+          "lastSuccessAt" : {
+            "type" : "string",
+            "description" : "Last time a feed refresh completed successfully.",
+            "format" : "date-time"
+          },
+          "latestPublishedAt" : {
+            "type" : "string",
+            "description" : "Latest feed item publication time observed for this link.",
+            "format" : "date-time"
+          }
+        },
+        "description" : "Observed RSS or Atom feed refresh state."
       },
       "SortRequest" : {
         "type" : "object",

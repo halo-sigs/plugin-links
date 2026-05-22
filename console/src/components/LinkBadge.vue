@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { Link } from "@/api/generated";
 import { IconExternalLinkLine } from "@halo-dev/components";
+import { computed } from "vue";
+import MdiRss from "~icons/mdi/rss";
 
 const props = defineProps<{
   selectMode?: boolean;
@@ -17,6 +19,27 @@ function handleClick() {
     emit("open-edit");
   }
 }
+
+const rssStatusClass = computed(() => {
+  if (props.link.status?.rss?.lastError) {
+    return ":uno: bg-red-100 text-red-600";
+  }
+  if (props.link.status?.rss?.lastSuccessAt) {
+    return ":uno: bg-emerald-100 text-emerald-600";
+  }
+  return ":uno: bg-amber-100 text-amber-600";
+});
+
+const rssTooltip = computed(() => {
+  const rss = props.link.status?.rss;
+  if (rss?.lastError) {
+    return `RSS 刷新失败：${rss.lastError}`;
+  }
+  if (rss?.lastSuccessAt) {
+    return `RSS 已启用，缓存 ${rss.itemCount || 0} 篇`;
+  }
+  return "RSS 已启用，等待刷新";
+});
 </script>
 <template>
   <label
@@ -52,6 +75,16 @@ function handleClick() {
         {{ link.spec?.url }}
       </span>
     </div>
+    <span
+      v-if="!selectMode && !sortMode && link.spec?.rss?.enabled"
+      v-tooltip="{
+        content: rssTooltip,
+      }"
+      class=":uno: size-5 flex flex-none items-center justify-center rounded"
+      :class="rssStatusClass"
+    >
+      <MdiRss class=":uno: size-3.5" />
+    </span>
     <a
       v-if="!selectMode && !sortMode && link.spec?.url"
       :href="link.spec.url"

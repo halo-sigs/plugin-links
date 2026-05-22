@@ -13,6 +13,10 @@ rules:
   - apiGroups: [ "core.halo.run", "console.api.link.halo.run" ]
     resources: [ "links", "linkgroups" ]
     verbs: [ "get", "list" ]
+  - apiGroups: [ "console.api.link.halo.run" ]
+    resources: [ "rss/items", "rss/discovery" ]
+    resourceNames: [ "-" ]
+    verbs: [ "get" ]
 ---
 apiVersion: v1alpha1
 kind: Role
@@ -39,6 +43,10 @@ rules:
     resources: [ "links/detail" ]
     resourceNames: [ "-" ]
     verbs: [ "get" ]
+  - apiGroups: [ "console.api.link.halo.run" ]
+    resources: [ "links/rss/refresh", "rss/cleanup" ]
+    resourceNames: [ "-" ]
+    verbs: [ "create" ]
 ---
 apiVersion: v1alpha1
 kind: Role

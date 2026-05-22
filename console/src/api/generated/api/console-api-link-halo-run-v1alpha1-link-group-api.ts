@@ -105,6 +105,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkGroupApiAxiosParamCreator = functi
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
+    
             localVarHeaderParameter['Content-Type'] = 'application/json';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
@@ -247,3 +248,4 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkGroupApi extends BaseAPI {
         return ConsoleApiLinkHaloRunV1alpha1LinkGroupApiFp(this.configuration).sortLinkGroups(requestParameters.sortRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }
+

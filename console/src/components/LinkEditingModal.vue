@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import { linksCoreApiClient } from "@/api";
+import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import type { Link } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
-import { useTemplateRef } from "vue";
+import { shallowRef, useTemplateRef } from "vue";
 import LinkForm from "./LinkForm.vue";
 
 const props = withDefaults(
@@ -23,6 +23,7 @@ const emit = defineEmits<{
 const queryClient = useQueryClient();
 
 const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
+const isRefreshingFeed = shallowRef(false);
 
 const { mutate, isPending } = useMutation({
   mutationFn: (data: LinkFormState) => {
@@ -51,6 +52,17 @@ const { mutate, isPending } = useMutation({
         },
         {
           op: "add",
+          path: "/spec/rss",
+          value:
+            data.rss?.enabled || data.rss?.feedUrl
+              ? {
+                  enabled: data.rss.enabled ?? false,
+                  feedUrl: data.rss.feedUrl || undefined,
+                }
+              : null,
+        },
+        {
+          op: "add",
           path: "/metadata/annotations",
           value: data.annotations || {},
         },
@@ -67,6 +79,24 @@ const { mutate, isPending } = useMutation({
 
 function onSubmit(data: LinkFormState) {
   mutate(data);
+}
+
+async function handleRefreshFeed() {
+  if (!props.link.spec?.rss?.enabled || isRefreshingFeed.value) {
+    return;
+  }
+  isRefreshingFeed.value = true;
+  try {
+    await linksConsoleApiClient.feed.refreshLinkFeed({
+      name: props.link.metadata.name,
+    });
+    Toast.success("刷新 RSS 成功");
+    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+  } catch {
+    Toast.error("刷新 RSS 失败");
+  } finally {
+    isRefreshingFeed.value = false;
+  }
 }
 
 function handleDelete() {
@@ -102,6 +132,7 @@ function handleDelete() {
           displayName: link.spec.displayName,
           logo: link.spec.logo,
           description: link.spec.description,
+          rss: link.spec.rss,
           annotations: link.metadata.annotations,
         }"
         @submit="onSubmit"
@@ -113,6 +144,9 @@ function handleDelete() {
         <VSpace>
           <!-- @vue-ignore -->
           <VButton :loading="isPending" type="secondary" @click="$formkit.submit('link-form')"> 保存 </VButton>
+          <VButton v-if="link.spec?.rss?.enabled" :loading="isRefreshingFeed" @click="handleRefreshFeed">
+            刷新 RSS
+          </VButton>
           <VButton @click="modal?.close()">取消</VButton>
         </VSpace>
         <VButton type="danger" ghost @click="handleDelete">删除</VButton>
