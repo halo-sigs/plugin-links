@@ -1,266 +1,39 @@
 # plugin-links
 
-Halo 2.0 的链接管理插件，支持在 Console 进行管理以及为主题端提供 `/links` 页面路由。
+Halo 2.0 的链接管理插件，支持在 Console 管理链接，并为主题端提供 `/links` 页面路由、Finder API 和匿名公共 REST API。
 
-## 使用方式
+## 功能特性
+
+- 支持为链接设置名称、URL、Logo、描述、分组和排序
+- 支持链接分组管理、分组排序，以及删除分组时保留或删除组内链接
+- 支持批量导入链接，可按需自动获取站点标题、描述和图标
+- 主题端 `/links` 页面路由，可通过 `group` 参数按分组展示
+- 提供 `linkFinder` Finder API，可在主题任意位置渲染链接
+- 提供匿名可访问的公共 REST API，方便前端框架构建客户端渲染链接页
+
+## 安装使用
 
 1. 下载，目前提供以下两个下载方式：
     - GitHub Releases：访问 [Releases](https://github.com/halo-sigs/plugin-links/releases) 下载 Assets 中的 JAR 文件。
-    - Halo 应用市场：<https://halo.run/store/apps/app-hfbQg>
+    - Halo 应用市场：<https://www.halo.run/store/apps/app-hfbQg>
 2. 安装，插件安装和更新方式可参考：<https://docs.halo.run/user-guide/plugins>
 3. 安装完成之后，访问 Console 左侧的**链接**菜单项，即可进行管理。
-4. 前台访问地址为 `/links`，需要注意的是，此插件需要主题提供模板（links.html）才能访问 `/links`。
-
-## 开发环境
-
-```bash
-git clone git@github.com:halo-sigs/plugin-links.git
-
-# 或者当你 fork 之后
-
-git clone git@github.com:{your_github_id}/plugin-links.git
-```
-
-```bash
-cd path/to/plugin-links
-```
-
-```bash
-# macOS / Linux
-./gradlew pnpmInstall
-
-# Windows
-./gradlew.bat pnpmInstall
-```
-
-```bash
-# macOS / Linux
-./gradlew build
-
-# Windows
-./gradlew.bat build
-```
-
-修改 Halo 配置文件：
-
-```yaml
-halo:
-  plugin:
-    runtime-mode: development
-    classes-directories:
-      - "build/classes"
-      - "build/resources"
-    lib-directories:
-      - "libs"
-    fixedPluginPath:
-      - "/path/to/plugin-links"
-```
+4. 前台访问地址为 `/links`，需要注意的是，此插件需要主题提供模板（`links.html`）才能访问 `/links`。
 
 ## 主题适配
 
-目前此插件为主题端提供了 `/links` 路由，模板为 `links.html`，也提供了 [Finder API](https://docs.halo.run/developer-guide/theme/finder-apis)，可以将链接渲染到任何地方。
+此插件为主题端提供了：
 
-### 模板变量
+- **列表路由** `/links`（模板 `links.html`），支持通过 `group` 查询参数筛选分组
+- **Finder API**（`linkFinder`）：可在主题任意位置渲染链接，无需依赖路由页面
+- **公共 REST API**：供 React / Vue / Svelte 等前端框架构建客户端渲染链接页使用
+- **评论来源适配**：可在链接页面接入 Halo 评论组件
 
-#### 路由信息
+详细的主题适配文档请参考：
 
-- 模板路径：/templates/links.html
-- 访问路径：/links
+- [主题 API 文档](./dev/theme-api.md) — 模板路由、模板变量、Finder API、评论适配、类型定义
+- [REST API 文档](./dev/rest-api.md) — 公共 API、Console API 和标准 CRUD 端点
 
-#### 变量
+## 开发文档
 
-groups
-
-##### 变量类型
-
-List<[#LinkGroupVo](#linkgroupvo)>
-
-##### 示例
-
-```html
-<th:block th:each="group : ${groups}">
-    <h2 th:text="${group.spec.displayName}"></h2>
-    <a th:each="link : ${group.links}" :key="i" th:href="${link.spec.url}" target="_blank">
-        <div>
-            <div>
-                <img  th:src="${link.spec.logo}" th:alt="${link.spec.displayName}" />
-            </div>
-            <div >
-                <div>
-                    <p th:text="${link.spec.displayName}"></p>
-                    <p th:text="${link.spec.description}"></p>
-                </div>
-            </div>
-        </div>
-    </a>
-</th:block>
-```
-
-#### 变量
-
-linksTitle
-
-##### 变量类型
-
-String
-
-##### 示例
-
-```html
-<h2 th:text="${linksTitle}"></h2>
-```
-
-### Finder API
-
-#### listBy(group)
-
-##### 描述
-
-根据 group 获取链接。
-
-##### 参数
-
-1. `group:string` - 分组（LinkGroup）的唯一标识 `metadata.name`。
-
-##### 返回值
-
-List<[#LinkVo](#linkvo)>
-
-##### 示例
-
-```html
-<th:block th:each="link : ${linkFinder.listBy('friends')}">
-    <a th:href="${link.spec.url}" target="_blank">
-        <div>
-            <div>
-                <img  th:src="${link.spec.logo}" th:alt="${link.spec.displayName}" />
-            </div>
-            <div >
-                <div>
-                    <p th:text="${link.spec.displayName}"></p>
-                    <p th:text="${link.spec.description}"></p>
-                </div>
-            </div>
-        </div>
-    </a>
-</th:block>
-```
-
-#### groupBy()
-
-##### 描述
-
-获取所有分组，包含链接集合。
-
-##### 参数
-
-无
-
-##### 返回值
-
-List<[#LinkGroupVo](#linkgroupvo)>
-
-##### 示例
-
-```html
-<th:block th:each="group : ${linkFinder.groupBy()}">
-    <h2 th:text="${group.spec.displayName}"></h2>
-    <a th:each="link : ${group.links}" :key="i" th:href="${link.spec.url}" target="_blank">
-        <div>
-            <div>
-                <img  th:src="${link.spec.logo}" th:alt="${link.spec.displayName}" />
-            </div>
-            <div >
-                <div>
-                    <p th:text="${link.spec.displayName}"></p>
-                    <p th:text="${link.spec.description}"></p>
-                </div>
-            </div>
-        </div>
-    </a>
-</th:block>
-```
-
-### 评论适配
-
-主题开发者可以参考 [自定义标签](https://docs.halo.run/developer-guide/theme/template-tag/#halocomment)，来为友情链接接入评论功能。
-
-#### 参数值
-
-group：plugin.halo.run
-
-kind: Plugin
-
-name: ${pluginName}
-
-#### 示例
-
-```html
-<div th:if="${haloCommentEnabled}">
-    <halo:comment
-        group="plugin.halo.run"
-        kind="Plugin"
-        th:attr="name=${pluginName}"
-    />
-</div>
-```
-
-### 类型定义
-
-#### LinkVo
-
-```json
-{
-  "metadata": {
-    "name": "string",                                   // 唯一标识
-    "labels": {
-      "additionalProp1": "string"
-    },
-    "annotations": {
-      "additionalProp1": "string"
-    },
-    "creationTimestamp": "2022-11-20T13:06:38.512Z",    // 创建时间
-  },
-  "spec": {
-    "url": "string",                                    // 链接
-    "displayName": "string",                            // 显示名称
-    "description": "string",                            // 描述
-    "logo": "string",                                   // Logo
-    "priority": 0,                                      // 排序字段
-  }
-}
-```
-
-#### LinkGroupVo
-
-```json
-{
-  "metadata": {
-    "name": "string",                                   // 唯一标识
-    "labels": {
-      "additionalProp1": "string"
-    },
-    "annotations": {
-      "additionalProp1": "string"
-    },
-    "creationTimestamp": "2022-11-20T13:06:38.512Z",    // 创建时间
-  },
-  "spec": {
-    "displayName": "string",                            // 显示名称
-    "priority": 0,                                      // 排序字段
-    "links": [                                          // 链接集合，即 Link 的 metadata.name 的集合
-      "string"
-    ]
-  },
-  "links": "List<#LinkVo>"                              // 链接集合
-}
-```
-
-### Annotations 元数据适配
-
-根据 Halo 的[元数据表单定义文档](https://docs.halo.run/developer-guide/annotations-form/)和[模型元数据文档](https://docs.halo.run/developer-guide/theme/annotations)，Halo 支持为部分模型的表单添加元数据表单，此插件同样适配了此功能，如果你作为主题开发者，需要为链接或者链接分组添加额外的字段，可以参考上述文档并结合下面的 TargetRef 列表进行适配。
-
-| 对应模型   | group            | kind       |
-| ---------- | ---------------- | ---------- |
-| 链接       | core.halo.run | Link       |
-| 链接分组 | core.halo.run | LinkGroup |
+- [开发文档](./dev/dev.md) — 本地开发、构建、测试、API 客户端生成
