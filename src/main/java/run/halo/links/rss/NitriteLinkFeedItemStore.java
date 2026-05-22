@@ -32,7 +32,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
 
     public NitriteLinkFeedItemStore(LinksNitriteDatabase database) {
         this.database = database;
-        database.withCollection(COLLECTION_NAME, collection -> {
+        boolean migrated = database.withCollection(COLLECTION_NAME, collection -> {
             if (!collection.hasIndex("id")) {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.UNIQUE), "id");
             }
@@ -47,8 +47,24 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE),
                     "fetchedAt");
             }
-            return null;
+            if (!collection.hasIndex("read")) {
+                collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "read");
+            }
+            List<Document> docsWithoutReadState = new ArrayList<>();
+            collection.find().forEach(doc -> {
+                if (doc.get("read", Boolean.class) == null) {
+                    docsWithoutReadState.add(doc);
+                }
+            });
+            docsWithoutReadState.forEach(doc -> {
+                doc.put("read", false);
+                collection.update(where("id").eq(doc.get("id", String.class)), doc);
+            });
+            return !docsWithoutReadState.isEmpty();
         });
+        if (migrated) {
+            database.commit();
+        }
     }
 
     @Override
@@ -57,6 +73,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             throw new IllegalArgumentException("Feed item id must not be blank.");
         }
         database.withCollection(COLLECTION_NAME, collection -> {
+            mergeReadState(collection.find(where("id").eq(item.getId())).firstOrNull(), item);
             collection.update(where("id").eq(item.getId()), toDocument(item),
                 UpdateOptions.updateOptions(true));
             return null;
@@ -74,6 +91,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
                 if (!StringUtils.hasText(item.getId())) {
                     throw new IllegalArgumentException("Feed item id must not be blank.");
                 }
+                mergeReadState(collection.find(where("id").eq(item.getId())).firstOrNull(), item);
                 collection.update(where("id").eq(item.getId()), toDocument(item),
                     UpdateOptions.updateOptions(true));
             }
@@ -104,6 +122,26 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
     @Override
     public long count() {
         return database.withCollection(COLLECTION_NAME, collection -> collection.size());
+    }
+
+    @Override
+    public boolean updateRead(String id, boolean read) {
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("Feed item id must not be blank.");
+        }
+        boolean updated = database.withCollection(COLLECTION_NAME, collection -> {
+            Document doc = collection.find(where("id").eq(id)).firstOrNull();
+            if (doc == null) {
+                return false;
+            }
+            doc.put("read", read);
+            collection.update(where("id").eq(id), doc);
+            return true;
+        });
+        if (updated) {
+            database.commit();
+        }
+        return updated;
     }
 
     @Override
@@ -190,7 +228,23 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             }
             filter = and(filter, cursor);
         }
+        if (query.getRead() != null) {
+            Filter readFilter = query.getRead()
+                ? where("read").eq(true)
+                : where("read").eq(false);
+            filter = and(filter, readFilter);
+        }
         return filter;
+    }
+
+    private static void mergeReadState(Document existing, LinkFeedItem item) {
+        if (existing == null) {
+            return;
+        }
+        Boolean read = existing.get("read", Boolean.class);
+        if (read != null) {
+            item.setRead(read);
+        }
     }
 
     private static Document toDocument(LinkFeedItem item) {
@@ -205,7 +259,8 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             .put("publishedAt", toString(item.getPublishedAt()))
             .put("updatedAt", toString(item.getUpdatedAt()))
             .put("fetchedAt", toString(item.getFetchedAt()))
-            .put("contentHash", item.getContentHash());
+            .put("contentHash", item.getContentHash())
+            .put("read", Boolean.TRUE.equals(item.getRead()));
     }
 
     private static Optional<LinkFeedItem> parseDocument(Document doc) {
@@ -226,6 +281,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             item.setUpdatedAt(parseInstant(doc.get("updatedAt", String.class)));
             item.setFetchedAt(parseInstant(doc.get("fetchedAt", String.class)));
             item.setContentHash(doc.get("contentHash", String.class));
+            item.setRead(Boolean.TRUE.equals(doc.get("read", Boolean.class)));
             return Optional.of(item);
         } catch (Exception e) {
             log.warn("Failed to parse cached feed item: {}", doc, e);

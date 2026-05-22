@@ -19,7 +19,7 @@ Halo Extension storage remains the right place for user-owned link configuration
 **Non-Goals:**
 
 - No public theme feed page in the first version.
-- No full RSS reader behavior such as folders, read/unread state, starring, or per-user timelines.
+- No full RSS reader behavior such as folders, starring, or per-user timelines.
 - No permanent archival guarantee for feed items; they are treated as rebuildable cache.
 - No migration from existing RSS data, because the plugin has no current RSS storage.
 - No automatic background crawling of every linked website unless RSS is enabled for that link.

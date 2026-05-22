@@ -70,6 +70,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         storeQuery.setLinkName(requested.getLinkName());
         storeQuery.setBeforePublishedAt(requested.getBeforePublishedAt());
         storeQuery.setBeforeId(requested.getBeforeId());
+        storeQuery.setRead(requested.getRead());
         storeQuery.setLimit(Math.min(limit + 1, LinkFeedItemQuery.MAX_LIMIT));
 
         List<LinkFeedItem> items = itemStore.listRecent(storeQuery);
@@ -207,6 +208,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         item.setUpdatedAt(updatedAt);
         item.setFetchedAt(fetchedAt);
         item.setContentHash(sha256(firstText(title, "") + "|" + firstText(summary, "")));
+        item.setRead(false);
         return item;
     }
 

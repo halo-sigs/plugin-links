@@ -2,7 +2,7 @@
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import type { Link } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
-import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
@@ -69,16 +69,36 @@ const { mutate, isPending } = useMutation({
       ],
     });
   },
-  onSuccess: () => {
+  onSuccess: async (_, data) => {
     Toast.success("编辑链接成功");
+    if (shouldRefreshFeedAfterSave(data)) {
+      try {
+        await linksConsoleApiClient.feed.refreshLinkFeed({
+          name: props.link.metadata.name,
+        });
+        Toast.success("RSS 已自动刷新");
+      } catch {
+        Toast.error("RSS 自动刷新失败");
+      }
+    }
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+    queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
   },
 });
 
 function onSubmit(data: LinkFormState) {
   mutate(data);
+}
+
+function shouldRefreshFeedAfterSave(data: LinkFormState) {
+  const nextFeedUrl = data.rss?.feedUrl || "";
+  return Boolean(
+    data.rss?.enabled
+      && nextFeedUrl
+      && (!props.link.spec?.rss?.enabled || props.link.spec?.rss?.feedUrl !== nextFeedUrl),
+  );
 }
 
 async function handleRefreshFeed() {
@@ -92,6 +112,7 @@ async function handleRefreshFeed() {
     });
     Toast.success("刷新 RSS 成功");
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+    queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
   } catch {
     Toast.error("刷新 RSS 失败");
   } finally {
@@ -113,6 +134,7 @@ function handleDelete() {
 
       modal.value?.close();
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+      queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
     },
   });
 }

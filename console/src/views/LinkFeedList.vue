@@ -1,26 +1,29 @@
 <script lang="ts" setup>
 import type { Link, LinkFeedItem, LinkGroup } from "@/api/generated";
-import MdiRss from "~icons/mdi/rss";
-import { useLinksFetch } from "@/composables/use-link-fetch";
-import { useLinkFeedItems } from "@/composables/use-link-feed";
+import { useRssLinksFetch } from "@/composables/use-link-fetch";
+import { useLinkFeedItems, type LinkFeedReadStatus } from "@/composables/use-link-feed";
 import { IconArrowLeft, IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import MdiRefresh from "~icons/mdi/refresh";
+import MdiRss from "~icons/mdi/rss";
 
 const router = useRouter();
-const { data: groupsWithLinks } = useLinksFetch();
+const { data: groupsWithLinks } = useRssLinksFetch();
 const {
   items,
   selectedLinkName,
   selectedGroupName,
+  selectedReadStatus,
   hasNext,
   isLoading,
   isLoadingMore,
-  refreshingLinkName,
+  markingReadItemId,
   load,
   selectLink,
   selectGroup,
-  refreshLink,
+  selectReadStatus,
+  markItemRead,
 } = useLinkFeedItems();
 
 const allLinks = computed(() => {
@@ -32,7 +35,10 @@ const linkByName = computed(() => {
 });
 
 const groups = computed(() => {
-  return groupsWithLinks.value?.map((item) => item.group).filter((group): group is LinkGroup => !!group) || [];
+  return groupsWithLinks.value
+    ?.filter((item) => item.links.length)
+    .map((item) => item.group)
+    .filter((group): group is LinkGroup => !!group) || [];
 });
 
 function sourceLink(linkName?: string): Link | undefined {
@@ -48,6 +54,10 @@ function sourceName(linkName?: string) {
 
 function articleTitle(item: LinkFeedItem) {
   return item.title || item.url || "未命名文章";
+}
+
+function handleReadStatusChange(event: Event) {
+  selectReadStatus((event.target as HTMLSelectElement).value as LinkFeedReadStatus);
 }
 
 function formatTime(value?: string) {
@@ -106,8 +116,25 @@ function formatTime(value?: string) {
           </option>
         </select>
       </label>
+      <label class=":uno: min-w-36 flex flex-col gap-1 text-xs text-gray-600">
+        <span>阅读状态</span>
+        <select
+          v-model="selectedReadStatus"
+          class=":uno: h-9 border border-gray-200 rounded bg-white px-2 text-sm text-gray-900"
+          @change="handleReadStatusChange"
+        >
+          <option value="">全部</option>
+          <option value="unread">未读</option>
+          <option value="read">已读</option>
+        </select>
+      </label>
       <VSpace>
-        <VButton size="sm" :loading="isLoading" @click="load()">刷新列表</VButton>
+        <VButton size="sm" :loading="isLoading" @click="load()">
+          <template #icon>
+            <MdiRefresh class=":uno: size-full" />
+          </template>
+          重新加载
+        </VButton>
       </VSpace>
     </div>
 
@@ -122,6 +149,9 @@ function formatTime(value?: string) {
         v-for="item in items"
         :key="item.id"
         class=":uno: border border-gray-100 rounded-lg bg-white p-4 shadow-sm"
+        :class="{
+          ':uno: bg-gray-50/80': item.read,
+        }"
       >
         <div class=":uno: flex flex-wrap items-start justify-between gap-3">
           <div class=":uno: min-w-0 flex-1">
@@ -131,6 +161,10 @@ function formatTime(value?: string) {
               target="_blank"
               rel="noopener noreferrer"
               class=":uno: hover:text-primary max-w-full inline-flex items-center gap-1 text-sm text-gray-900 font-medium"
+              :class="{
+                ':uno: text-gray-500': item.read,
+              }"
+              @click="markItemRead(item, true)"
             >
               <span class=":uno: truncate">{{ articleTitle(item) }}</span>
               <IconExternalLinkLine class=":uno: size-3.5 flex-none" />
@@ -141,16 +175,23 @@ function formatTime(value?: string) {
             <div class=":uno: mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <span>{{ sourceName(item.linkName) }}</span>
               <span>{{ formatTime(item.publishedAt || item.updatedAt || item.fetchedAt) }}</span>
+              <span
+                class=":uno: rounded bg-gray-100 px-1.5 py-0.5"
+                :class="{
+                  ':uno: bg-green-50 text-green-700': !item.read,
+                }"
+              >
+                {{ item.read ? "已读" : "未读" }}
+              </span>
             </div>
           </div>
           <VButton
-            v-if="item.linkName"
             size="sm"
             ghost
-            :loading="refreshingLinkName === item.linkName"
-            @click="refreshLink(item.linkName)"
+            :loading="markingReadItemId === item.id"
+            @click="markItemRead(item, !item.read)"
           >
-            刷新
+            {{ item.read ? "标为未读" : "标为已读" }}
           </VButton>
         </div>
         <p v-if="item.summary" class=":uno: line-clamp-3 mt-3 text-sm text-gray-600">

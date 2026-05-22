@@ -11,6 +11,7 @@ public class LinkFeedItemQuery {
     private String linkName;
     private Instant beforePublishedAt;
     private String beforeId;
+    private Boolean read;
     private int limit = DEFAULT_LIMIT;
 
     public int normalizedLimit() {

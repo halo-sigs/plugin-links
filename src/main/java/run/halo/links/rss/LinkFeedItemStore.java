@@ -11,6 +11,8 @@ public interface LinkFeedItemStore {
 
     List<LinkFeedItem> listRecent(LinkFeedItemQuery query);
 
+    boolean updateRead(String id, boolean read);
+
     long count();
 
     long countByLinkName(String linkName);

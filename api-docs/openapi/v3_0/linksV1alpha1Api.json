@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:58682",
+    "url" : "http://localhost:49440",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -438,6 +438,13 @@
             "type" : "string"
           }
         }, {
+          "description" : "Filter items by read state.",
+          "in" : "query",
+          "name" : "read",
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
           "description" : "Cursor published time boundary.",
           "in" : "query",
           "name" : "beforePublishedAt",
@@ -472,6 +479,31 @@
             "description" : "default response"
           }
         },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/{id}/read" : {
+      "post" : {
+        "description" : "Mark a cached RSS or Atom feed item as read or unread.",
+        "operationId" : "markLinkFeedItemRead",
+        "parameters" : [ {
+          "description" : "Stable cached feed item id.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Read state to apply.",
+          "in" : "query",
+          "name" : "read",
+          "required" : true,
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : { },
         "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
       }
     },
@@ -1051,6 +1083,9 @@
           "publishedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "read" : {
+            "type" : "boolean"
           },
           "summary" : {
             "type" : "string"

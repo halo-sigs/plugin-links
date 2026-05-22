@@ -17,6 +17,10 @@ rules:
     resources: [ "rss/items", "rss/discovery" ]
     resourceNames: [ "-" ]
     verbs: [ "get" ]
+  - apiGroups: [ "console.api.link.halo.run" ]
+    resources: [ "rss/items/read" ]
+    resourceNames: [ "-" ]
+    verbs: [ "create" ]
 ---
 apiVersion: v1alpha1
 kind: Role

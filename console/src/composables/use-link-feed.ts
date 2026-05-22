@@ -5,20 +5,29 @@ import { computed, ref, shallowRef, watch } from "vue";
 
 export const QK_LINK_FEED_ITEMS = "plugin:links:feed-items";
 
+export type LinkFeedReadStatus = "" | "unread" | "read";
+
 export function useLinkFeedItems() {
   const items = ref<LinkFeedItem[]>([]);
   const selectedLinkName = shallowRef("");
   const selectedGroupName = shallowRef("");
+  const selectedReadStatus = shallowRef<LinkFeedReadStatus>("");
   const nextBeforePublishedAt = shallowRef<string | undefined>();
   const nextBeforeId = shallowRef<string | undefined>();
   const hasNext = shallowRef(false);
   const isLoading = shallowRef(false);
   const isLoadingMore = shallowRef(false);
-  const refreshingLinkName = shallowRef("");
+  const markingReadItemId = shallowRef("");
 
   const activeFilter = computed(() => ({
     linkName: selectedLinkName.value || undefined,
     groupName: selectedGroupName.value || undefined,
+    read:
+      selectedReadStatus.value === "read"
+        ? true
+        : selectedReadStatus.value === "unread"
+          ? false
+          : undefined,
   }));
 
   async function load({ append = false }: { append?: boolean } = {}) {
@@ -61,23 +70,32 @@ export function useLinkFeedItems() {
     }
   }
 
-  async function refreshLink(name: string) {
-    if (!name || refreshingLinkName.value) {
+  function selectReadStatus(status: LinkFeedReadStatus) {
+    selectedReadStatus.value = status;
+  }
+
+  async function markItemRead(item: LinkFeedItem, read: boolean) {
+    if (!item.id || markingReadItemId.value) {
       return;
     }
-    refreshingLinkName.value = name;
+    markingReadItemId.value = item.id;
     try {
-      await linksConsoleApiClient.feed.refreshLinkFeed({ name });
-      Toast.success("刷新 RSS 成功");
-      await load();
+      await linksConsoleApiClient.feed.markLinkFeedItemRead({
+        id: item.id,
+        read,
+      });
+      item.read = read;
+      if (activeFilter.value.read !== undefined && activeFilter.value.read !== read) {
+        items.value = items.value.filter((current) => current.id !== item.id);
+      }
     } catch {
-      Toast.error("刷新 RSS 失败");
+      Toast.error("更新阅读状态失败");
     } finally {
-      refreshingLinkName.value = "";
+      markingReadItemId.value = "";
     }
   }
 
-  watch([selectedLinkName, selectedGroupName], () => load(), {
+  watch([selectedLinkName, selectedGroupName, selectedReadStatus], () => load(), {
     immediate: true,
   });
 
@@ -85,13 +103,15 @@ export function useLinkFeedItems() {
     items,
     selectedLinkName,
     selectedGroupName,
+    selectedReadStatus,
     hasNext,
     isLoading,
     isLoadingMore,
-    refreshingLinkName,
+    markingReadItemId,
     load,
     selectLink,
     selectGroup,
-    refreshLink,
+    selectReadStatus,
+    markItemRead,
   };
 }

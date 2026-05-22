@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { linksCoreApiClient } from "@/api";
+import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import type { LinkGroup } from "@/api/generated";
-import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
@@ -57,15 +57,29 @@ const { mutate, isPending } = useMutation({
       },
     });
   },
-  onSuccess: () => {
+  onSuccess: async (response, data) => {
     Toast.success("创建链接成功");
+    const linkName = response.data.metadata.name;
+    if (shouldRefreshFeedAfterSave(data) && linkName) {
+      try {
+        await linksConsoleApiClient.feed.refreshLinkFeed({ name: linkName });
+        Toast.success("RSS 已自动刷新");
+      } catch {
+        Toast.error("RSS 自动刷新失败");
+      }
+    }
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+    queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
   },
 });
 
 function onSubmit(data: LinkFormState) {
   mutate(data);
+}
+
+function shouldRefreshFeedAfterSave(data: LinkFormState) {
+  return Boolean(data.rss?.enabled && data.rss.feedUrl);
 }
 
 const title = computed(() => {

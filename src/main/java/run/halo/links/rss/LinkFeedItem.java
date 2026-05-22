@@ -20,4 +20,5 @@ public class LinkFeedItem {
     private Instant updatedAt;
     private Instant fetchedAt;
     private String contentHash;
+    private Boolean read;
 }

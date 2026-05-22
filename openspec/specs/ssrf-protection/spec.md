@@ -1,4 +1,9 @@
-## ADDED Requirements
+# ssrf-protection Specification
+
+## Purpose
+Define URL-fetch safety requirements that prevent server-side requests from reaching private, reserved, or otherwise unsafe network targets.
+
+## Requirements
 
 ### Requirement: URL validation prevents DNS Rebinding attacks
 The system SHALL resolve the URL hostname to IP addresses once, reject any private/reserved IPs, and then connect to the validated public IP directly while preserving the original Host header.
@@ -36,3 +41,36 @@ The system SHALL return HTTP 400 (Bad Request) for link detail requests with mal
 #### Scenario: Non-HTTP scheme returns 400
 - **WHEN** a link detail request is made with a URL using the `ftp://` scheme
 - **THEN** the system returns HTTP 400 with an error message indicating only HTTP and HTTPS are allowed
+
+### Requirement: RSS feed requests are protected from SSRF
+The system SHALL apply URL validation to RSS feed discovery and RSS feed fetching before making any server-side network request.
+
+#### Scenario: Private feed URL is blocked
+- **WHEN** a feed discovery or feed fetch request targets a URL resolving to a private or reserved address
+- **THEN** the system rejects the request before connecting
+
+#### Scenario: Non-HTTP feed URL is blocked
+- **WHEN** a feed discovery or feed fetch request targets a URL using a non-HTTP(S) scheme
+- **THEN** the system rejects the request before connecting
+
+### Requirement: RSS redirects remain within the safety boundary
+The system SHALL validate every redirect target followed during RSS feed discovery and fetching.
+
+#### Scenario: Redirect to private address is blocked
+- **WHEN** a public feed URL redirects to a private or reserved address
+- **THEN** the system rejects the redirect and records the feed fetch as failed
+
+#### Scenario: Redirect limit is enforced
+- **WHEN** a feed discovery or feed fetch request exceeds the configured redirect limit
+- **THEN** the system stops following redirects and records the request as failed
+
+### Requirement: RSS responses are bounded
+The system SHALL enforce timeout and maximum response size limits when fetching RSS discovery pages and feed documents.
+
+#### Scenario: Feed response exceeds maximum size
+- **WHEN** a feed discovery or feed fetch response exceeds the configured maximum response size
+- **THEN** the system stops processing the response and records the request as failed
+
+#### Scenario: Feed request times out
+- **WHEN** a feed discovery or feed fetch request exceeds the configured timeout
+- **THEN** the system stops the request and records the request as failed

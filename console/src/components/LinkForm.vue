@@ -130,7 +130,7 @@ async function onSubmit(formData: LinkFormState) {
           <span class=":uno: text-base text-gray-900 font-medium"> 常规 </span>
         </div>
       </div>
-      <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+      <div class=":uno: mt-5 md:col-span-3 md:mt-0 space-y-4">
         <FormKit type="url" name="url" v-model="data.url" validation="required" label="网站地址">
           <template #suffix>
             <button
@@ -169,7 +169,7 @@ async function onSubmit(formData: LinkFormState) {
           <span class=":uno: text-base text-gray-900 font-medium"> RSS 订阅 </span>
         </div>
       </div>
-      <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+      <div class=":uno: mt-5 md:col-span-3 md:mt-0 space-y-4">
         <FormKit type="checkbox" name="rssEnabled" v-model="data.rss.enabled" label="启用 RSS 订阅"></FormKit>
         <FormKit type="url" name="rssFeedUrl" v-model="data.rss.feedUrl" label="订阅地址">
           <template #suffix>
@@ -201,7 +201,7 @@ async function onSubmit(formData: LinkFormState) {
         <span class=":uno: text-base text-gray-900 font-medium"> 元数据 </span>
       </div>
     </div>
-    <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+    <div class=":uno: mt-5 md:col-span-3 md:mt-0 space-y-4">
       <AnnotationsForm
         :key="name"
         ref="annotationsForm"

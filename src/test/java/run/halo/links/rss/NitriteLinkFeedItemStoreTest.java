@@ -58,6 +58,41 @@ class NitriteLinkFeedItemStoreTest {
         }
     }
 
+    @Test
+    void shouldFilterAndPreserveReadState() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            LinkFeedItem item = item("item-1", "link-a", "Unread", "2026-05-20T10:00:00Z");
+            store.upsert(item);
+
+            assertThat(store.updateRead("item-1", true)).isTrue();
+            assertThat(store.updateRead("missing", true)).isFalse();
+
+            LinkFeedItemQuery readQuery = new LinkFeedItemQuery();
+            readQuery.setRead(true);
+            assertThat(store.listRecent(readQuery))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("item-1");
+
+            LinkFeedItemQuery unreadQuery = new LinkFeedItemQuery();
+            unreadQuery.setRead(false);
+            assertThat(store.listRecent(unreadQuery)).isEmpty();
+
+            LinkFeedItem refreshed = item("item-1", "link-a", "Updated", "2026-05-20T10:00:00Z");
+            store.upsert(refreshed);
+
+            assertThat(store.listRecent(readQuery))
+                .singleElement()
+                .satisfies(updated -> {
+                    assertThat(updated.getTitle()).isEqualTo("Updated");
+                    assertThat(updated.getRead()).isTrue();
+                });
+        } finally {
+            database.destroy();
+        }
+    }
+
     private static LinkFeedItem item(String id, String linkName, String title, String publishedAt) {
         LinkFeedItem item = new LinkFeedItem();
         item.setId(id);
@@ -69,6 +104,7 @@ class NitriteLinkFeedItemStoreTest {
         item.setPublishedAt(Instant.parse(publishedAt));
         item.setFetchedAt(Instant.parse("2026-05-22T12:00:00Z"));
         item.setContentHash(id);
+        item.setRead(false);
         return item;
     }
 }

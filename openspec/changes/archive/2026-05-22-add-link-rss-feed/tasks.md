@@ -6,6 +6,7 @@
 - [x] 1.4 Define feed item and feed query domain models for cached RSS item persistence
 - [x] 1.5 Implement `LinkFeedItemStore` with deterministic upsert, indexed cursor listing, count, and delete operations
 - [x] 1.6 Implement retention cleanup by per-link count, global count, and item age limits
+- [x] 1.7 Persist cached feed item read state outside Halo Extension storage
 
 ## 2. Feed Fetching And Security
 
@@ -23,6 +24,7 @@
 - [x] 3.3 Add scheduled refresh for enabled links with conservative batching and per-feed failure isolation
 - [x] 3.4 Add scheduled retention cleanup and compact the embedded database after large delete batches
 - [x] 3.5 Regenerate OpenAPI docs and the generated TypeScript API client with `./gradlew generateApiClient`
+- [x] 3.6 Add read-state filtering and mark-read APIs for cached feed items
 
 ## 4. Console UI
 
@@ -31,6 +33,10 @@
 - [x] 4.3 Add a Console route for recent friend-link updates with cursor loading, link filter, group filter, and external article links
 - [x] 4.4 Add manual refresh actions with loading, success, and failure states
 - [x] 4.5 Render feed item titles and summaries as sanitized or plain text content
+- [x] 4.6 Automatically refresh RSS after first enabling RSS tracking for a link
+- [x] 4.7 Add read/unread filtering and mark-read actions to the friend-link updates view
+- [x] 4.8 Simplify navigation and refresh controls based on Console smoke-test feedback
+- [x] 4.9 Limit RSS updates view link and group filter choices to subscribed links
 
 ## 5. Verification
 

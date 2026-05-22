@@ -100,6 +100,13 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                         .required(false)
                     )
                     .parameter(parameterBuilder()
+                        .name("read")
+                        .description("Filter items by read state.")
+                        .in(ParameterIn.QUERY)
+                        .implementation(Boolean.class)
+                        .required(false)
+                    )
+                    .parameter(parameterBuilder()
                         .name("beforePublishedAt")
                         .description("Cursor published time boundary.")
                         .in(ParameterIn.QUERY)
@@ -122,6 +129,25 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                     )
                     .response(responseBuilder().implementation(LinkFeedItemPage.class));
             })
+            .POST("rss/items/{id}/read", this::markItemRead, builder -> builder
+                .operationId("markLinkFeedItemRead")
+                .description("Mark a cached RSS or Atom feed item as read or unread.")
+                .tag(tag)
+                .parameter(parameterBuilder()
+                    .name("id")
+                    .description("Stable cached feed item id.")
+                    .in(ParameterIn.PATH)
+                    .implementation(String.class)
+                    .required(true)
+                )
+                .parameter(parameterBuilder()
+                    .name("read")
+                    .description("Read state to apply.")
+                    .in(ParameterIn.QUERY)
+                    .implementation(Boolean.class)
+                    .required(true)
+                )
+            )
             .POST("rss/-/cleanup", this::cleanupFeedItems, builder -> builder
                 .operationId("cleanupLinkFeedItems")
                 .description("Apply RSS item retention cleanup and compact the embedded feed cache.")
@@ -171,6 +197,23 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         }
     }
 
+    private Mono<ServerResponse> markItemRead(ServerRequest request) {
+        String id = request.pathVariable("id");
+        try {
+            boolean read = request.queryParam("read")
+                .filter(StringUtils::hasText)
+                .map(LinkFeedEndpoint::parseBoolean)
+                .orElseThrow(() -> new IllegalArgumentException("Missing query parameter: read"));
+            return Mono.fromCallable(() -> itemStore.updateRead(id, read))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(updated -> updated
+                    ? ServerResponse.noContent().build()
+                    : ServerResponse.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        }
+    }
+
     private Mono<ServerResponse> cleanupFeedItems(ServerRequest request) {
         return Mono.fromCallable(() -> {
                 retentionService.enforce(LinkFeedRetentionPolicy.defaults());
@@ -203,6 +246,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             linkQuery.setLinkName(linkName);
             linkQuery.setBeforePublishedAt(query.getBeforePublishedAt());
             linkQuery.setBeforeId(query.getBeforeId());
+            linkQuery.setRead(query.getRead());
             linkQuery.setLimit(Math.min(limit + 1, LinkFeedItemQuery.MAX_LIMIT));
             items.addAll(itemStore.listRecent(linkQuery));
         }
@@ -236,6 +280,9 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                     throw new IllegalArgumentException("Invalid beforePublishedAt.", e);
                 }
             });
+        request.queryParam("read")
+            .filter(StringUtils::hasText)
+            .ifPresent(value -> query.setRead(parseBoolean(value)));
         request.queryParam("limit")
             .filter(StringUtils::hasText)
             .ifPresent(value -> {
@@ -246,6 +293,16 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                 }
             });
         return query;
+    }
+
+    private static boolean parseBoolean(String value) {
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        throw new IllegalArgumentException("Invalid read.");
     }
 
     private static Comparator<LinkFeedItem> recentComparator() {

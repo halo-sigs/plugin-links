@@ -11,6 +11,10 @@ The system SHALL allow each `Link` to optionally configure RSS/Atom tracking thr
 - **WHEN** a user saves a link with `spec.rss.enabled` set to `true` and `spec.rss.feedUrl` set to an absolute HTTP or HTTPS URL
 - **THEN** the system persists the RSS configuration on the `Link` resource
 
+#### Scenario: User enables RSS tracking for the first time
+- **WHEN** a user creates a link with RSS tracking enabled or enables RSS tracking on an existing link
+- **THEN** the Console starts an initial RSS refresh after saving the link
+
 #### Scenario: User disables RSS tracking
 - **WHEN** a user sets `spec.rss.enabled` to `false`
 - **THEN** the system excludes that link from scheduled RSS refreshes
@@ -97,6 +101,14 @@ The system SHALL expose a Console API for listing cached feed items with cursor 
 - **WHEN** the Console requests feed items for a specific link group
 - **THEN** the system returns only cached items for links currently assigned to that group
 
+#### Scenario: Items are filtered by read state
+- **WHEN** the Console requests feed items by read or unread state
+- **THEN** the system returns only cached items matching that read state
+
+#### Scenario: Item read state is updated
+- **WHEN** the Console marks a cached feed item as read or unread
+- **THEN** the system persists that read state in the embedded feed item store
+
 ### Requirement: Feed item retention
 The system SHALL enforce retention limits for cached RSS/Atom feed items.
 
@@ -118,6 +130,14 @@ The system SHALL provide a Console view for reading recent RSS/Atom updates from
 #### Scenario: Recent updates are displayed
 - **WHEN** the user opens the RSS updates view
 - **THEN** the Console displays recent cached feed items with title, source link, publication time, summary, and external article URL
+
+#### Scenario: Recent updates are filtered by read state
+- **WHEN** the user selects all, unread, or read items
+- **THEN** the Console reloads the recent updates list with that read-state filter
+
+#### Scenario: Link filter choices are limited to subscribed links
+- **WHEN** the user opens the RSS updates view link filter
+- **THEN** the Console lists only links with RSS tracking enabled and a feed URL configured
 
 #### Scenario: Feed status is visible on a link
 - **WHEN** a link has RSS tracking configured
