@@ -23,10 +23,9 @@ import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.infra.utils.PathUtils;
 import run.halo.links.dto.LinkDetailDTO;
+import run.halo.links.dto.LinkRequest;
 import run.halo.links.dto.SortRequest;
 import run.halo.links.extension.Link;
-import run.halo.links.extension.LinkGroup;
-import run.halo.links.dto.LinkRequest;
 import run.halo.links.query.LinkQuery;
 
 /**
@@ -72,18 +71,6 @@ public class LinkEndpoint implements CustomEndpoint {
                         .tag(tag)
                         .requestBody(requestBodyBuilder()
                             .description("Ordered metadata names of links.")
-                            .implementation(SortRequest.class))
-                        .response(responseBuilder()
-                            .responseCode("200"));
-                }
-            )
-            .POST("link-groups/-/sort", this::sortLinkGroups,
-                builder -> {
-                    builder.operationId("sortLinkGroups")
-                        .description("Update link group priorities according to the provided ordered group names.")
-                        .tag(tag)
-                        .requestBody(requestBodyBuilder()
-                            .description("Ordered metadata names of link groups.")
                             .implementation(SortRequest.class))
                         .response(responseBuilder()
                             .responseCode("200"));
@@ -154,25 +141,4 @@ public class LinkEndpoint implements CustomEndpoint {
             });
     }
 
-    Mono<ServerResponse> sortLinkGroups(ServerRequest request) {
-        return request.bodyToMono(SortRequest.class)
-            .flatMap(sortRequest -> {
-                var names = sortRequest.getNames();
-                if (names == null || names.isEmpty()) {
-                    return ServerResponse.ok().build();
-                }
-                return Flux.fromIterable(names)
-                    .zipWith(Flux.range(0, Integer.MAX_VALUE))
-                    .concatMap(tuple -> {
-                        String name = tuple.getT1();
-                        int priority = tuple.getT2();
-                        return client.fetch(LinkGroup.class, name)
-                            .flatMap(group -> {
-                                group.getSpec().setPriority(priority);
-                                return client.update(group);
-                            });
-                    })
-                    .then(ServerResponse.ok().build());
-            });
-    }
 }

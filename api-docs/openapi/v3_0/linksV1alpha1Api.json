@@ -157,7 +157,7 @@
         "tags" : [ "api.link.halo.run/v1alpha1/Link" ]
       }
     },
-    "/apis/console.api.link.halo.run/v1alpha1/link-groups/-/sort" : {
+    "/apis/console.api.link.halo.run/v1alpha1/linkgroups/-/sort" : {
       "post" : {
         "description" : "Update link group priorities according to the provided ordered group names.",
         "operationId" : "sortLinkGroups",
@@ -176,7 +176,7 @@
             "description" : "OK"
           }
         },
-        "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkGroup" ]
       }
     },
     "/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}" : {

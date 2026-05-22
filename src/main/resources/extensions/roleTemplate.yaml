@@ -32,7 +32,7 @@ rules:
     resources: [ "links", "linkgroups" ]
     verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
   - apiGroups: [ "console.api.link.halo.run" ]
-    resources: [ "links/sort", "link-groups/sort" ]
+    resources: [ "links/sort", "linkgroups/sort" ]
     resourceNames: [ "-" ]
     verbs: [ "create" ]
   - apiGroups: [ "console.api.link.halo.run" ]

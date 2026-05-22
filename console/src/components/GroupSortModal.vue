@@ -41,7 +41,7 @@ async function handleSave() {
   isSubmitting.value = true;
   try {
     const names = groups.value.map((group) => group.metadata.name);
-    await linksConsoleApiClient.link.sortLinkGroups({
+    await linksConsoleApiClient.group.sortLinkGroups({
       sortRequest: { names },
     });
     Toast.success("保存成功");

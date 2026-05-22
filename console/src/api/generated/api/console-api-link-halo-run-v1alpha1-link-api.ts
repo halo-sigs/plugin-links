@@ -150,47 +150,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiAxiosParamCreator = function (c
             };
         },
         /**
-         * Update link group priorities according to the provided ordered group names.
-         * @param {SortRequest} [sortRequest] Ordered metadata names of link groups.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        sortLinkGroups: async (sortRequest?: SortRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/link-groups/-/sort`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication basicAuth required
-            // http basic authentication required
-            setBasicAuthToObject(localVarRequestOptions, configuration)
-
-            // authentication bearerAuth required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            localVarHeaderParameter['Content-Type'] = 'application/json';
-
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-            localVarRequestOptions.data = serializeDataIfNeeded(sortRequest, localVarRequestOptions, configuration)
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
          * Update link priorities according to the provided ordered link names.
          * @param {SortRequest} [sortRequest] Ordered metadata names of links.
          * @param {*} [options] Override http request option.
@@ -272,18 +231,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFp = function(configuration?: C
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Update link group priorities according to the provided ordered group names.
-         * @param {SortRequest} [sortRequest] Ordered metadata names of link groups.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async sortLinkGroups(sortRequest?: SortRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.sortLinkGroups(sortRequest, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkApi.sortLinkGroups']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
          * Update link priorities according to the provided ordered link names.
          * @param {SortRequest} [sortRequest] Ordered metadata names of links.
          * @param {*} [options] Override http request option.
@@ -322,15 +269,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApiFactory = function (configurati
          */
         listLinks(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkList> {
             return localVarFp.listLinks(requestParameters.keyword, requestParameters.groupName, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Update link group priorities according to the provided ordered group names.
-         * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        sortLinkGroups(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.sortLinkGroups(requestParameters.sortRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * Update link priorities according to the provided ordered link names.
@@ -415,20 +353,6 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest {
 }
 
 /**
- * Request parameters for sortLinkGroups operation in ConsoleApiLinkHaloRunV1alpha1LinkApi.
- * @export
- * @interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest
- */
-export interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest {
-    /**
-     * Ordered metadata names of link groups.
-     * @type {SortRequest}
-     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroups
-     */
-    readonly sortRequest?: SortRequest
-}
-
-/**
  * Request parameters for sortLinks operation in ConsoleApiLinkHaloRunV1alpha1LinkApi.
  * @export
  * @interface ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinksRequest
@@ -469,17 +393,6 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApi extends BaseAPI {
      */
     public listLinks(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApiListLinksRequest = {}, options?: RawAxiosRequestConfig) {
         return ConsoleApiLinkHaloRunV1alpha1LinkApiFp(this.configuration).listLinks(requestParameters.keyword, requestParameters.groupName, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Update link group priorities according to the provided ordered group names.
-     * @param {ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApi
-     */
-    public sortLinkGroups(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApiSortLinkGroupsRequest = {}, options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkApiFp(this.configuration).sortLinkGroups(requestParameters.sortRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
