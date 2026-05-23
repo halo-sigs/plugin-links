@@ -5,6 +5,8 @@ import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import java.io.StringReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -35,6 +37,8 @@ public class DefaultLinkFeedService implements LinkFeedService {
 
     private static final int MAX_ITEMS_PER_FETCH = 100;
     private static final int MAX_SUMMARY_LENGTH = 500;
+    private static final List<String> HALO_DEFAULT_FEED_PATHS =
+        List.of("/rss.xml", "/feed/moments/rss.xml");
 
     private final ReactiveExtensionClient client;
     private final LinkFeedItemStore itemStore;
@@ -91,6 +95,10 @@ public class DefaultLinkFeedService implements LinkFeedService {
     }
 
     private LinkFeedDiscoveryResult discoverBlocking(String websiteUrl) {
+        List<String> haloDefaultFeedUrls = discoverHaloDefaultFeedUrls(websiteUrl);
+        if (!haloDefaultFeedUrls.isEmpty()) {
+            return new LinkFeedDiscoveryResult(haloDefaultFeedUrls);
+        }
         var result = feedFetcher.fetchHtml(websiteUrl);
         if (!isSuccess(result.statusCode()) || result.document() == null) {
             return new LinkFeedDiscoveryResult();
@@ -105,6 +113,47 @@ public class DefaultLinkFeedService implements LinkFeedService {
             .distinct()
             .toList();
         return new LinkFeedDiscoveryResult(feedUrls);
+    }
+
+    private List<String> discoverHaloDefaultFeedUrls(String websiteUrl) {
+        return haloDefaultFeedCandidates(websiteUrl)
+            .stream()
+            .filter(this::isParseableFeed)
+            .distinct()
+            .toList();
+    }
+
+    static List<String> haloDefaultFeedCandidates(String websiteUrl) {
+        if (!StringUtils.hasText(websiteUrl)) {
+            return List.of();
+        }
+        try {
+            URI websiteUri = new URI(websiteUrl.trim());
+            if (!StringUtils.hasText(websiteUri.getScheme())
+                || !StringUtils.hasText(websiteUri.getHost())) {
+                return List.of();
+            }
+            URI origin = new URI(websiteUri.getScheme(), null, websiteUri.getHost(),
+                websiteUri.getPort(), null, null, null);
+            return HALO_DEFAULT_FEED_PATHS.stream()
+                .map(path -> origin.resolve(path).toString())
+                .toList();
+        } catch (URISyntaxException e) {
+            return List.of();
+        }
+    }
+
+    private boolean isParseableFeed(String feedUrl) {
+        try {
+            var result = feedFetcher.fetchFeed(feedUrl, null, null);
+            if (!isSuccess(result.statusCode()) || !StringUtils.hasText(result.body())) {
+                return false;
+            }
+            new SyndFeedInput().build(new StringReader(result.body()));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private LinkFeedRefreshResult refreshBlocking(Link link) throws Exception {

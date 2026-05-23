@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,7 @@ import java.net.URL;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.server.ServerErrorException;
@@ -25,6 +27,95 @@ import run.halo.links.extension.Link;
 import run.halo.links.security.SafeUrlFetcher;
 
 class DefaultLinkFeedServiceTest {
+
+    @Test
+    void shouldDiscoverHaloDefaultRssBeforeHtmlDiscovery() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 200, feedXml()));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            404, ""));
+
+        StepVerifier.create(service.discover("https://example.com/about"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/rss.xml"))
+            .verifyComplete();
+
+        verify(feedFetcher).fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull());
+        verify(feedFetcher).fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull());
+        verify(feedFetcher, never()).fetchHtml(anyString());
+    }
+
+    @Test
+    void shouldDiscoverBothHaloDefaultFeeds() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 200, feedXml()));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            200, feedXml()));
+
+        StepVerifier.create(service.discover("https://example.com"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/rss.xml",
+                    "https://example.com/feed/moments/rss.xml"))
+            .verifyComplete();
+
+        verify(feedFetcher, never()).fetchHtml(anyString());
+    }
+
+    @Test
+    void shouldFallbackToHtmlDiscoveryWhenHaloDefaultFeedsAreUnavailable() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        String html = """
+            <!doctype html>
+            <html>
+              <head>
+                <link rel="alternate" type="application/rss+xml" href="/feed.xml">
+              </head>
+            </html>
+            """;
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            200, "<html></html>"));
+        when(feedFetcher.fetchHtml("https://example.com/blog"))
+            .thenReturn(htmlResult("https://example.com/blog", 200, html));
+
+        StepVerifier.create(service.discover("https://example.com/blog"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/feed.xml"))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldDeriveHaloDefaultFeedCandidatesFromWebsiteOrigin() {
+        assertThat(DefaultLinkFeedService.haloDefaultFeedCandidates(
+            "https://example.com:8443/posts/hello?preview=true"))
+            .containsExactly("https://example.com:8443/rss.xml",
+                "https://example.com:8443/feed/moments/rss.xml");
+    }
 
     @Test
     void shouldCacheItemsAndUpdateSuccessStatus() throws Exception {
@@ -352,6 +443,17 @@ class DefaultLinkFeedServiceTest {
               </channel>
             </rss>
             """;
+    }
+
+    private static SafeUrlFetcher.FetchResult feedResult(String url, int statusCode, String body)
+        throws Exception {
+        return new SafeUrlFetcher.FetchResult(new URL(url), statusCode, body, null, null, null);
+    }
+
+    private static SafeUrlFetcher.FetchResult htmlResult(String url, int statusCode, String body)
+        throws Exception {
+        return new SafeUrlFetcher.FetchResult(new URL(url), statusCode, body,
+            Jsoup.parse(body, url), null, null);
     }
 
     private static String haloFeedXml() {
