@@ -1,20 +1,31 @@
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFeedItem } from "@/api/generated";
 import { Toast } from "@halo-dev/components";
-import { computed, ref, shallowRef, watch } from "vue";
+import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from "vue";
 
 export const QK_LINK_FEED_ITEMS = "plugin:links:feed-items";
 
 export type LinkFeedReadStatus = "" | "unread" | "read";
-export type LinkFeedBooleanStatus = "" | "true" | "false";
 
-export function useLinkFeedItems() {
+export interface LinkFeedItemsFilter {
+  linkName?: string;
+  groupName?: string;
+  read?: boolean;
+  favorite?: boolean;
+  readLater?: boolean;
+}
+
+export interface UseLinkFeedItemsOptions {
+  autoLoad?: boolean;
+  fixedFilter?: MaybeRefOrGetter<LinkFeedItemsFilter | undefined>;
+}
+
+export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
+  const { autoLoad = true } = options;
   const items = ref<LinkFeedItem[]>([]);
   const selectedLinkName = shallowRef("");
   const selectedGroupName = shallowRef("");
   const selectedReadStatus = shallowRef<LinkFeedReadStatus>("");
-  const selectedFavoriteStatus = shallowRef<LinkFeedBooleanStatus>("");
-  const selectedReadLaterStatus = shallowRef<LinkFeedBooleanStatus>("");
   const nextBeforePublishedAt = shallowRef<string | undefined>();
   const nextBeforeId = shallowRef<string | undefined>();
   const hasNext = shallowRef(false);
@@ -24,7 +35,7 @@ export function useLinkFeedItems() {
   const markingFavoriteItemId = shallowRef("");
   const markingReadLaterItemId = shallowRef("");
 
-  const activeFilter = computed(() => ({
+  const activeFilter = computed<LinkFeedItemsFilter>(() => ({
     linkName: selectedLinkName.value || undefined,
     groupName: selectedGroupName.value || undefined,
     read:
@@ -33,8 +44,7 @@ export function useLinkFeedItems() {
         : selectedReadStatus.value === "unread"
           ? false
           : undefined,
-    favorite: booleanFilterValue(selectedFavoriteStatus.value),
-    readLater: booleanFilterValue(selectedReadLaterStatus.value),
+    ...toValue(options.fixedFilter),
   }));
 
   async function load({ append = false }: { append?: boolean } = {}) {
@@ -79,14 +89,6 @@ export function useLinkFeedItems() {
 
   function selectReadStatus(status: LinkFeedReadStatus) {
     selectedReadStatus.value = status;
-  }
-
-  function selectFavoriteStatus(status: LinkFeedBooleanStatus) {
-    selectedFavoriteStatus.value = status;
-  }
-
-  function selectReadLaterStatus(status: LinkFeedBooleanStatus) {
-    selectedReadLaterStatus.value = status;
   }
 
   async function markItemRead(item: LinkFeedItem, read: boolean) {
@@ -155,8 +157,22 @@ export function useLinkFeedItems() {
   async function openItem(item: LinkFeedItem) {
     const markedRead = item.read || (await markItemRead(item, true));
     if (markedRead && item.readLater) {
-      await markItemReadLater(item, false);
+      return await markItemReadLater(item, false);
     }
+    return markedRead;
+  }
+
+  function patchItemState(item: LinkFeedItem) {
+    const current = items.value.find((candidate) => candidate.id === item.id);
+    if (!current) {
+      return;
+    }
+    Object.assign(current, {
+      favorite: item.favorite,
+      read: item.read,
+      readLater: item.readLater,
+    });
+    removeIfExcluded(current);
   }
 
   function removeIfExcluded(item: LinkFeedItem) {
@@ -174,27 +190,11 @@ export function useLinkFeedItems() {
     );
   }
 
-  function booleanFilterValue(status: LinkFeedBooleanStatus) {
-    if (status === "true") {
-      return true;
-    }
-    if (status === "false") {
-      return false;
-    }
-    return undefined;
-  }
-
   watch(
-    [
-      selectedLinkName,
-      selectedGroupName,
-      selectedReadStatus,
-      selectedFavoriteStatus,
-      selectedReadLaterStatus,
-    ],
+    [selectedLinkName, selectedGroupName, selectedReadStatus, () => toValue(options.fixedFilter)],
     () => load(),
     {
-      immediate: true,
+      immediate: autoLoad,
     },
   );
 
@@ -203,8 +203,6 @@ export function useLinkFeedItems() {
     selectedLinkName,
     selectedGroupName,
     selectedReadStatus,
-    selectedFavoriteStatus,
-    selectedReadLaterStatus,
     hasNext,
     isLoading,
     isLoadingMore,
@@ -215,11 +213,10 @@ export function useLinkFeedItems() {
     selectLink,
     selectGroup,
     selectReadStatus,
-    selectFavoriteStatus,
-    selectReadLaterStatus,
     markItemRead,
     markItemFavorite,
     markItemReadLater,
     openItem,
+    patchItemState,
   };
 }

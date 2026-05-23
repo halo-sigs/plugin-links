@@ -1,30 +1,38 @@
 <script lang="ts" setup>
 import type { Link, LinkFeedItem, LinkGroup } from "@/api/generated";
+import LinkFeedItemCard from "@/components/LinkFeedItemCard.vue";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
-import {
-  useLinkFeedItems,
-  type LinkFeedBooleanStatus,
-  type LinkFeedReadStatus,
-} from "@/composables/use-link-feed";
-import { IconArrowLeft, IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
-import { computed } from "vue";
+import { useLinkFeedItems, type LinkFeedReadStatus } from "@/composables/use-link-feed";
+import { IconArrowLeft, VButton, VLoading, VModal, VPageHeader, VSpace } from "@halo-dev/components";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
-import MdiClockOutline from "~icons/mdi/clock-outline";
 import MdiRefresh from "~icons/mdi/refresh";
 import MdiRss from "~icons/mdi/rss";
 import MdiStar from "~icons/mdi/star";
-import MdiStarOutline from "~icons/mdi/star-outline";
+
+type LinkFeedItemsState = ReturnType<typeof useLinkFeedItems>;
 
 const router = useRouter();
 const { data: groupsWithLinks } = useRssLinksFetch();
+
+const mainFeed = useLinkFeedItems();
+const readLaterFeed = useLinkFeedItems({
+  fixedFilter: {
+    readLater: true,
+  },
+});
+const favoriteFeed = useLinkFeedItems({
+  autoLoad: false,
+  fixedFilter: {
+    favorite: true,
+  },
+});
+
 const {
   items,
   selectedLinkName,
   selectedGroupName,
   selectedReadStatus,
-  selectedFavoriteStatus,
-  selectedReadLaterStatus,
   hasNext,
   isLoading,
   isLoadingMore,
@@ -35,13 +43,30 @@ const {
   selectLink,
   selectGroup,
   selectReadStatus,
-  selectFavoriteStatus,
-  selectReadLaterStatus,
-  markItemRead,
-  markItemFavorite,
-  markItemReadLater,
-  openItem,
-} = useLinkFeedItems();
+} = mainFeed;
+
+const {
+  items: readLaterItems,
+  hasNext: readLaterHasNext,
+  isLoading: readLaterIsLoading,
+  isLoadingMore: readLaterIsLoadingMore,
+  markingReadItemId: readLaterMarkingReadItemId,
+  markingFavoriteItemId: readLaterMarkingFavoriteItemId,
+  markingReadLaterItemId: readLaterMarkingReadLaterItemId,
+} = readLaterFeed;
+
+const {
+  items: favoriteItems,
+  hasNext: favoriteHasNext,
+  isLoading: favoriteIsLoading,
+  isLoadingMore: favoriteIsLoadingMore,
+  markingReadItemId: favoriteMarkingReadItemId,
+  markingFavoriteItemId: favoriteMarkingFavoriteItemId,
+  markingReadLaterItemId: favoriteMarkingReadLaterItemId,
+} = favoriteFeed;
+
+const favoriteModalVisible = ref(false);
+const favoriteModal = ref<InstanceType<typeof VModal> | null>(null);
 
 const allLinks = computed(() => {
   return groupsWithLinks.value?.flatMap((group) => group.links) || [];
@@ -69,20 +94,55 @@ function sourceName(linkName?: string) {
   return sourceLink(linkName)?.spec?.displayName || linkName || "未知链接";
 }
 
-function articleTitle(item: LinkFeedItem) {
-  return item.title || item.url || "未命名文章";
-}
-
 function handleReadStatusChange(event: Event) {
   selectReadStatus((event.target as HTMLSelectElement).value as LinkFeedReadStatus);
 }
 
-function handleFavoriteStatusChange(event: Event) {
-  selectFavoriteStatus((event.target as HTMLSelectElement).value as LinkFeedBooleanStatus);
+async function openFavoriteModal() {
+  favoriteModalVisible.value = true;
+  await favoriteFeed.load();
 }
 
-function handleReadLaterStatusChange(event: Event) {
-  selectReadLaterStatus((event.target as HTMLSelectElement).value as LinkFeedBooleanStatus);
+async function handleOpenItem(feed: LinkFeedItemsState, item: LinkFeedItem) {
+  const updated = await feed.openItem(item);
+  if (!updated) {
+    return;
+  }
+  syncItemState(item);
+}
+
+async function handleMarkItemRead(feed: LinkFeedItemsState, item: LinkFeedItem, read: boolean) {
+  const updated = await feed.markItemRead(item, read);
+  if (!updated) {
+    return;
+  }
+  syncItemState(item);
+}
+
+async function handleMarkItemFavorite(feed: LinkFeedItemsState, item: LinkFeedItem, favorite: boolean) {
+  const updated = await feed.markItemFavorite(item, favorite);
+  if (!updated) {
+    return;
+  }
+  syncItemState(item);
+  if (favoriteModalVisible.value) {
+    await favoriteFeed.load();
+  }
+}
+
+async function handleMarkItemReadLater(feed: LinkFeedItemsState, item: LinkFeedItem, readLater: boolean) {
+  const updated = await feed.markItemReadLater(item, readLater);
+  if (!updated) {
+    return;
+  }
+  syncItemState(item);
+  await readLaterFeed.load();
+}
+
+function syncItemState(item: LinkFeedItem) {
+  mainFeed.patchItemState(item);
+  readLaterFeed.patchItemState(item);
+  favoriteFeed.patchItemState(item);
 }
 
 function formatTime(value?: string) {
@@ -96,6 +156,10 @@ function formatTime(value?: string) {
     minute: "2-digit",
   }).format(new Date(value));
 }
+
+function itemTime(item: LinkFeedItem) {
+  return formatTime(item.publishedAt || item.updatedAt || item.fetchedAt);
+}
 </script>
 
 <template>
@@ -104,16 +168,61 @@ function formatTime(value?: string) {
       <MdiRss />
     </template>
     <template #actions>
-      <VButton size="sm" @click="router.push({ name: 'Links' })">
-        <template #icon>
-          <IconArrowLeft class=":uno: size-full" />
-        </template>
-        返回链接
-      </VButton>
+      <VSpace>
+        <VButton size="sm" @click="openFavoriteModal">
+          <template #icon>
+            <MdiStar class=":uno: size-full text-yellow-500" />
+          </template>
+          收藏
+        </VButton>
+        <VButton size="sm" @click="router.push({ name: 'Links' })">
+          <template #icon>
+            <IconArrowLeft class=":uno: size-full" />
+          </template>
+          返回链接
+        </VButton>
+      </VSpace>
     </template>
   </VPageHeader>
 
   <div class=":uno: p-4">
+    <section v-if="readLaterIsLoading || readLaterItems.length" class=":uno: mb-4">
+      <div class=":uno: mb-2 flex flex-wrap items-center justify-between gap-3">
+        <h2 class=":uno: text-sm text-gray-900 font-semibold">
+          稍后阅读
+        </h2>
+        <VButton size="sm" ghost :loading="readLaterIsLoading" @click="readLaterFeed.load()">
+          <template #icon>
+            <MdiRefresh class=":uno: size-full" />
+          </template>
+          刷新
+        </VButton>
+      </div>
+      <VLoading v-if="readLaterIsLoading && !readLaterItems.length" />
+      <div v-else class=":uno: space-y-2">
+        <LinkFeedItemCard
+          v-for="item in readLaterItems"
+          :key="item.id"
+          compact
+          :item="item"
+          :source-name="sourceName(item.linkName)"
+          :published-at-text="itemTime(item)"
+          :marking-read-item-id="readLaterMarkingReadItemId"
+          :marking-favorite-item-id="readLaterMarkingFavoriteItemId"
+          :marking-read-later-item-id="readLaterMarkingReadLaterItemId"
+          @open="handleOpenItem(readLaterFeed, $event)"
+          @toggle-favorite="(target, favorite) => handleMarkItemFavorite(readLaterFeed, target, favorite)"
+          @toggle-read-later="(target, readLater) => handleMarkItemReadLater(readLaterFeed, target, readLater)"
+          @toggle-read="(target, read) => handleMarkItemRead(readLaterFeed, target, read)"
+        />
+      </div>
+      <div v-if="readLaterHasNext" class=":uno: flex justify-center pt-3">
+        <VButton size="sm" :loading="readLaterIsLoadingMore" @click="readLaterFeed.load({ append: true })">
+          加载更多
+        </VButton>
+      </div>
+    </section>
+
     <div class=":uno: mb-4 flex flex-wrap items-end gap-3 border border-gray-100 rounded-lg bg-white p-4">
       <label class=":uno: min-w-48 flex flex-col gap-1 text-xs text-gray-600">
         <span>链接</span>
@@ -153,30 +262,6 @@ function formatTime(value?: string) {
           <option value="read">已读</option>
         </select>
       </label>
-      <label class=":uno: min-w-36 flex flex-col gap-1 text-xs text-gray-600">
-        <span>收藏状态</span>
-        <select
-          v-model="selectedFavoriteStatus"
-          class=":uno: h-9 border border-gray-200 rounded bg-white px-2 text-sm text-gray-900"
-          @change="handleFavoriteStatusChange"
-        >
-          <option value="">全部</option>
-          <option value="true">已收藏</option>
-          <option value="false">未收藏</option>
-        </select>
-      </label>
-      <label class=":uno: min-w-36 flex flex-col gap-1 text-xs text-gray-600">
-        <span>稍后阅读</span>
-        <select
-          v-model="selectedReadLaterStatus"
-          class=":uno: h-9 border border-gray-200 rounded bg-white px-2 text-sm text-gray-900"
-          @change="handleReadLaterStatusChange"
-        >
-          <option value="">全部</option>
-          <option value="true">稍后阅读</option>
-          <option value="false">非稍后阅读</option>
-        </select>
-      </label>
       <VSpace>
         <VButton size="sm" :loading="isLoading" @click="load()">
           <template #icon>
@@ -194,101 +279,67 @@ function formatTime(value?: string) {
     </div>
 
     <div v-else class=":uno: space-y-3">
-      <article
+      <LinkFeedItemCard
         v-for="item in items"
         :key="item.id"
-        class=":uno: border border-gray-100 rounded-lg bg-white p-4 shadow-sm"
-        :class="{
-          ':uno: bg-gray-50/80': item.read,
-        }"
-      >
-        <div class=":uno: flex flex-wrap items-start justify-between gap-3">
-          <div class=":uno: min-w-0 flex-1">
-            <a
-              v-if="item.url"
-              :href="item.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class=":uno: hover:text-primary max-w-full inline-flex items-center gap-1 text-sm text-gray-900 font-medium"
-              :class="{
-                ':uno: text-gray-500': item.read,
-              }"
-              @click="openItem(item)"
-            >
-              <span class=":uno: truncate">{{ articleTitle(item) }}</span>
-              <IconExternalLinkLine class=":uno: size-3.5 flex-none" />
-            </a>
-            <div v-else class=":uno: truncate text-sm text-gray-900 font-medium">
-              {{ articleTitle(item) }}
-            </div>
-            <div class=":uno: mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-              <span>{{ sourceName(item.linkName) }}</span>
-              <span>{{ formatTime(item.publishedAt || item.updatedAt || item.fetchedAt) }}</span>
-              <span
-                class=":uno: rounded bg-gray-100 px-1.5 py-0.5"
-                :class="{
-                  ':uno: bg-green-50 text-green-700': !item.read,
-                }"
-              >
-                {{ item.read ? "已读" : "未读" }}
-              </span>
-              <span v-if="item.favorite" class=":uno: rounded bg-yellow-50 px-1.5 py-0.5 text-yellow-700">
-                已收藏
-              </span>
-              <span v-if="item.readLater" class=":uno: rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">
-                稍后阅读
-              </span>
-            </div>
-          </div>
-          <div class=":uno: flex flex-none flex-wrap items-center justify-end gap-2">
-            <VButton
-              size="sm"
-              ghost
-              :aria-label="item.favorite ? '取消收藏' : '收藏'"
-              :loading="markingFavoriteItemId === item.id"
-              v-tooltip="{
-                content: item.favorite ? '取消收藏' : '收藏',
-              }"
-              @click="markItemFavorite(item, !item.favorite)"
-            >
-              <template #icon>
-                <MdiStar v-if="item.favorite" class=":uno: size-full text-yellow-500" />
-                <MdiStarOutline v-else class=":uno: size-full" />
-              </template>
-            </VButton>
-            <VButton
-              size="sm"
-              ghost
-              :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
-              :loading="markingReadLaterItemId === item.id"
-              v-tooltip="{
-                content: item.readLater ? '移出稍后阅读' : '稍后阅读',
-              }"
-              @click="markItemReadLater(item, !item.readLater)"
-            >
-              <template #icon>
-                <MdiClockCheckOutline v-if="item.readLater" class=":uno: size-full text-blue-600" />
-                <MdiClockOutline v-else class=":uno: size-full" />
-              </template>
-            </VButton>
-            <VButton
-              size="sm"
-              ghost
-              :loading="markingReadItemId === item.id"
-              @click="markItemRead(item, !item.read)"
-            >
-              {{ item.read ? "标为未读" : "标为已读" }}
-            </VButton>
-          </div>
-        </div>
-        <p v-if="item.summary" class=":uno: line-clamp-3 mt-3 text-sm text-gray-600">
-          {{ item.summary }}
-        </p>
-      </article>
+        :item="item"
+        :source-name="sourceName(item.linkName)"
+        :published-at-text="itemTime(item)"
+        :marking-read-item-id="markingReadItemId"
+        :marking-favorite-item-id="markingFavoriteItemId"
+        :marking-read-later-item-id="markingReadLaterItemId"
+        @open="handleOpenItem(mainFeed, $event)"
+        @toggle-favorite="(target, favorite) => handleMarkItemFavorite(mainFeed, target, favorite)"
+        @toggle-read-later="(target, readLater) => handleMarkItemReadLater(mainFeed, target, readLater)"
+        @toggle-read="(target, read) => handleMarkItemRead(mainFeed, target, read)"
+      />
 
       <div class=":uno: flex justify-center pt-2" v-if="hasNext">
         <VButton :loading="isLoadingMore" @click="load({ append: true })">加载更多</VButton>
       </div>
     </div>
   </div>
+
+  <VModal
+    ref="favoriteModal"
+    v-model:visible="favoriteModalVisible"
+    :centered="false"
+    title="收藏文章"
+    :mount-to-body="true"
+    :width="860"
+  >
+    <VLoading v-if="favoriteIsLoading && !favoriteItems.length" />
+    <div
+      v-else-if="!favoriteItems.length"
+      class=":uno: border border-gray-100 rounded-lg bg-white px-4 py-10 text-center text-sm text-gray-500"
+    >
+      暂无收藏文章
+    </div>
+    <div v-else class=":uno: max-h-[65vh] overflow-auto pr-1 space-y-3">
+      <LinkFeedItemCard
+        v-for="item in favoriteItems"
+        :key="item.id"
+        :item="item"
+        :source-name="sourceName(item.linkName)"
+        :published-at-text="itemTime(item)"
+        :marking-read-item-id="favoriteMarkingReadItemId"
+        :marking-favorite-item-id="favoriteMarkingFavoriteItemId"
+        :marking-read-later-item-id="favoriteMarkingReadLaterItemId"
+        @open="handleOpenItem(favoriteFeed, $event)"
+        @toggle-favorite="(target, favorite) => handleMarkItemFavorite(favoriteFeed, target, favorite)"
+        @toggle-read-later="(target, readLater) => handleMarkItemReadLater(favoriteFeed, target, readLater)"
+        @toggle-read="(target, read) => handleMarkItemRead(favoriteFeed, target, read)"
+      />
+      <div v-if="favoriteHasNext" class=":uno: flex justify-center pt-2">
+        <VButton :loading="favoriteIsLoadingMore" @click="favoriteFeed.load({ append: true })">加载更多</VButton>
+      </div>
+    </div>
+
+    <template #footer>
+      <VSpace>
+        <VButton type="secondary" :loading="favoriteIsLoading" @click="favoriteFeed.load()">刷新</VButton>
+        <VButton @click="favoriteModal?.close()">关闭</VButton>
+      </VSpace>
+    </template>
+  </VModal>
 </template>
