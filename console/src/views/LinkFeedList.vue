@@ -1,12 +1,20 @@
 <script lang="ts" setup>
 import type { Link, LinkFeedItem, LinkGroup } from "@/api/generated";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
-import { useLinkFeedItems, type LinkFeedReadStatus } from "@/composables/use-link-feed";
+import {
+  useLinkFeedItems,
+  type LinkFeedBooleanStatus,
+  type LinkFeedReadStatus,
+} from "@/composables/use-link-feed";
 import { IconArrowLeft, IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
+import MdiClockOutline from "~icons/mdi/clock-outline";
 import MdiRefresh from "~icons/mdi/refresh";
 import MdiRss from "~icons/mdi/rss";
+import MdiStar from "~icons/mdi/star";
+import MdiStarOutline from "~icons/mdi/star-outline";
 
 const router = useRouter();
 const { data: groupsWithLinks } = useRssLinksFetch();
@@ -15,15 +23,24 @@ const {
   selectedLinkName,
   selectedGroupName,
   selectedReadStatus,
+  selectedFavoriteStatus,
+  selectedReadLaterStatus,
   hasNext,
   isLoading,
   isLoadingMore,
   markingReadItemId,
+  markingFavoriteItemId,
+  markingReadLaterItemId,
   load,
   selectLink,
   selectGroup,
   selectReadStatus,
+  selectFavoriteStatus,
+  selectReadLaterStatus,
   markItemRead,
+  markItemFavorite,
+  markItemReadLater,
+  openItem,
 } = useLinkFeedItems();
 
 const allLinks = computed(() => {
@@ -58,6 +75,14 @@ function articleTitle(item: LinkFeedItem) {
 
 function handleReadStatusChange(event: Event) {
   selectReadStatus((event.target as HTMLSelectElement).value as LinkFeedReadStatus);
+}
+
+function handleFavoriteStatusChange(event: Event) {
+  selectFavoriteStatus((event.target as HTMLSelectElement).value as LinkFeedBooleanStatus);
+}
+
+function handleReadLaterStatusChange(event: Event) {
+  selectReadLaterStatus((event.target as HTMLSelectElement).value as LinkFeedBooleanStatus);
 }
 
 function formatTime(value?: string) {
@@ -128,6 +153,30 @@ function formatTime(value?: string) {
           <option value="read">已读</option>
         </select>
       </label>
+      <label class=":uno: min-w-36 flex flex-col gap-1 text-xs text-gray-600">
+        <span>收藏状态</span>
+        <select
+          v-model="selectedFavoriteStatus"
+          class=":uno: h-9 border border-gray-200 rounded bg-white px-2 text-sm text-gray-900"
+          @change="handleFavoriteStatusChange"
+        >
+          <option value="">全部</option>
+          <option value="true">已收藏</option>
+          <option value="false">未收藏</option>
+        </select>
+      </label>
+      <label class=":uno: min-w-36 flex flex-col gap-1 text-xs text-gray-600">
+        <span>稍后阅读</span>
+        <select
+          v-model="selectedReadLaterStatus"
+          class=":uno: h-9 border border-gray-200 rounded bg-white px-2 text-sm text-gray-900"
+          @change="handleReadLaterStatusChange"
+        >
+          <option value="">全部</option>
+          <option value="true">稍后阅读</option>
+          <option value="false">非稍后阅读</option>
+        </select>
+      </label>
       <VSpace>
         <VButton size="sm" :loading="isLoading" @click="load()">
           <template #icon>
@@ -164,7 +213,7 @@ function formatTime(value?: string) {
               :class="{
                 ':uno: text-gray-500': item.read,
               }"
-              @click="markItemRead(item, true)"
+              @click="openItem(item)"
             >
               <span class=":uno: truncate">{{ articleTitle(item) }}</span>
               <IconExternalLinkLine class=":uno: size-3.5 flex-none" />
@@ -183,16 +232,54 @@ function formatTime(value?: string) {
               >
                 {{ item.read ? "已读" : "未读" }}
               </span>
+              <span v-if="item.favorite" class=":uno: rounded bg-yellow-50 px-1.5 py-0.5 text-yellow-700">
+                已收藏
+              </span>
+              <span v-if="item.readLater" class=":uno: rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">
+                稍后阅读
+              </span>
             </div>
           </div>
-          <VButton
-            size="sm"
-            ghost
-            :loading="markingReadItemId === item.id"
-            @click="markItemRead(item, !item.read)"
-          >
-            {{ item.read ? "标为未读" : "标为已读" }}
-          </VButton>
+          <div class=":uno: flex flex-none flex-wrap items-center justify-end gap-2">
+            <VButton
+              size="sm"
+              ghost
+              :aria-label="item.favorite ? '取消收藏' : '收藏'"
+              :loading="markingFavoriteItemId === item.id"
+              v-tooltip="{
+                content: item.favorite ? '取消收藏' : '收藏',
+              }"
+              @click="markItemFavorite(item, !item.favorite)"
+            >
+              <template #icon>
+                <MdiStar v-if="item.favorite" class=":uno: size-full text-yellow-500" />
+                <MdiStarOutline v-else class=":uno: size-full" />
+              </template>
+            </VButton>
+            <VButton
+              size="sm"
+              ghost
+              :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
+              :loading="markingReadLaterItemId === item.id"
+              v-tooltip="{
+                content: item.readLater ? '移出稍后阅读' : '稍后阅读',
+              }"
+              @click="markItemReadLater(item, !item.readLater)"
+            >
+              <template #icon>
+                <MdiClockCheckOutline v-if="item.readLater" class=":uno: size-full text-blue-600" />
+                <MdiClockOutline v-else class=":uno: size-full" />
+              </template>
+            </VButton>
+            <VButton
+              size="sm"
+              ghost
+              :loading="markingReadItemId === item.id"
+              @click="markItemRead(item, !item.read)"
+            >
+              {{ item.read ? "标为未读" : "标为已读" }}
+            </VButton>
+          </div>
         </div>
         <p v-if="item.summary" class=":uno: line-clamp-3 mt-3 text-sm text-gray-600">
           {{ item.summary }}

@@ -21,4 +21,6 @@ public class LinkFeedItem {
     private Instant fetchedAt;
     private String contentHash;
     private Boolean read;
+    private Boolean favorite;
+    private Boolean readLater;
 }

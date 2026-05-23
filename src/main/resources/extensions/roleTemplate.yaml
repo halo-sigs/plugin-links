@@ -18,7 +18,7 @@ rules:
     resourceNames: [ "-" ]
     verbs: [ "get" ]
   - apiGroups: [ "console.api.link.halo.run" ]
-    resources: [ "rss/items/read" ]
+    resources: [ "rss/items/read", "rss/items/favorite", "rss/items/read-later" ]
     resourceNames: [ "-" ]
     verbs: [ "create" ]
 ---

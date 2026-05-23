@@ -71,6 +71,8 @@ public class DefaultLinkFeedService implements LinkFeedService {
         storeQuery.setBeforePublishedAt(requested.getBeforePublishedAt());
         storeQuery.setBeforeId(requested.getBeforeId());
         storeQuery.setRead(requested.getRead());
+        storeQuery.setFavorite(requested.getFavorite());
+        storeQuery.setReadLater(requested.getReadLater());
         storeQuery.setLimit(Math.min(limit + 1, LinkFeedItemQuery.MAX_LIMIT));
 
         List<LinkFeedItem> items = itemStore.listRecent(storeQuery);

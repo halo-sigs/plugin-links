@@ -108,7 +108,7 @@ class DefaultLinkFeedServiceTest {
     }
 
     @Test
-    void shouldPassReadFilterWhenListingItems() {
+    void shouldPassItemStateFiltersWhenListingItems() {
         ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
         LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
         LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
@@ -119,12 +119,19 @@ class DefaultLinkFeedServiceTest {
 
         LinkFeedItemQuery query = new LinkFeedItemQuery();
         query.setRead(false);
+        query.setFavorite(true);
+        query.setReadLater(true);
         service.listItems(query);
 
         ArgumentCaptor<LinkFeedItemQuery> queryCaptor =
             ArgumentCaptor.forClass(LinkFeedItemQuery.class);
         verify(itemStore).listRecent(queryCaptor.capture());
-        assertThat(queryCaptor.getValue().getRead()).isFalse();
+        assertThat(queryCaptor.getValue())
+            .satisfies(actual -> {
+                assertThat(actual.getRead()).isFalse();
+                assertThat(actual.getFavorite()).isTrue();
+                assertThat(actual.getReadLater()).isTrue();
+            });
     }
 
     private static Link rssLink(String name, String feedUrl) {

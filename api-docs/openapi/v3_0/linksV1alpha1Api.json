@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:49440",
+    "url" : "http://localhost:46963",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -445,6 +445,20 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Filter items by favorite state.",
+          "in" : "query",
+          "name" : "favorite",
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "description" : "Filter items by read-later state.",
+          "in" : "query",
+          "name" : "readLater",
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
           "description" : "Cursor published time boundary.",
           "in" : "query",
           "name" : "beforePublishedAt",
@@ -482,6 +496,31 @@
         "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
       }
     },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/{id}/favorite" : {
+      "post" : {
+        "description" : "Mark a cached RSS or Atom feed item as favorite or not favorite.",
+        "operationId" : "markLinkFeedItemFavorite",
+        "parameters" : [ {
+          "description" : "Stable cached feed item id.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Favorite state to apply.",
+          "in" : "query",
+          "name" : "favorite",
+          "required" : true,
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : { },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
     "/apis/console.api.link.halo.run/v1alpha1/rss/items/{id}/read" : {
       "post" : {
         "description" : "Mark a cached RSS or Atom feed item as read or unread.",
@@ -498,6 +537,31 @@
           "description" : "Read state to apply.",
           "in" : "query",
           "name" : "read",
+          "required" : true,
+          "schema" : {
+            "type" : "boolean"
+          }
+        } ],
+        "responses" : { },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/{id}/read-later" : {
+      "post" : {
+        "description" : "Mark a cached RSS or Atom feed item as read-later or not read-later.",
+        "operationId" : "markLinkFeedItemReadLater",
+        "parameters" : [ {
+          "description" : "Stable cached feed item id.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Read-later state to apply.",
+          "in" : "query",
+          "name" : "readLater",
           "required" : true,
           "schema" : {
             "type" : "boolean"
@@ -1064,6 +1128,9 @@
           "contentHash" : {
             "type" : "string"
           },
+          "favorite" : {
+            "type" : "boolean"
+          },
           "feedUrl" : {
             "type" : "string"
           },
@@ -1085,6 +1152,9 @@
             "format" : "date-time"
           },
           "read" : {
+            "type" : "boolean"
+          },
+          "readLater" : {
             "type" : "boolean"
           },
           "summary" : {

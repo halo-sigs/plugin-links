@@ -107,6 +107,20 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                         .required(false)
                     )
                     .parameter(parameterBuilder()
+                        .name("favorite")
+                        .description("Filter items by favorite state.")
+                        .in(ParameterIn.QUERY)
+                        .implementation(Boolean.class)
+                        .required(false)
+                    )
+                    .parameter(parameterBuilder()
+                        .name("readLater")
+                        .description("Filter items by read-later state.")
+                        .in(ParameterIn.QUERY)
+                        .implementation(Boolean.class)
+                        .required(false)
+                    )
+                    .parameter(parameterBuilder()
                         .name("beforePublishedAt")
                         .description("Cursor published time boundary.")
                         .in(ParameterIn.QUERY)
@@ -143,6 +157,44 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                 .parameter(parameterBuilder()
                     .name("read")
                     .description("Read state to apply.")
+                    .in(ParameterIn.QUERY)
+                    .implementation(Boolean.class)
+                    .required(true)
+                )
+            )
+            .POST("rss/items/{id}/favorite", this::markItemFavorite, builder -> builder
+                .operationId("markLinkFeedItemFavorite")
+                .description("Mark a cached RSS or Atom feed item as favorite or not favorite.")
+                .tag(tag)
+                .parameter(parameterBuilder()
+                    .name("id")
+                    .description("Stable cached feed item id.")
+                    .in(ParameterIn.PATH)
+                    .implementation(String.class)
+                    .required(true)
+                )
+                .parameter(parameterBuilder()
+                    .name("favorite")
+                    .description("Favorite state to apply.")
+                    .in(ParameterIn.QUERY)
+                    .implementation(Boolean.class)
+                    .required(true)
+                )
+            )
+            .POST("rss/items/{id}/read-later", this::markItemReadLater, builder -> builder
+                .operationId("markLinkFeedItemReadLater")
+                .description("Mark a cached RSS or Atom feed item as read-later or not read-later.")
+                .tag(tag)
+                .parameter(parameterBuilder()
+                    .name("id")
+                    .description("Stable cached feed item id.")
+                    .in(ParameterIn.PATH)
+                    .implementation(String.class)
+                    .required(true)
+                )
+                .parameter(parameterBuilder()
+                    .name("readLater")
+                    .description("Read-later state to apply.")
                     .in(ParameterIn.QUERY)
                     .implementation(Boolean.class)
                     .required(true)
@@ -202,9 +254,45 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         try {
             boolean read = request.queryParam("read")
                 .filter(StringUtils::hasText)
-                .map(LinkFeedEndpoint::parseBoolean)
+                .map(value -> parseBoolean(value, "read"))
                 .orElseThrow(() -> new IllegalArgumentException("Missing query parameter: read"));
             return Mono.fromCallable(() -> itemStore.updateRead(id, read))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(updated -> updated
+                    ? ServerResponse.noContent().build()
+                    : ServerResponse.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        }
+    }
+
+    private Mono<ServerResponse> markItemFavorite(ServerRequest request) {
+        String id = request.pathVariable("id");
+        try {
+            boolean favorite = request.queryParam("favorite")
+                .filter(StringUtils::hasText)
+                .map(value -> parseBoolean(value, "favorite"))
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "Missing query parameter: favorite"));
+            return Mono.fromCallable(() -> itemStore.updateFavorite(id, favorite))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(updated -> updated
+                    ? ServerResponse.noContent().build()
+                    : ServerResponse.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        }
+    }
+
+    private Mono<ServerResponse> markItemReadLater(ServerRequest request) {
+        String id = request.pathVariable("id");
+        try {
+            boolean readLater = request.queryParam("readLater")
+                .filter(StringUtils::hasText)
+                .map(value -> parseBoolean(value, "readLater"))
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "Missing query parameter: readLater"));
+            return Mono.fromCallable(() -> itemStore.updateReadLater(id, readLater))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(updated -> updated
                     ? ServerResponse.noContent().build()
@@ -247,6 +335,8 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             linkQuery.setBeforePublishedAt(query.getBeforePublishedAt());
             linkQuery.setBeforeId(query.getBeforeId());
             linkQuery.setRead(query.getRead());
+            linkQuery.setFavorite(query.getFavorite());
+            linkQuery.setReadLater(query.getReadLater());
             linkQuery.setLimit(Math.min(limit + 1, LinkFeedItemQuery.MAX_LIMIT));
             items.addAll(itemStore.listRecent(linkQuery));
         }
@@ -282,7 +372,13 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             });
         request.queryParam("read")
             .filter(StringUtils::hasText)
-            .ifPresent(value -> query.setRead(parseBoolean(value)));
+            .ifPresent(value -> query.setRead(parseBoolean(value, "read")));
+        request.queryParam("favorite")
+            .filter(StringUtils::hasText)
+            .ifPresent(value -> query.setFavorite(parseBoolean(value, "favorite")));
+        request.queryParam("readLater")
+            .filter(StringUtils::hasText)
+            .ifPresent(value -> query.setReadLater(parseBoolean(value, "readLater")));
         request.queryParam("limit")
             .filter(StringUtils::hasText)
             .ifPresent(value -> {
@@ -295,14 +391,14 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         return query;
     }
 
-    private static boolean parseBoolean(String value) {
+    private static boolean parseBoolean(String value, String parameterName) {
         if ("true".equalsIgnoreCase(value)) {
             return true;
         }
         if ("false".equalsIgnoreCase(value)) {
             return false;
         }
-        throw new IllegalArgumentException("Invalid read.");
+        throw new IllegalArgumentException("Invalid " + parameterName + ".");
     }
 
     private static Comparator<LinkFeedItem> recentComparator() {

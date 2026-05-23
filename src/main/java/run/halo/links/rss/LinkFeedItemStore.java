@@ -13,6 +13,10 @@ public interface LinkFeedItemStore {
 
     boolean updateRead(String id, boolean read);
 
+    boolean updateFavorite(String id, boolean favorite);
+
+    boolean updateReadLater(String id, boolean readLater);
+
     long count();
 
     long countByLinkName(String linkName);

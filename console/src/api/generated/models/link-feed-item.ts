@@ -34,6 +34,12 @@ export interface LinkFeedItem {
     'contentHash'?: string;
     /**
      *
+     * @type {boolean}
+     * @memberof LinkFeedItem
+     */
+    'favorite'?: boolean;
+    /**
+     *
      * @type {string}
      * @memberof LinkFeedItem
      */
@@ -74,6 +80,12 @@ export interface LinkFeedItem {
      * @memberof LinkFeedItem
      */
     'read'?: boolean;
+    /**
+     *
+     * @type {boolean}
+     * @memberof LinkFeedItem
+     */
+    'readLater'?: boolean;
     /**
      *
      * @type {string}

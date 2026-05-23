@@ -62,6 +62,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
+
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
@@ -105,6 +106,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
             }
 
 
+
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
@@ -119,13 +121,15 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
          * @param {string} [linkName] Filter items by link metadata name.
          * @param {string} [groupName] Filter items by current link group metadata name.
          * @param {boolean} [read] Filter items by read state.
+         * @param {boolean} [favorite] Filter items by favorite state.
+         * @param {boolean} [readLater] Filter items by read-later state.
          * @param {string} [beforePublishedAt] Cursor published time boundary.
          * @param {string} [beforeId] Cursor stable item id boundary.
          * @param {number} [limit] Maximum number of items to return.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listLinkFeedItems: async (linkName?: string, groupName?: string, read?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        listLinkFeedItems: async (linkName?: string, groupName?: string, read?: boolean, favorite?: boolean, readLater?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/rss/items`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -158,6 +162,14 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
                 localVarQueryParameter['read'] = read;
             }
 
+            if (favorite !== undefined) {
+                localVarQueryParameter['favorite'] = favorite;
+            }
+
+            if (readLater !== undefined) {
+                localVarQueryParameter['readLater'] = readLater;
+            }
+
             if (beforePublishedAt !== undefined) {
                 localVarQueryParameter['beforePublishedAt'] = beforePublishedAt;
             }
@@ -168,6 +180,54 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
 
             if (limit !== undefined) {
                 localVarQueryParameter['limit'] = limit;
+            }
+
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Mark a cached RSS or Atom feed item as favorite or not favorite.
+         * @param {string} id Stable cached feed item id.
+         * @param {boolean} favorite Favorite state to apply.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markLinkFeedItemFavorite: async (id: string, favorite: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('markLinkFeedItemFavorite', 'id', id)
+            // verify required parameter 'favorite' is not null or undefined
+            assertParamExists('markLinkFeedItemFavorite', 'favorite', favorite)
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/rss/items/{id}/favorite`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (favorite !== undefined) {
+                localVarQueryParameter['favorite'] = favorite;
             }
 
 
@@ -216,6 +276,54 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
 
             if (read !== undefined) {
                 localVarQueryParameter['read'] = read;
+            }
+
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Mark a cached RSS or Atom feed item as read-later or not read-later.
+         * @param {string} id Stable cached feed item id.
+         * @param {boolean} readLater Read-later state to apply.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markLinkFeedItemReadLater: async (id: string, readLater: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('markLinkFeedItemReadLater', 'id', id)
+            // verify required parameter 'readLater' is not null or undefined
+            assertParamExists('markLinkFeedItemReadLater', 'readLater', readLater)
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/rss/items/{id}/read-later`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (readLater !== undefined) {
+                localVarQueryParameter['readLater'] = readLater;
             }
 
 
@@ -308,16 +416,31 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
          * @param {string} [linkName] Filter items by link metadata name.
          * @param {string} [groupName] Filter items by current link group metadata name.
          * @param {boolean} [read] Filter items by read state.
+         * @param {boolean} [favorite] Filter items by favorite state.
+         * @param {boolean} [readLater] Filter items by read-later state.
          * @param {string} [beforePublishedAt] Cursor published time boundary.
          * @param {string} [beforeId] Cursor stable item id boundary.
          * @param {number} [limit] Maximum number of items to return.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listLinkFeedItems(linkName?: string, groupName?: string, read?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkFeedItemPage>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listLinkFeedItems(linkName, groupName, read, beforePublishedAt, beforeId, limit, options);
+        async listLinkFeedItems(linkName?: string, groupName?: string, read?: boolean, favorite?: boolean, readLater?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkFeedItemPage>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listLinkFeedItems(linkName, groupName, read, favorite, readLater, beforePublishedAt, beforeId, limit, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.listLinkFeedItems']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Mark a cached RSS or Atom feed item as favorite or not favorite.
+         * @param {string} id Stable cached feed item id.
+         * @param {boolean} favorite Favorite state to apply.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async markLinkFeedItemFavorite(id: string, favorite: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.markLinkFeedItemFavorite(id, favorite, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.markLinkFeedItemFavorite']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -331,6 +454,19 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
             const localVarAxiosArgs = await localVarAxiosParamCreator.markLinkFeedItemRead(id, read, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.markLinkFeedItemRead']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Mark a cached RSS or Atom feed item as read-later or not read-later.
+         * @param {string} id Stable cached feed item id.
+         * @param {boolean} readLater Read-later state to apply.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async markLinkFeedItemReadLater(id: string, readLater: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.markLinkFeedItemReadLater(id, readLater, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.markLinkFeedItemReadLater']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -379,7 +515,16 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
          * @throws {RequiredError}
          */
         listLinkFeedItems(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkFeedItemPage> {
-            return localVarFp.listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(axios, basePath));
+            return localVarFp.listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.favorite, requestParameters.readLater, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Mark a cached RSS or Atom feed item as favorite or not favorite.
+         * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavoriteRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markLinkFeedItemFavorite(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavoriteRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.markLinkFeedItemFavorite(requestParameters.id, requestParameters.favorite, options).then((request) => request(axios, basePath));
         },
         /**
          * Mark a cached RSS or Atom feed item as read or unread.
@@ -389,6 +534,15 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
          */
         markLinkFeedItemRead(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.markLinkFeedItemRead(requestParameters.id, requestParameters.read, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Mark a cached RSS or Atom feed item as read-later or not read-later.
+         * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLaterRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        markLinkFeedItemReadLater(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLaterRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.markLinkFeedItemReadLater(requestParameters.id, requestParameters.readLater, options).then((request) => request(axios, basePath));
         },
         /**
          * Refresh RSS or Atom items for an enabled link.
@@ -444,6 +598,20 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsReques
     readonly read?: boolean
 
     /**
+     * Filter items by favorite state.
+     * @type {boolean}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItems
+     */
+    readonly favorite?: boolean
+
+    /**
+     * Filter items by read-later state.
+     * @type {boolean}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItems
+     */
+    readonly readLater?: boolean
+
+    /**
      * Cursor published time boundary.
      * @type {string}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItems
@@ -466,6 +634,27 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsReques
 }
 
 /**
+ * Request parameters for markLinkFeedItemFavorite operation in ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.
+ * @export
+ * @interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavoriteRequest
+ */
+export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavoriteRequest {
+    /**
+     * Stable cached feed item id.
+     * @type {string}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavorite
+     */
+    readonly id: string
+
+    /**
+     * Favorite state to apply.
+     * @type {boolean}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavorite
+     */
+    readonly favorite: boolean
+}
+
+/**
  * Request parameters for markLinkFeedItemRead operation in ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.
  * @export
  * @interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadRequest
@@ -484,6 +673,27 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadReq
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemRead
      */
     readonly read: boolean
+}
+
+/**
+ * Request parameters for markLinkFeedItemReadLater operation in ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.
+ * @export
+ * @interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLaterRequest
+ */
+export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLaterRequest {
+    /**
+     * Stable cached feed item id.
+     * @type {string}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLater
+     */
+    readonly id: string
+
+    /**
+     * Read-later state to apply.
+     * @type {boolean}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLater
+     */
+    readonly readLater: boolean
 }
 
 /**
@@ -536,7 +746,18 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
      */
     public listLinkFeedItems(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsRequest = {}, options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(this.axios, this.basePath));
+        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.favorite, requestParameters.readLater, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Mark a cached RSS or Atom feed item as favorite or not favorite.
+     * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavoriteRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
+     */
+    public markLinkFeedItemFavorite(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemFavoriteRequest, options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).markLinkFeedItemFavorite(requestParameters.id, requestParameters.favorite, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -548,6 +769,17 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
      */
     public markLinkFeedItemRead(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadRequest, options?: RawAxiosRequestConfig) {
         return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).markLinkFeedItemRead(requestParameters.id, requestParameters.read, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Mark a cached RSS or Atom feed item as read-later or not read-later.
+     * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLaterRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
+     */
+    public markLinkFeedItemReadLater(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiMarkLinkFeedItemReadLaterRequest, options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).markLinkFeedItemReadLater(requestParameters.id, requestParameters.readLater, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

@@ -50,17 +50,27 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             if (!collection.hasIndex("read")) {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "read");
             }
-            List<Document> docsWithoutReadState = new ArrayList<>();
+            if (!collection.hasIndex("favorite")) {
+                collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "favorite");
+            }
+            if (!collection.hasIndex("readLater")) {
+                collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "readLater");
+            }
+            List<Document> docsWithMissingState = new ArrayList<>();
             collection.find().forEach(doc -> {
-                if (doc.get("read", Boolean.class) == null) {
-                    docsWithoutReadState.add(doc);
+                if (doc.get("read", Boolean.class) == null
+                    || doc.get("favorite", Boolean.class) == null
+                    || doc.get("readLater", Boolean.class) == null) {
+                    docsWithMissingState.add(doc);
                 }
             });
-            docsWithoutReadState.forEach(doc -> {
-                doc.put("read", false);
+            docsWithMissingState.forEach(doc -> {
+                putDefaultState(doc, "read");
+                putDefaultState(doc, "favorite");
+                putDefaultState(doc, "readLater");
                 collection.update(where("id").eq(doc.get("id", String.class)), doc);
             });
-            return !docsWithoutReadState.isEmpty();
+            return !docsWithMissingState.isEmpty();
         });
         if (migrated) {
             database.commit();
@@ -73,7 +83,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             throw new IllegalArgumentException("Feed item id must not be blank.");
         }
         database.withCollection(COLLECTION_NAME, collection -> {
-            mergeReadState(collection.find(where("id").eq(item.getId())).firstOrNull(), item);
+            mergeItemState(collection.find(where("id").eq(item.getId())).firstOrNull(), item);
             collection.update(where("id").eq(item.getId()), toDocument(item),
                 UpdateOptions.updateOptions(true));
             return null;
@@ -91,7 +101,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
                 if (!StringUtils.hasText(item.getId())) {
                     throw new IllegalArgumentException("Feed item id must not be blank.");
                 }
-                mergeReadState(collection.find(where("id").eq(item.getId())).firstOrNull(), item);
+                mergeItemState(collection.find(where("id").eq(item.getId())).firstOrNull(), item);
                 collection.update(where("id").eq(item.getId()), toDocument(item),
                     UpdateOptions.updateOptions(true));
             }
@@ -126,6 +136,20 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
 
     @Override
     public boolean updateRead(String id, boolean read) {
+        return updateBooleanState(id, "read", read);
+    }
+
+    @Override
+    public boolean updateFavorite(String id, boolean favorite) {
+        return updateBooleanState(id, "favorite", favorite);
+    }
+
+    @Override
+    public boolean updateReadLater(String id, boolean readLater) {
+        return updateBooleanState(id, "readLater", readLater);
+    }
+
+    private boolean updateBooleanState(String id, String field, boolean value) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("Feed item id must not be blank.");
         }
@@ -134,7 +158,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             if (doc == null) {
                 return false;
             }
-            doc.put("read", read);
+            doc.put(field, value);
             collection.update(where("id").eq(id), doc);
             return true;
         });
@@ -156,7 +180,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             return;
         }
         database.withCollection(COLLECTION_NAME, collection -> {
-            collection.remove(where("publishedAt").lt(toString(cutoff)));
+            collection.remove(and(where("publishedAt").lt(toString(cutoff)), unsavedFilter()));
             return null;
         });
         database.commit();
@@ -172,9 +196,14 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             if (total <= keepCount) {
                 return null;
             }
+            Filter filter = unsavedFilter();
+            long deleteCount = Math.min(total - keepCount, collection.find(filter).size());
+            if (deleteCount <= 0) {
+                return null;
+            }
             List<String> ids = new ArrayList<>();
-            collection.find(FindOptions.orderBy("publishedAt", SortOrder.Ascending)
-                    .limit(total - keepCount))
+            collection.find(filter, FindOptions.orderBy("publishedAt", SortOrder.Ascending)
+                    .limit(deleteCount))
                 .forEach(doc -> {
                     String id = doc.get("id", String.class);
                     if (StringUtils.hasText(id)) {
@@ -193,14 +222,19 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             return;
         }
         database.withCollection(COLLECTION_NAME, collection -> {
-            Filter filter = where("linkName").eq(linkName);
-            long total = collection.find(filter).size();
+            Filter linkFilter = where("linkName").eq(linkName);
+            long total = collection.find(linkFilter).size();
             if (total <= keepCount) {
+                return null;
+            }
+            Filter filter = and(linkFilter, unsavedFilter());
+            long deleteCount = Math.min(total - keepCount, collection.find(filter).size());
+            if (deleteCount <= 0) {
                 return null;
             }
             List<String> ids = new ArrayList<>();
             collection.find(filter, FindOptions.orderBy("publishedAt", SortOrder.Ascending)
-                    .limit(total - keepCount))
+                    .limit(deleteCount))
                 .forEach(doc -> {
                     String id = doc.get("id", String.class);
                     if (StringUtils.hasText(id)) {
@@ -234,16 +268,36 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
                 : where("read").eq(false);
             filter = and(filter, readFilter);
         }
+        if (query.getFavorite() != null) {
+            Filter favoriteFilter = query.getFavorite()
+                ? where("favorite").eq(true)
+                : where("favorite").eq(false);
+            filter = and(filter, favoriteFilter);
+        }
+        if (query.getReadLater() != null) {
+            Filter readLaterFilter = query.getReadLater()
+                ? where("readLater").eq(true)
+                : where("readLater").eq(false);
+            filter = and(filter, readLaterFilter);
+        }
         return filter;
     }
 
-    private static void mergeReadState(Document existing, LinkFeedItem item) {
+    private static void mergeItemState(Document existing, LinkFeedItem item) {
         if (existing == null) {
             return;
         }
         Boolean read = existing.get("read", Boolean.class);
         if (read != null) {
             item.setRead(read);
+        }
+        Boolean favorite = existing.get("favorite", Boolean.class);
+        if (favorite != null) {
+            item.setFavorite(favorite);
+        }
+        Boolean readLater = existing.get("readLater", Boolean.class);
+        if (readLater != null) {
+            item.setReadLater(readLater);
         }
     }
 
@@ -260,7 +314,9 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             .put("updatedAt", toString(item.getUpdatedAt()))
             .put("fetchedAt", toString(item.getFetchedAt()))
             .put("contentHash", item.getContentHash())
-            .put("read", Boolean.TRUE.equals(item.getRead()));
+            .put("read", Boolean.TRUE.equals(item.getRead()))
+            .put("favorite", Boolean.TRUE.equals(item.getFavorite()))
+            .put("readLater", Boolean.TRUE.equals(item.getReadLater()));
     }
 
     private static Optional<LinkFeedItem> parseDocument(Document doc) {
@@ -282,6 +338,8 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             item.setFetchedAt(parseInstant(doc.get("fetchedAt", String.class)));
             item.setContentHash(doc.get("contentHash", String.class));
             item.setRead(Boolean.TRUE.equals(doc.get("read", Boolean.class)));
+            item.setFavorite(Boolean.TRUE.equals(doc.get("favorite", Boolean.class)));
+            item.setReadLater(Boolean.TRUE.equals(doc.get("readLater", Boolean.class)));
             return Optional.of(item);
         } catch (Exception e) {
             log.warn("Failed to parse cached feed item: {}", doc, e);
@@ -304,6 +362,16 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             return item.getUpdatedAt();
         }
         return item.getFetchedAt();
+    }
+
+    private static Filter unsavedFilter() {
+        return and(where("favorite").eq(false), where("readLater").eq(false));
+    }
+
+    private static void putDefaultState(Document doc, String field) {
+        if (doc.get(field, Boolean.class) == null) {
+            doc.put(field, false);
+        }
     }
 
     private static Instant parseInstant(String value) {
