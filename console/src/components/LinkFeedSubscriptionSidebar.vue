@@ -51,7 +51,9 @@ function itemCountText(count?: number) {
 </script>
 
 <template>
-  <aside class=":uno: min-w-0 border border-gray-100 rounded-lg bg-white p-3 lg:w-72 lg:flex-none">
+  <aside
+    class=":uno: min-w-0 border border-gray-100 rounded-lg bg-white p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-72 lg:flex-none lg:self-start lg:overflow-hidden"
+  >
     <div class=":uno: mb-3 flex items-center justify-between gap-3">
       <div class=":uno: text-sm text-gray-900 font-semibold">订阅</div>
       <span class=":uno: rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{{ links.length }}</span>
@@ -61,7 +63,7 @@ function itemCountText(count?: number) {
 
     <div
       v-else
-      class=":uno: flex gap-2 overflow-x-auto pb-1 lg:max-h-[calc(100vh-14rem)] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0"
+      class=":uno: flex gap-2 overflow-x-auto pb-1 lg:max-h-[calc(100vh-6.5rem)] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0"
     >
       <button
         type="button"
@@ -91,7 +93,8 @@ function itemCountText(count?: number) {
         class=":uno: min-w-56 flex flex-none items-center gap-2 border rounded-md px-3 py-2 text-left transition-colors lg:w-full"
         :class="{
           ':uno: border-primary bg-primary/5 text-primary': selectedLinkName === link.metadata.name,
-          ':uno: border-transparent bg-gray-50 text-gray-700 hover:bg-gray-100': selectedLinkName !== link.metadata.name,
+          ':uno: border-transparent bg-gray-50 text-gray-700 hover:bg-gray-100':
+            selectedLinkName !== link.metadata.name,
         }"
         @click="emit('selectLink', link.metadata.name)"
       >
@@ -106,7 +109,9 @@ function itemCountText(count?: number) {
         </span>
         <span class=":uno: min-w-0 flex-1">
           <span class=":uno: block truncate text-sm font-medium">{{ linkTitle(link) }}</span>
-          <span class=":uno: block truncate text-xs text-gray-500">{{ link.spec?.url || link.spec?.rss?.feedUrl }}</span>
+          <span class=":uno: block truncate text-xs text-gray-500">{{
+            link.spec?.url || link.spec?.rss?.feedUrl
+          }}</span>
         </span>
         <span
           v-tooltip="{
@@ -122,9 +127,7 @@ function itemCountText(count?: number) {
         </span>
       </button>
 
-      <div v-if="!links.length" class=":uno: px-3 py-8 text-center text-sm text-gray-500 lg:px-0">
-        暂无已订阅链接
-      </div>
+      <div v-if="!links.length" class=":uno: px-3 py-8 text-center text-sm text-gray-500 lg:px-0">暂无已订阅链接</div>
     </div>
   </aside>
 </template>

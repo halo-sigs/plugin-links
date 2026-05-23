@@ -3,8 +3,8 @@ import type { Link, LinkFeedItem } from "@/api/generated";
 import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
-import { useRssLinksFetch } from "@/composables/use-link-fetch";
 import { useLinkFeedItems } from "@/composables/use-link-feed";
+import { useRssLinksFetch } from "@/composables/use-link-fetch";
 import { IconArrowLeft, VButton, VModal, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed, shallowRef, useTemplateRef } from "vue";
 import { useRouter } from "vue-router";
@@ -192,7 +192,7 @@ function itemTime(item: LinkFeedItem) {
   </VPageHeader>
 
   <div class=":uno: p-4">
-    <div class=":uno: min-w-0 flex flex-col gap-4 lg:flex-row">
+    <div class=":uno: min-w-0 flex flex-col gap-4 lg:flex-row lg:items-start">
       <LinkFeedSubscriptionSidebar
         :links="allLinks"
         :selected-link-name="selectedLinkName"
