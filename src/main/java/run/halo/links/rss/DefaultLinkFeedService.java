@@ -108,9 +108,11 @@ public class DefaultLinkFeedService implements LinkFeedService {
         Link.RssStatus previousStatus = Optional.ofNullable(link.getStatus().getRss())
             .orElse(new Link.RssStatus());
         Instant fetchedAt = Instant.now();
+        long cachedItemCount = itemStore.countByLinkName(linkName);
 
-        var fetchResult = feedFetcher.fetchFeed(feedUrl, previousStatus.getEtag(),
-            previousStatus.getLastModified());
+        var fetchResult = feedFetcher.fetchFeed(feedUrl,
+            cachedItemCount > 0 ? previousStatus.getEtag() : null,
+            cachedItemCount > 0 ? previousStatus.getLastModified() : null);
 
         LinkFeedRefreshResult result = new LinkFeedRefreshResult();
         result.setLinkName(linkName);
@@ -121,7 +123,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         result.setLastModified(fetchResult.lastModified());
 
         if (result.isNotModified()) {
-            result.setItemCount(itemStore.countByLinkName(linkName));
+            result.setItemCount(cachedItemCount);
             result.setLatestPublishedAt(previousStatus.getLatestPublishedAt());
             return result;
         }
