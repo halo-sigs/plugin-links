@@ -21,7 +21,10 @@ function handleClick() {
 }
 
 const rssStatusClass = computed(() => {
-  if (props.link.status?.rss?.lastError) {
+  if (hasPartialRssFailure(props.link)) {
+    return ":uno: bg-amber-100 text-amber-600";
+  }
+  if (hasRssFailure(props.link)) {
     return ":uno: bg-red-100 text-red-600";
   }
   if (props.link.status?.rss?.lastSuccessAt) {
@@ -32,14 +35,36 @@ const rssStatusClass = computed(() => {
 
 const rssTooltip = computed(() => {
   const rss = props.link.status?.rss;
-  if (rss?.lastError) {
+  const feedCount = rssFeedUrls(props.link).length;
+  const feedCountText = feedCount > 1 ? `${feedCount} 个订阅源，` : "";
+  if (hasPartialRssFailure(props.link)) {
+    return `RSS 部分订阅源刷新失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
+  }
+  if (hasRssFailure(props.link) && rss?.lastError) {
     return `RSS 刷新失败：${rss.lastError}`;
   }
   if (rss?.lastSuccessAt) {
-    return `RSS 已启用，缓存 ${rss.itemCount || 0} 篇`;
+    return `RSS 已启用，${feedCountText}缓存 ${rss.itemCount || 0} 篇`;
   }
   return "RSS 已启用，等待刷新";
 });
+
+function rssFeedUrls(link: Link) {
+  return link.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()) || [];
+}
+
+function hasPartialRssFailure(link: Link) {
+  const feeds = link.status?.rss?.feeds || [];
+  return feeds.some((feed) => !!feed.lastError) && feeds.some((feed) => !feed.lastError && feed.lastSuccessAt);
+}
+
+function hasRssFailure(link: Link) {
+  const feeds = link.status?.rss?.feeds || [];
+  if (feeds.length) {
+    return feeds.every((feed) => !!feed.lastError);
+  }
+  return !!link.status?.rss?.lastError;
+}
 </script>
 <template>
   <label

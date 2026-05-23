@@ -39,6 +39,28 @@ class NitriteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldCountItemsByLinkNameAndFeedUrl() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("feed-a-1", "link-a", "First", "2026-05-20T10:00:00Z",
+                "https://example.com/feed.xml"));
+            store.upsert(item("feed-a-2", "link-a", "Second", "2026-05-21T10:00:00Z",
+                "https://example.com/feed.xml"));
+            store.upsert(item("feed-b-1", "link-a", "Other Feed", "2026-05-22T10:00:00Z",
+                "https://example.com/comments.xml"));
+
+            assertThat(store.countByLinkName("link-a")).isEqualTo(3);
+            assertThat(store.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+                .isEqualTo(2);
+            assertThat(store.countByLinkNameAndFeedUrl("link-a",
+                "https://example.com/comments.xml")).isEqualTo(1);
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldDeleteExcessItemsByLinkName() {
         LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
         try {
@@ -235,6 +257,13 @@ class NitriteLinkFeedItemStoreTest {
 
     private static LinkFeedItem item(String id, String linkName, String title, String publishedAt) {
         return item(id, linkName, title, publishedAt, false, false);
+    }
+
+    private static LinkFeedItem item(String id, String linkName, String title, String publishedAt,
+        String feedUrl) {
+        LinkFeedItem item = item(id, linkName, title, publishedAt, false, false);
+        item.setFeedUrl(feedUrl);
+        return item;
     }
 
     private static LinkFeedItem item(String id, String linkName, String title, String publishedAt,

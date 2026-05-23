@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:46963",
+    "url" : "http://localhost:31573",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -346,7 +346,7 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/{name}/rss/refresh" : {
       "post" : {
-        "description" : "Refresh RSS or Atom items for an enabled link.",
+        "description" : "Refresh RSS or Atom items for all configured feed URLs on an enabled link.",
         "operationId" : "refreshLinkFeed",
         "parameters" : [ {
           "description" : "Metadata name of the link.",
@@ -393,7 +393,7 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/rss/discovery" : {
       "get" : {
-        "description" : "Discover an RSS or Atom feed URL from a link website URL.",
+        "description" : "Discover RSS or Atom feed URLs from a link website URL.",
         "operationId" : "discoverLinkFeed",
         "parameters" : [ {
           "description" : "Absolute HTTP or HTTPS website URL to inspect.",
@@ -1037,6 +1037,42 @@
           }
         }
       },
+      "FeedResult" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "etag" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "fetchedItemCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "itemCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastModified" : {
+            "type" : "string"
+          },
+          "latestPublishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "notModified" : {
+            "type" : "boolean"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        }
+      },
       "JsonPatch" : {
         "minItems" : 1,
         "uniqueItems" : true,
@@ -1114,8 +1150,11 @@
       "LinkFeedDiscoveryResult" : {
         "type" : "object",
         "properties" : {
-          "feedUrl" : {
-            "type" : "string"
+          "feedUrls" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           }
         }
       },
@@ -1195,11 +1234,11 @@
       "LinkFeedRefreshResult" : {
         "type" : "object",
         "properties" : {
-          "etag" : {
-            "type" : "string"
-          },
-          "feedUrl" : {
-            "type" : "string"
+          "feeds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedResult"
+            }
           },
           "fetchedAt" : {
             "type" : "string",
@@ -1213,9 +1252,6 @@
             "type" : "integer",
             "format" : "int64"
           },
-          "lastModified" : {
-            "type" : "string"
-          },
           "latestPublishedAt" : {
             "type" : "string",
             "format" : "date-time"
@@ -1223,7 +1259,7 @@
           "linkName" : {
             "type" : "string"
           },
-          "notModified" : {
+          "partialFailure" : {
             "type" : "boolean"
           }
         }
@@ -1610,6 +1646,53 @@
           }
         }
       },
+      "RssFeedStatus" : {
+        "type" : "object",
+        "properties" : {
+          "etag" : {
+            "type" : "string",
+            "description" : "ETag returned by this feed server for conditional requests."
+          },
+          "failureCount" : {
+            "type" : "integer",
+            "description" : "Number of consecutive refresh failures for this feed URL.",
+            "format" : "int32"
+          },
+          "itemCount" : {
+            "type" : "integer",
+            "description" : "Number of cached feed items for this feed URL.",
+            "format" : "int64"
+          },
+          "lastError" : {
+            "type" : "string",
+            "description" : "Last refresh failure message for this feed URL."
+          },
+          "lastFetchedAt" : {
+            "type" : "string",
+            "description" : "Last time this feed URL refresh was attempted.",
+            "format" : "date-time"
+          },
+          "lastModified" : {
+            "type" : "string",
+            "description" : "Last-Modified value returned by this feed server."
+          },
+          "lastSuccessAt" : {
+            "type" : "string",
+            "description" : "Last time this feed URL refresh completed successfully.",
+            "format" : "date-time"
+          },
+          "latestPublishedAt" : {
+            "type" : "string",
+            "description" : "Latest feed item publication time observed for this feed URL.",
+            "format" : "date-time"
+          },
+          "url" : {
+            "type" : "string",
+            "description" : "Configured feed URL this status belongs to."
+          }
+        },
+        "description" : "Observed RSS or Atom refresh state for one configured feed URL."
+      },
       "RssSpec" : {
         "type" : "object",
         "properties" : {
@@ -1617,9 +1700,13 @@
             "type" : "boolean",
             "description" : "Whether RSS or Atom tracking is enabled for this link."
           },
-          "feedUrl" : {
-            "type" : "string",
-            "description" : "Absolute HTTP or HTTPS URL of the RSS or Atom feed."
+          "feedUrls" : {
+            "type" : "array",
+            "description" : "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds.",
+            "items" : {
+              "type" : "string",
+              "description" : "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds."
+            }
           }
         },
         "description" : "RSS or Atom feed tracking settings."
@@ -1627,18 +1714,17 @@
       "RssStatus" : {
         "type" : "object",
         "properties" : {
-          "effectiveFeedUrl" : {
-            "type" : "string",
-            "description" : "Feed URL currently used for refreshes."
-          },
-          "etag" : {
-            "type" : "string",
-            "description" : "ETag returned by the feed server for conditional requests."
-          },
           "failureCount" : {
             "type" : "integer",
             "description" : "Number of consecutive feed refresh failures.",
             "format" : "int32"
+          },
+          "feeds" : {
+            "type" : "array",
+            "description" : "Observed refresh state for each configured feed URL.",
+            "items" : {
+              "$ref" : "#/components/schemas/RssFeedStatus"
+            }
           },
           "itemCount" : {
             "type" : "integer",
@@ -1653,10 +1739,6 @@
             "type" : "string",
             "description" : "Last time a feed refresh was attempted.",
             "format" : "date-time"
-          },
-          "lastModified" : {
-            "type" : "string",
-            "description" : "Last-Modified value returned by the feed server for conditional requests."
           },
           "lastSuccessAt" : {
             "type" : "string",

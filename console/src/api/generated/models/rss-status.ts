@@ -13,6 +13,9 @@
  */
 
 
+// May contain unused imports in some cases
+// @ts-ignore
+import type { RssFeedStatus } from './rss-feed-status';
 
 /**
  * Observed RSS or Atom feed refresh state.
@@ -21,23 +24,17 @@
  */
 export interface RssStatus {
     /**
-     * Feed URL currently used for refreshes.
-     * @type {string}
-     * @memberof RssStatus
-     */
-    'effectiveFeedUrl'?: string;
-    /**
-     * ETag returned by the feed server for conditional requests.
-     * @type {string}
-     * @memberof RssStatus
-     */
-    'etag'?: string;
-    /**
      * Number of consecutive feed refresh failures.
      * @type {number}
      * @memberof RssStatus
      */
     'failureCount'?: number;
+    /**
+     * Observed refresh state for each configured feed URL.
+     * @type {Array<RssFeedStatus>}
+     * @memberof RssStatus
+     */
+    'feeds'?: Array<RssFeedStatus>;
     /**
      * Number of cached feed items for this link.
      * @type {number}
@@ -56,12 +53,6 @@ export interface RssStatus {
      * @memberof RssStatus
      */
     'lastFetchedAt'?: string;
-    /**
-     * Last-Modified value returned by the feed server for conditional requests.
-     * @type {string}
-     * @memberof RssStatus
-     */
-    'lastModified'?: string;
     /**
      * Last time a feed refresh completed successfully.
      * @type {string}

@@ -27,10 +27,10 @@ export interface RssSpec {
      */
     'enabled'?: boolean;
     /**
-     * Absolute HTTP or HTTPS URL of the RSS or Atom feed.
-     * @type {string}
+     * Absolute HTTP or HTTPS URLs of the RSS or Atom feeds.
+     * @type {Array<string>}
      * @memberof RssSpec
      */
-    'feedUrl'?: string;
+    'feedUrls'?: Array<string>;
 }
 

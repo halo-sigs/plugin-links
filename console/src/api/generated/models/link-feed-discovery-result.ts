@@ -22,9 +22,9 @@
 export interface LinkFeedDiscoveryResult {
     /**
      * 
-     * @type {string}
+     * @type {Array<string>}
      * @memberof LinkFeedDiscoveryResult
      */
-    'feedUrl'?: string;
+    'feedUrls'?: Array<string>;
 }
 

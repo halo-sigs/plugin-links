@@ -16,6 +16,7 @@ git_push.sh
 index.ts
 models/add-operation.ts
 models/copy-operation.ts
+models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
 models/link-detail-dto.ts
@@ -38,6 +39,7 @@ models/metadata.ts
 models/move-operation.ts
 models/remove-operation.ts
 models/replace-operation.ts
+models/rss-feed-status.ts
 models/rss-spec.ts
 models/rss-status.ts
 models/sort-request.ts

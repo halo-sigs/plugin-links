@@ -39,6 +39,9 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             if (!collection.hasIndex("linkName")) {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "linkName");
             }
+            if (!collection.hasIndex("feedUrl")) {
+                collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "feedUrl");
+            }
             if (!collection.hasIndex("publishedAt")) {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE),
                     "publishedAt");
@@ -172,6 +175,13 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
     public long countByLinkName(String linkName) {
         return database.withCollection(COLLECTION_NAME,
             collection -> collection.find(where("linkName").eq(linkName)).size());
+    }
+
+    @Override
+    public long countByLinkNameAndFeedUrl(String linkName, String feedUrl) {
+        return database.withCollection(COLLECTION_NAME,
+            collection -> collection.find(and(where("linkName").eq(linkName),
+                where("feedUrl").eq(feedUrl))).size());
     }
 
     @Override

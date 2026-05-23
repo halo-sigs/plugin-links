@@ -42,10 +42,10 @@ const { mutate, isPending } = useMutation({
           groupName: props.group?.metadata.name,
           priority: maxPriority + 1,
           rss:
-            data.rss?.enabled || data.rss?.feedUrl
+            data.rss?.enabled || data.rss?.feedUrls?.length
               ? {
                   enabled: data.rss.enabled ?? false,
-                  feedUrl: data.rss.feedUrl || undefined,
+                  feedUrls: data.rss.feedUrls || [],
                 }
               : undefined,
         },
@@ -79,7 +79,7 @@ function onSubmit(data: LinkFormState) {
 }
 
 function shouldRefreshFeedAfterSave(data: LinkFormState) {
-  return Boolean(data.rss?.enabled && data.rss.feedUrl);
+  return Boolean(data.rss?.enabled && data.rss.feedUrls?.length);
 }
 
 const title = computed(() => {

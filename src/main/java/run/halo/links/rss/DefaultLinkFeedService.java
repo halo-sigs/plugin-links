@@ -9,9 +9,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +59,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
                 }
                 return Mono.fromCallable(() -> refreshBlocking(link))
                     .subscribeOn(Schedulers.boundedElastic())
-                    .flatMap(result -> updateSuccessStatus(link, result).thenReturn(result))
+                    .flatMap(result -> updateStatus(link, result).thenReturn(result))
                     .onErrorResume(error -> updateFailureStatus(link, error)
                         .then(Mono.error(error)));
             });
@@ -92,31 +95,76 @@ public class DefaultLinkFeedService implements LinkFeedService {
         if (!isSuccess(result.statusCode()) || result.document() == null) {
             return new LinkFeedDiscoveryResult();
         }
-        Optional<String> feedUrl = result.document()
+        List<String> feedUrls = result.document()
             .select("link[rel~=(?i)alternate]")
             .stream()
             .filter(DefaultLinkFeedService::isFeedLink)
             .map(element -> element.absUrl("href"))
             .filter(StringUtils::hasText)
-            .findFirst();
-        return new LinkFeedDiscoveryResult(feedUrl.orElse(null));
+            .map(String::trim)
+            .distinct()
+            .toList();
+        return new LinkFeedDiscoveryResult(feedUrls);
     }
 
     private LinkFeedRefreshResult refreshBlocking(Link link) throws Exception {
         String linkName = link.getMetadata().getName();
-        String feedUrl = link.getSpec().getRss().getFeedUrl();
+        List<String> feedUrls = rssFeedUrls(link);
+        if (feedUrls.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "RSS feed URLs are required for this link.");
+        }
         Link.RssStatus previousStatus = Optional.ofNullable(link.getStatus().getRss())
             .orElse(new Link.RssStatus());
         Instant fetchedAt = Instant.now();
-        long cachedItemCount = itemStore.countByLinkName(linkName);
-
-        var fetchResult = feedFetcher.fetchFeed(feedUrl,
-            cachedItemCount > 0 ? previousStatus.getEtag() : null,
-            cachedItemCount > 0 ? previousStatus.getLastModified() : null);
+        Map<String, Link.RssFeedStatus> previousFeedStatuses = feedStatusByUrl(previousStatus);
 
         LinkFeedRefreshResult result = new LinkFeedRefreshResult();
         result.setLinkName(linkName);
-        result.setFeedUrl(feedUrl);
+        result.setFetchedAt(fetchedAt);
+
+        List<LinkFeedRefreshResult.FeedResult> feedResults = new ArrayList<>();
+        for (String feedUrl : feedUrls) {
+            Link.RssFeedStatus previousFeedStatus = previousFeedStatuses.get(feedUrl);
+            try {
+                feedResults.add(refreshFeedBlocking(linkName, feedUrl, previousFeedStatus,
+                    fetchedAt));
+            } catch (Exception e) {
+                feedResults.add(failedFeedResult(linkName, feedUrl, previousFeedStatus,
+                    fetchedAt, e));
+            }
+        }
+        retentionService.enforceForLink(linkName, LinkFeedRetentionPolicy.defaults());
+
+        feedResults.forEach(feedResult -> feedResult.setItemCount(
+            itemStore.countByLinkNameAndFeedUrl(linkName, feedResult.getUrl())));
+        result.setFeeds(List.copyOf(feedResults));
+        result.setFetchedItemCount(feedResults.stream()
+            .mapToInt(LinkFeedRefreshResult.FeedResult::getFetchedItemCount)
+            .sum());
+        result.setItemCount(feedResults.stream()
+            .mapToLong(LinkFeedRefreshResult.FeedResult::getItemCount)
+            .sum());
+        result.setPartialFailure(hasAnyFailure(feedResults) && hasAnySuccess(feedResults));
+        result.setLatestPublishedAt(feedResults.stream()
+            .map(LinkFeedRefreshResult.FeedResult::getLatestPublishedAt)
+            .filter(Objects::nonNull)
+            .max(Comparator.naturalOrder())
+            .orElse(previousStatus.getLatestPublishedAt()));
+
+        return result;
+    }
+
+    private LinkFeedRefreshResult.FeedResult refreshFeedBlocking(String linkName, String feedUrl,
+        Link.RssFeedStatus previousStatus, Instant fetchedAt) throws Exception {
+        long cachedItemCount = itemStore.countByLinkNameAndFeedUrl(linkName, feedUrl);
+        var fetchResult = feedFetcher.fetchFeed(feedUrl,
+            cachedItemCount > 0 && previousStatus != null ? previousStatus.getEtag() : null,
+            cachedItemCount > 0 && previousStatus != null ? previousStatus.getLastModified()
+                : null);
+
+        LinkFeedRefreshResult.FeedResult result = new LinkFeedRefreshResult.FeedResult();
+        result.setUrl(feedUrl);
         result.setFetchedAt(fetchedAt);
         result.setNotModified(fetchResult.statusCode() == 304);
         result.setEtag(fetchResult.etag());
@@ -124,7 +172,8 @@ public class DefaultLinkFeedService implements LinkFeedService {
 
         if (result.isNotModified()) {
             result.setItemCount(cachedItemCount);
-            result.setLatestPublishedAt(previousStatus.getLatestPublishedAt());
+            result.setLatestPublishedAt(previousStatus == null ? null
+                : previousStatus.getLatestPublishedAt());
             return result;
         }
         if (!isSuccess(fetchResult.statusCode())) {
@@ -141,35 +190,52 @@ public class DefaultLinkFeedService implements LinkFeedService {
             .toList();
 
         itemStore.upsertAll(items);
-        retentionService.enforceForLink(linkName, LinkFeedRetentionPolicy.defaults());
-
         result.setFetchedItemCount(items.size());
-        result.setItemCount(itemStore.countByLinkName(linkName));
+        result.setItemCount(itemStore.countByLinkNameAndFeedUrl(linkName, feedUrl));
         result.setLatestPublishedAt(items.stream()
             .map(LinkFeedItem::getPublishedAt)
             .filter(Objects::nonNull)
             .max(Comparator.naturalOrder())
-            .orElse(previousStatus.getLatestPublishedAt()));
-
+            .orElse(previousStatus == null ? null : previousStatus.getLatestPublishedAt()));
         return result;
     }
 
-    private Mono<Link> updateSuccessStatus(Link link, LinkFeedRefreshResult result) {
+    private LinkFeedRefreshResult.FeedResult failedFeedResult(String linkName, String feedUrl,
+        Link.RssFeedStatus previousStatus, Instant fetchedAt, Throwable error) {
+        LinkFeedRefreshResult.FeedResult result = new LinkFeedRefreshResult.FeedResult();
+        result.setUrl(feedUrl);
+        result.setFetchedAt(fetchedAt);
+        result.setItemCount(itemStore.countByLinkNameAndFeedUrl(linkName, feedUrl));
+        result.setLatestPublishedAt(previousStatus == null ? null
+            : previousStatus.getLatestPublishedAt());
+        result.setError(error.getMessage());
+        return result;
+    }
+
+    private Mono<Link> updateStatus(Link link, LinkFeedRefreshResult result) {
+        Link.RssStatus previousStatus = Optional.ofNullable(link.getStatus().getRss())
+            .orElseGet(Link.RssStatus::new);
+        Map<String, Link.RssFeedStatus> previousFeedStatuses = feedStatusByUrl(previousStatus);
         Link.RssStatus status = Optional.ofNullable(link.getStatus().getRss())
             .orElseGet(Link.RssStatus::new);
-        status.setEffectiveFeedUrl(result.getFeedUrl());
         status.setLastFetchedAt(result.getFetchedAt());
-        status.setLastSuccessAt(result.getFetchedAt());
-        status.setLastError(null);
-        status.setFailureCount(0);
-        if (StringUtils.hasText(result.getEtag())) {
-            status.setEtag(result.getEtag());
-        }
-        if (StringUtils.hasText(result.getLastModified())) {
-            status.setLastModified(result.getLastModified());
-        }
+        result.getFeeds()
+            .stream()
+            .filter(DefaultLinkFeedService::isSuccessful)
+            .map(LinkFeedRefreshResult.FeedResult::getFetchedAt)
+            .filter(Objects::nonNull)
+            .max(Comparator.naturalOrder())
+            .ifPresent(status::setLastSuccessAt);
+        status.setLastError(aggregateError(result.getFeeds()));
+        status.setFailureCount(hasAnySuccess(result.getFeeds()) ? 0
+            : Optional.ofNullable(status.getFailureCount()).orElse(0) + 1);
         status.setLatestPublishedAt(result.getLatestPublishedAt());
         status.setItemCount(result.getItemCount());
+        status.setFeeds(result.getFeeds()
+            .stream()
+            .map(feedResult -> toFeedStatus(feedResult,
+                previousFeedStatuses.get(feedResult.getUrl())))
+            .toList());
         link.getStatus().setRss(status);
         return client.update(link);
     }
@@ -177,7 +243,6 @@ public class DefaultLinkFeedService implements LinkFeedService {
     private Mono<Link> updateFailureStatus(Link link, Throwable error) {
         Link.RssStatus status = Optional.ofNullable(link.getStatus().getRss())
             .orElseGet(Link.RssStatus::new);
-        status.setEffectiveFeedUrl(link.getSpec().getRss().getFeedUrl());
         status.setLastFetchedAt(Instant.now());
         status.setLastError(error.getMessage());
         status.setFailureCount(Optional.ofNullable(status.getFailureCount()).orElse(0) + 1);
@@ -199,7 +264,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         String identity = StringUtils.hasText(guid) ? guid : url;
 
         LinkFeedItem item = new LinkFeedItem();
-        item.setId(sha256(linkName + "|" + identity));
+        item.setId(stableItemId(linkName, feedUrl, identity));
         item.setLinkName(linkName);
         item.setFeedUrl(feedUrl);
         item.setGuid(guid);
@@ -216,6 +281,104 @@ public class DefaultLinkFeedService implements LinkFeedService {
         return item;
     }
 
+    static String stableItemId(String linkName, String feedUrl, String identity) {
+        return sha256(linkName + "|" + feedUrl + "|" + identity);
+    }
+
+    private static List<String> rssFeedUrls(Link link) {
+        if (link.getSpec() == null || link.getSpec().getRss() == null
+            || link.getSpec().getRss().getFeedUrls() == null) {
+            return List.of();
+        }
+        Map<String, String> normalized = new LinkedHashMap<>();
+        link.getSpec().getRss().getFeedUrls()
+            .stream()
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .forEach(feedUrl -> normalized.putIfAbsent(feedUrl, feedUrl));
+        return List.copyOf(normalized.values());
+    }
+
+    private static Map<String, Link.RssFeedStatus> feedStatusByUrl(Link.RssStatus status) {
+        if (status == null || status.getFeeds() == null) {
+            return Map.of();
+        }
+        Map<String, Link.RssFeedStatus> statuses = new LinkedHashMap<>();
+        status.getFeeds()
+            .stream()
+            .filter(feedStatus -> StringUtils.hasText(feedStatus.getUrl()))
+            .forEach(feedStatus -> statuses.putIfAbsent(feedStatus.getUrl(), feedStatus));
+        return statuses;
+    }
+
+    private static Link.RssFeedStatus toFeedStatus(LinkFeedRefreshResult.FeedResult result,
+        Link.RssFeedStatus previousStatus) {
+        Link.RssFeedStatus status = new Link.RssFeedStatus();
+        status.setUrl(result.getUrl());
+        status.setLastFetchedAt(result.getFetchedAt());
+        status.setItemCount(result.getItemCount());
+        if (!isSuccessful(result)) {
+            status.setLastSuccessAt(previousStatus == null ? null : previousStatus.getLastSuccessAt());
+            status.setLatestPublishedAt(previousStatus == null ? null
+                : previousStatus.getLatestPublishedAt());
+            status.setEtag(previousStatus == null ? null : previousStatus.getEtag());
+            status.setLastModified(previousStatus == null ? null : previousStatus.getLastModified());
+            status.setLastError(result.getError());
+            status.setFailureCount(Optional.ofNullable(previousStatus)
+                .map(Link.RssFeedStatus::getFailureCount)
+                .orElse(0) + 1);
+            return status;
+        }
+        status.setLastSuccessAt(result.getFetchedAt());
+        status.setLatestPublishedAt(result.getLatestPublishedAt());
+        status.setLastError(null);
+        status.setFailureCount(0);
+        status.setEtag(nextValidator(result.getEtag(), previousStatus == null ? null
+            : previousStatus.getEtag(), result.isNotModified()));
+        status.setLastModified(nextValidator(result.getLastModified(), previousStatus == null ? null
+            : previousStatus.getLastModified(), result.isNotModified()));
+        return status;
+    }
+
+    private static String nextValidator(String current, String previous, boolean notModified) {
+        if (StringUtils.hasText(current)) {
+            return current;
+        }
+        return notModified ? previous : null;
+    }
+
+    private static String aggregateError(List<LinkFeedRefreshResult.FeedResult> feedResults) {
+        if (!hasAnyFailure(feedResults)) {
+            return null;
+        }
+        if (hasAnySuccess(feedResults)) {
+            long failedCount = feedResults.stream()
+                .filter(feedResult -> !isSuccessful(feedResult))
+                .count();
+            return "Failed to refresh " + failedCount + " RSS feed URL"
+                + (failedCount > 1 ? "s" : "") + ".";
+        }
+        return feedResults.stream()
+            .map(LinkFeedRefreshResult.FeedResult::getError)
+            .filter(StringUtils::hasText)
+            .findFirst()
+            .orElse("Failed to refresh RSS feeds.");
+    }
+
+    private static boolean hasAnySuccess(List<LinkFeedRefreshResult.FeedResult> feedResults) {
+        return feedResults != null && feedResults.stream()
+            .anyMatch(DefaultLinkFeedService::isSuccessful);
+    }
+
+    private static boolean hasAnyFailure(List<LinkFeedRefreshResult.FeedResult> feedResults) {
+        return feedResults != null && feedResults.stream()
+            .anyMatch(feedResult -> !isSuccessful(feedResult));
+    }
+
+    private static boolean isSuccessful(LinkFeedRefreshResult.FeedResult feedResult) {
+        return feedResult != null && !StringUtils.hasText(feedResult.getError());
+    }
+
     private static boolean isFeedLink(Element element) {
         String type = element.attr("type").toLowerCase();
         String href = element.attr("href");
@@ -227,7 +390,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         return link.getSpec() != null
             && link.getSpec().getRss() != null
             && Boolean.TRUE.equals(link.getSpec().getRss().getEnabled())
-            && StringUtils.hasText(link.getSpec().getRss().getFeedUrl());
+            && !rssFeedUrls(link).isEmpty();
     }
 
     private static String summaryValue(SyndEntry entry) {

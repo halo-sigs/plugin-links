@@ -22,7 +22,10 @@ function linkTitle(link: Link) {
 }
 
 function rssStatusClass(link: Link) {
-  if (link.status?.rss?.lastError) {
+  if (hasPartialRssFailure(link)) {
+    return ":uno: bg-amber-100 text-amber-600";
+  }
+  if (hasRssFailure(link)) {
     return ":uno: bg-red-100 text-red-600";
   }
   if (link.status?.rss?.lastSuccessAt) {
@@ -33,13 +36,43 @@ function rssStatusClass(link: Link) {
 
 function rssTooltip(link: Link) {
   const rss = link.status?.rss;
-  if (rss?.lastError) {
+  const feedCount = rssFeedUrls(link).length;
+  const feedCountText = feedCount > 1 ? `${feedCount} 个订阅源，` : "";
+  if (hasPartialRssFailure(link)) {
+    return `RSS 部分订阅源刷新失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
+  }
+  if (hasRssFailure(link) && rss?.lastError) {
     return `RSS 刷新失败：${rss.lastError}`;
   }
   if (rss?.lastSuccessAt) {
-    return `RSS 已启用，缓存 ${rss.itemCount || 0} 篇`;
+    return `RSS 已启用，${feedCountText}缓存 ${rss.itemCount || 0} 篇`;
   }
   return "RSS 已启用，等待刷新";
+}
+
+function rssFeedUrls(link: Link) {
+  return link.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()) || [];
+}
+
+function hasPartialRssFailure(link: Link) {
+  const feeds = link.status?.rss?.feeds || [];
+  return feeds.some((feed) => !!feed.lastError) && feeds.some((feed) => !feed.lastError && feed.lastSuccessAt);
+}
+
+function hasRssFailure(link: Link) {
+  const feeds = link.status?.rss?.feeds || [];
+  if (feeds.length) {
+    return feeds.every((feed) => !!feed.lastError);
+  }
+  return !!link.status?.rss?.lastError;
+}
+
+function linkSubtitle(link: Link) {
+  const feedUrls = rssFeedUrls(link);
+  if (feedUrls.length > 1) {
+    return `${feedUrls.length} 个订阅源`;
+  }
+  return link.spec?.url || feedUrls[0];
 }
 
 function itemCountText(count?: number) {
@@ -107,11 +140,9 @@ function itemCountText(count?: number) {
         <span v-else class=":uno: size-7 flex flex-none items-center justify-center rounded bg-white text-gray-400">
           <MdiRss class=":uno: size-4" />
         </span>
-        <span class=":uno: min-w-0 flex-1">
-          <span class=":uno: block truncate text-sm font-medium">{{ linkTitle(link) }}</span>
-          <span class=":uno: block truncate text-xs text-gray-500">{{
-            link.spec?.url || link.spec?.rss?.feedUrl
-          }}</span>
+          <span class=":uno: min-w-0 flex-1">
+            <span class=":uno: block truncate text-sm font-medium">{{ linkTitle(link) }}</span>
+          <span class=":uno: block truncate text-xs text-gray-500">{{ linkSubtitle(link) }}</span>
         </span>
         <span
           v-tooltip="{

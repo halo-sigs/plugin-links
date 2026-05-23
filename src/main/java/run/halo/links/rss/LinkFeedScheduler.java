@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
@@ -32,6 +33,7 @@ public class LinkFeedScheduler {
             .build();
         try {
             client.listAll(Link.class, options, Sort.unsorted())
+                .filter(LinkFeedScheduler::hasFeedUrls)
                 .map(link -> link.getMetadata().getName())
                 .flatMap(name -> linkFeedService.refresh(name)
                         .doOnError(error -> log.warn("Failed to refresh RSS feed for link {}",
@@ -52,5 +54,14 @@ public class LinkFeedScheduler {
         } catch (Throwable e) {
             log.warn("Scheduled RSS retention cleanup failed", e);
         }
+    }
+
+    private static boolean hasFeedUrls(Link link) {
+        return link.getSpec() != null
+            && link.getSpec().getRss() != null
+            && link.getSpec().getRss().getFeedUrls() != null
+            && link.getSpec().getRss().getFeedUrls()
+            .stream()
+            .anyMatch(StringUtils::hasText);
     }
 }

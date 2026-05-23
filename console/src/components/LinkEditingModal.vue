@@ -54,10 +54,10 @@ const { mutate, isPending } = useMutation({
           op: "add",
           path: "/spec/rss",
           value:
-            data.rss?.enabled || data.rss?.feedUrl
+            data.rss?.enabled || data.rss?.feedUrls?.length
               ? {
                   enabled: data.rss.enabled ?? false,
-                  feedUrl: data.rss.feedUrl || undefined,
+                  feedUrls: data.rss.feedUrls || [],
                 }
               : null,
         },
@@ -93,16 +93,16 @@ function onSubmit(data: LinkFormState) {
 }
 
 function shouldRefreshFeedAfterSave(data: LinkFormState) {
-  const nextFeedUrl = data.rss?.feedUrl || "";
+  const nextFeedUrls = data.rss?.feedUrls || [];
   return Boolean(
     data.rss?.enabled
-      && nextFeedUrl
-      && (!props.link.spec?.rss?.enabled || props.link.spec?.rss?.feedUrl !== nextFeedUrl),
+      && nextFeedUrls.length
+      && (!props.link.spec?.rss?.enabled || !sameFeedUrls(props.link.spec.rss.feedUrls || [], nextFeedUrls)),
   );
 }
 
 async function handleRefreshFeed() {
-  if (!props.link.spec?.rss?.enabled || isRefreshingFeed.value) {
+  if (!props.link.spec?.rss?.enabled || !props.link.spec.rss.feedUrls?.length || isRefreshingFeed.value) {
     return;
   }
   isRefreshingFeed.value = true;
@@ -118,6 +118,10 @@ async function handleRefreshFeed() {
   } finally {
     isRefreshingFeed.value = false;
   }
+}
+
+function sameFeedUrls(left: string[], right: string[]) {
+  return left.length === right.length && left.every((feedUrl, index) => feedUrl === right[index]);
 }
 
 function handleDelete() {
@@ -166,7 +170,11 @@ function handleDelete() {
         <VSpace>
           <!-- @vue-ignore -->
           <VButton :loading="isPending" type="secondary" @click="$formkit.submit('link-form')"> 保存 </VButton>
-          <VButton v-if="link.spec?.rss?.enabled" :loading="isRefreshingFeed" @click="handleRefreshFeed">
+          <VButton
+            v-if="link.spec?.rss?.enabled && link.spec.rss.feedUrls?.length"
+            :loading="isRefreshingFeed"
+            @click="handleRefreshFeed"
+          >
             刷新 RSS
           </VButton>
           <VButton @click="modal?.close()">取消</VButton>

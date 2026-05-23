@@ -21,6 +21,8 @@ public interface LinkFeedItemStore {
 
     long countByLinkName(String linkName);
 
+    long countByLinkNameAndFeedUrl(String linkName, String feedUrl);
+
     void deleteOlderThan(Instant cutoff);
 
     void deleteExcess(long keepCount);

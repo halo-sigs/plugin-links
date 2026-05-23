@@ -5,6 +5,7 @@ import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import run.halo.app.extension.AbstractExtension;
@@ -66,8 +67,8 @@ public class Link extends AbstractExtension {
         @Schema(description = "Whether RSS or Atom tracking is enabled for this link.")
         private Boolean enabled;
 
-        @Schema(description = "Absolute HTTP or HTTPS URL of the RSS or Atom feed.")
-        private String feedUrl;
+        @Schema(description = "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds.")
+        private List<String> feedUrls;
     }
 
     @Data
@@ -80,9 +81,6 @@ public class Link extends AbstractExtension {
     @Data
     @Schema(description = "Observed RSS or Atom feed refresh state.")
     public static class RssStatus {
-        @Schema(description = "Feed URL currently used for refreshes.")
-        private String effectiveFeedUrl;
-
         @Schema(description = "Last time a feed refresh was attempted.")
         private Instant lastFetchedAt;
 
@@ -95,16 +93,44 @@ public class Link extends AbstractExtension {
         @Schema(description = "Number of consecutive feed refresh failures.")
         private Integer failureCount;
 
-        @Schema(description = "ETag returned by the feed server for conditional requests.")
-        private String etag;
-
-        @Schema(description = "Last-Modified value returned by the feed server for conditional requests.")
-        private String lastModified;
-
         @Schema(description = "Latest feed item publication time observed for this link.")
         private Instant latestPublishedAt;
 
         @Schema(description = "Number of cached feed items for this link.")
+        private Long itemCount;
+
+        @Schema(description = "Observed refresh state for each configured feed URL.")
+        private List<RssFeedStatus> feeds;
+    }
+
+    @Data
+    @Schema(description = "Observed RSS or Atom refresh state for one configured feed URL.")
+    public static class RssFeedStatus {
+        @Schema(description = "Configured feed URL this status belongs to.")
+        private String url;
+
+        @Schema(description = "Last time this feed URL refresh was attempted.")
+        private Instant lastFetchedAt;
+
+        @Schema(description = "Last time this feed URL refresh completed successfully.")
+        private Instant lastSuccessAt;
+
+        @Schema(description = "Last refresh failure message for this feed URL.")
+        private String lastError;
+
+        @Schema(description = "Number of consecutive refresh failures for this feed URL.")
+        private Integer failureCount;
+
+        @Schema(description = "ETag returned by this feed server for conditional requests.")
+        private String etag;
+
+        @Schema(description = "Last-Modified value returned by this feed server.")
+        private String lastModified;
+
+        @Schema(description = "Latest feed item publication time observed for this feed URL.")
+        private Instant latestPublishedAt;
+
+        @Schema(description = "Number of cached feed items for this feed URL.")
         private Long itemCount;
     }
 }

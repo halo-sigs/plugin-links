@@ -1,5 +1,6 @@
 package run.halo.links.rss;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,5 +9,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LinkFeedDiscoveryResult {
-    private String feedUrl;
+    private List<String> feedUrls = List.of();
 }

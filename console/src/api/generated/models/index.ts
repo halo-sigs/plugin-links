@@ -1,5 +1,6 @@
 export * from './add-operation';
 export * from './copy-operation';
+export * from './feed-result';
 export * from './json-patch-inner';
 export * from './link';
 export * from './link-detail-dto';
@@ -21,6 +22,7 @@ export * from './metadata';
 export * from './move-operation';
 export * from './remove-operation';
 export * from './replace-operation';
+export * from './rss-feed-status';
 export * from './rss-spec';
 export * from './rss-status';
 export * from './sort-request';

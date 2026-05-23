@@ -57,7 +57,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         return route()
             .GET("rss/discovery", this::discoverFeed, builder -> builder
                 .operationId("discoverLinkFeed")
-                .description("Discover an RSS or Atom feed URL from a link website URL.")
+                .description("Discover RSS or Atom feed URLs from a link website URL.")
                 .tag(tag)
                 .parameter(parameterBuilder()
                     .name("url")
@@ -70,7 +70,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             )
             .POST("links/{name}/rss/refresh", this::refreshFeed, builder -> builder
                 .operationId("refreshLinkFeed")
-                .description("Refresh RSS or Atom items for an enabled link.")
+                .description("Refresh RSS or Atom items for all configured feed URLs on an enabled link.")
                 .tag(tag)
                 .parameter(parameterBuilder()
                     .name("name")

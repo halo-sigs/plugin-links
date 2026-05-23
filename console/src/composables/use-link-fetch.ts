@@ -36,6 +36,10 @@ function groupLinks(groups: LinkGroup[], links: Link[]) {
   return [...grouped, ungrouped];
 }
 
+function hasRssFeedUrls(link: Link) {
+  return Boolean(link.spec?.rss?.feedUrls?.some((feedUrl) => !!feedUrl?.trim()));
+}
+
 export function useLinksFetch() {
   return useQuery<GroupWithLinks[]>({
     queryKey: [QK_GROUPS_WITH_LINKS],
@@ -103,7 +107,7 @@ export function useRssLinksFetch() {
 
       return groupLinks(
         groups,
-        links.filter((link) => link.spec?.rss?.enabled && !!link.spec.rss.feedUrl),
+        links.filter((link) => link.spec?.rss?.enabled && hasRssFeedUrls(link)),
       );
     },
   });

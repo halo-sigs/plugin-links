@@ -3,6 +3,7 @@ package run.halo.links.rss;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.URL;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -38,7 +40,8 @@ class DefaultLinkFeedServiceTest {
         when(client.update(any(Link.class))).thenAnswer(invocation ->
             Mono.just(invocation.getArgument(0)));
         when(itemStore.upsertAll(anyList())).thenReturn(1);
-        when(itemStore.countByLinkName("link-a")).thenReturn(1L);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
         when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
             .thenReturn(new SafeUrlFetcher.FetchResult(
                 new URL("https://example.com/feed.xml"),
@@ -68,17 +71,23 @@ class DefaultLinkFeedServiceTest {
             });
 
         Link.RssStatus status = link.getStatus().getRss();
-        assertThat(status.getEffectiveFeedUrl()).isEqualTo("https://example.com/feed.xml");
         assertThat(status.getLastError()).isNull();
         assertThat(status.getFailureCount()).isZero();
-        assertThat(status.getEtag()).isEqualTo("\"feed-v1\"");
         assertThat(status.getItemCount()).isEqualTo(1);
         assertThat(status.getLatestPublishedAt()).isEqualTo(Instant.parse("2026-05-20T10:00:00Z"));
+        assertThat(status.getFeeds())
+            .singleElement()
+            .satisfies(feedStatus -> {
+                assertThat(feedStatus.getUrl()).isEqualTo("https://example.com/feed.xml");
+                assertThat(feedStatus.getEtag()).isEqualTo("\"feed-v1\"");
+                assertThat(feedStatus.getFailureCount()).isZero();
+                assertThat(feedStatus.getItemCount()).isEqualTo(1);
+            });
         verify(retentionService).enforceForLink(eq("link-a"), any(LinkFeedRetentionPolicy.class));
     }
 
     @Test
-    void shouldUpdateFailureStatusWhenRefreshFails() {
+    void shouldUpdatePerFeedFailureStatusWhenRefreshFails() {
         ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
         LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
         LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
@@ -88,24 +97,41 @@ class DefaultLinkFeedServiceTest {
         Link link = rssLink("link-a", "https://example.com/feed.xml");
         Link.RssStatus status = new Link.RssStatus();
         status.setFailureCount(2);
+        Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
+        feedStatus.setUrl("https://example.com/feed.xml");
+        feedStatus.setFailureCount(2);
+        status.setFeeds(List.of(feedStatus));
         link.getStatus().setRss(status);
 
         when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
         when(client.update(any(Link.class))).thenAnswer(invocation ->
             Mono.just(invocation.getArgument(0)));
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(0L);
         when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
             .thenThrow(new ServerErrorException("URL blocked for security reasons",
                 new IllegalArgumentException("private")));
 
         StepVerifier.create(service.refresh("link-a"))
-            .expectError(ServerErrorException.class)
-            .verify();
+            .assertNext(result -> {
+                assertThat(result.isPartialFailure()).isFalse();
+                assertThat(result.getFeeds())
+                    .singleElement()
+                    .satisfies(feed -> assertThat(feed.getError()).contains("URL blocked"));
+            })
+            .verifyComplete();
 
         Link.RssStatus updatedStatus = link.getStatus().getRss();
-        assertThat(updatedStatus.getEffectiveFeedUrl()).isEqualTo("https://example.com/feed.xml");
         assertThat(updatedStatus.getFailureCount()).isEqualTo(3);
         assertThat(updatedStatus.getLastError()).contains("URL blocked");
         assertThat(updatedStatus.getLastFetchedAt()).isNotNull();
+        assertThat(updatedStatus.getFeeds())
+            .singleElement()
+            .satisfies(updatedFeed -> {
+                assertThat(updatedFeed.getUrl()).isEqualTo("https://example.com/feed.xml");
+                assertThat(updatedFeed.getFailureCount()).isEqualTo(3);
+                assertThat(updatedFeed.getLastError()).contains("URL blocked");
+            });
     }
 
     @Test
@@ -149,7 +175,8 @@ class DefaultLinkFeedServiceTest {
         when(client.update(any(Link.class))).thenAnswer(invocation ->
             Mono.just(invocation.getArgument(0)));
         when(itemStore.upsertAll(anyList())).thenReturn(2);
-        when(itemStore.countByLinkName("link-a")).thenReturn(2L);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://ryanc.cc/rss.xml"))
+            .thenReturn(2L);
         when(feedFetcher.fetchFeed(eq("https://ryanc.cc/rss.xml"), any(), any()))
             .thenReturn(new SafeUrlFetcher.FetchResult(
                 new URL("https://ryanc.cc/rss.xml"),
@@ -185,14 +212,18 @@ class DefaultLinkFeedServiceTest {
             new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
         Link link = rssLink("link-a", "https://example.com/feed.xml");
         Link.RssStatus status = new Link.RssStatus();
-        status.setEtag("\"feed-v1\"");
-        status.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
+        feedStatus.setUrl("https://example.com/feed.xml");
+        feedStatus.setEtag("\"feed-v1\"");
+        feedStatus.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        status.setFeeds(List.of(feedStatus));
         link.getStatus().setRss(status);
 
         when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
         when(client.update(any(Link.class))).thenAnswer(invocation ->
             Mono.just(invocation.getArgument(0)));
-        when(itemStore.countByLinkName("link-a")).thenReturn(0L, 1L);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(0L, 1L);
         when(itemStore.upsertAll(anyList())).thenReturn(1);
         when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
             .thenReturn(new SafeUrlFetcher.FetchResult(
@@ -211,7 +242,85 @@ class DefaultLinkFeedServiceTest {
         verify(feedFetcher).fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull());
     }
 
-    private static Link rssLink(String name, String feedUrl) {
+    @Test
+    void shouldRefreshMultipleFeedUrlsWithPartialFailureIsolation() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml",
+            "https://example.com/comments.xml");
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(itemStore.countByLinkNameAndFeedUrl(eq("link-a"), anyString())).thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenReturn(new SafeUrlFetcher.FetchResult(
+                new URL("https://example.com/feed.xml"),
+                200,
+                feedXml(),
+                null,
+                "\"feed-v1\"",
+                null
+            ));
+        when(feedFetcher.fetchFeed(eq("https://example.com/comments.xml"), any(), any()))
+            .thenThrow(new ServerErrorException("URL blocked for security reasons",
+                new IllegalArgumentException("private")));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> {
+                assertThat(result.isPartialFailure()).isTrue();
+                assertThat(result.getFetchedItemCount()).isEqualTo(1);
+                assertThat(result.getItemCount()).isEqualTo(2);
+                assertThat(result.getFeeds())
+                    .extracting(LinkFeedRefreshResult.FeedResult::getUrl)
+                    .containsExactly("https://example.com/feed.xml",
+                        "https://example.com/comments.xml");
+                assertThat(result.getFeeds().get(1).getError()).contains("URL blocked");
+            })
+            .verifyComplete();
+
+        Link.RssStatus status = link.getStatus().getRss();
+        assertThat(status.getLastError()).contains("Failed to refresh 1 RSS feed URL");
+        assertThat(status.getFailureCount()).isZero();
+        assertThat(status.getItemCount()).isEqualTo(2);
+        assertThat(status.getFeeds())
+            .hasSize(2)
+            .extracting(Link.RssFeedStatus::getUrl)
+            .containsExactly("https://example.com/feed.xml", "https://example.com/comments.xml");
+    }
+
+    @Test
+    void shouldRejectEnabledLinkWithoutFeedUrls() {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", " ");
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .expectErrorSatisfies(error -> assertThat(error)
+                .hasMessageContaining("RSS is not enabled"))
+            .verify();
+    }
+
+    @Test
+    void shouldScopeStableItemIdByFeedUrl() {
+        assertThat(DefaultLinkFeedService.stableItemId("link-a",
+            "https://example.com/feed.xml", "post-1"))
+            .isNotEqualTo(DefaultLinkFeedService.stableItemId("link-a",
+                "https://example.com/comments.xml", "post-1"));
+    }
+
+    private static Link rssLink(String name, String... feedUrls) {
         Link link = new Link();
         Metadata metadata = new Metadata();
         metadata.setName(name);
@@ -219,7 +328,7 @@ class DefaultLinkFeedServiceTest {
         Link.LinkSpec spec = new Link.LinkSpec();
         Link.RssSpec rss = new Link.RssSpec();
         rss.setEnabled(true);
-        rss.setFeedUrl(feedUrl);
+        rss.setFeedUrls(Arrays.asList(feedUrls));
         spec.setRss(rss);
         link.setSpec(spec);
         link.setStatus(new Link.LinkStatus());

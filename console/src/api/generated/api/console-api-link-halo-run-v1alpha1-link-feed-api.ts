@@ -73,7 +73,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
             };
         },
         /**
-         * Discover an RSS or Atom feed URL from a link website URL.
+         * Discover RSS or Atom feed URLs from a link website URL.
          * @param {string} url Absolute HTTP or HTTPS website URL to inspect.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -338,7 +338,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
             };
         },
         /**
-         * Refresh RSS or Atom items for an enabled link.
+         * Refresh RSS or Atom items for all configured feed URLs on an enabled link.
          * @param {string} name Metadata name of the link.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -400,7 +400,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Discover an RSS or Atom feed URL from a link website URL.
+         * Discover RSS or Atom feed URLs from a link website URL.
          * @param {string} url Absolute HTTP or HTTPS website URL to inspect.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -470,7 +470,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Refresh RSS or Atom items for an enabled link.
+         * Refresh RSS or Atom items for all configured feed URLs on an enabled link.
          * @param {string} name Metadata name of the link.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -500,7 +500,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
             return localVarFp.cleanupLinkFeedItems(options).then((request) => request(axios, basePath));
         },
         /**
-         * Discover an RSS or Atom feed URL from a link website URL.
+         * Discover RSS or Atom feed URLs from a link website URL.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiDiscoverLinkFeedRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -545,7 +545,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
             return localVarFp.markLinkFeedItemReadLater(requestParameters.id, requestParameters.readLater, options).then((request) => request(axios, basePath));
         },
         /**
-         * Refresh RSS or Atom items for an enabled link.
+         * Refresh RSS or Atom items for all configured feed URLs on an enabled link.
          * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiRefreshLinkFeedRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -728,7 +728,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
     }
 
     /**
-     * Discover an RSS or Atom feed URL from a link website URL.
+     * Discover RSS or Atom feed URLs from a link website URL.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiDiscoverLinkFeedRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -783,7 +783,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
     }
 
     /**
-     * Refresh RSS or Atom items for an enabled link.
+     * Refresh RSS or Atom items for all configured feed URLs on an enabled link.
      * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiRefreshLinkFeedRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}

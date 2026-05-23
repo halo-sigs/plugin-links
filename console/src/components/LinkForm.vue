@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFormState } from "@/types";
-import { Toast, VLoading } from "@halo-dev/components";
+import { Toast, VButton, VLoading } from "@halo-dev/components";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiRss from "~icons/mdi/rss";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
@@ -18,7 +18,7 @@ const emit = defineEmits<{
 type LinkFormData = LinkFormState & {
   rss: {
     enabled: boolean;
-    feedUrl: string;
+    feedUrls: string[];
   };
 };
 
@@ -27,20 +27,23 @@ const data = ref<LinkFormData>({
   displayName: "",
   rss: {
     enabled: false,
-    feedUrl: "",
+    feedUrls: [],
   },
 });
+const rssFeedUrlsText = shallowRef("");
 
 onMounted(() => {
   if (props.formState) {
     const formState = toRaw(props.formState);
+    const feedUrls = [...(formState.rss?.feedUrls || [])];
     data.value = {
       ...formState,
       rss: {
         enabled: formState.rss?.enabled ?? false,
-        feedUrl: formState.rss?.feedUrl || "",
+        feedUrls,
       },
     };
+    rssFeedUrlsText.value = feedUrlsToText(feedUrls);
   }
 });
 
@@ -82,12 +85,13 @@ const handleDiscoverFeed = async () => {
     const { data: result } = await linksConsoleApiClient.feed.discoverLinkFeed({
       url: data.value.url,
     });
-    if (result.feedUrl) {
-      data.value.rss = {
-        enabled: true,
-        feedUrl: result.feedUrl,
-      };
-      Toast.success("发现订阅地址");
+    const discoveredFeedUrls = normalizeFeedUrls(result.feedUrls || []);
+    if (discoveredFeedUrls.length) {
+      data.value.rss.enabled = true;
+      const feedUrls = mergeFeedUrls(parseFeedUrlsText(rssFeedUrlsText.value), discoveredFeedUrls);
+      data.value.rss.feedUrls = feedUrls;
+      rssFeedUrlsText.value = feedUrlsToText(feedUrls);
+      Toast.success(`发现 ${discoveredFeedUrls.length} 个订阅地址`);
       return;
     }
     Toast.info("未发现订阅地址");
@@ -100,7 +104,23 @@ const handleDiscoverFeed = async () => {
 
 const annotationsForm = ref();
 
-async function onSubmit(formData: LinkFormState) {
+function normalizeFeedUrls(feedUrls: string[]) {
+  return [...new Set(feedUrls.map((feedUrl) => feedUrl.trim()).filter(Boolean))];
+}
+
+function parseFeedUrlsText(value: string) {
+  return normalizeFeedUrls(value.split(/\r?\n/));
+}
+
+function feedUrlsToText(feedUrls: string[]) {
+  return normalizeFeedUrls(feedUrls).join("\n");
+}
+
+function mergeFeedUrls(currentFeedUrls: string[], discoveredFeedUrls: string[]) {
+  return normalizeFeedUrls([...currentFeedUrls, ...discoveredFeedUrls]);
+}
+
+async function onSubmit() {
   annotationsForm.value?.handleSubmit();
   await nextTick();
 
@@ -108,12 +128,22 @@ async function onSubmit(formData: LinkFormState) {
   if (customFormInvalid || specFormInvalid) {
     return;
   }
+  const feedUrls = parseFeedUrlsText(rssFeedUrlsText.value);
+  data.value.rss.feedUrls = feedUrls;
+  rssFeedUrlsText.value = feedUrlsToText(feedUrls);
+  if (data.value.rss.enabled && !feedUrls.length) {
+    Toast.error("请至少填写一个订阅地址");
+    return;
+  }
 
   emit("submit", {
-    ...formData,
+    url: data.value.url,
+    displayName: data.value.displayName,
+    logo: data.value.logo,
+    description: data.value.description,
     rss: {
       enabled: data.value.rss.enabled,
-      feedUrl: data.value.rss.feedUrl,
+      feedUrls,
     },
     annotations: {
       ...annotations,
@@ -172,22 +202,26 @@ async function onSubmit(formData: LinkFormState) {
         </div>
         <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
           <FormKit type="checkbox" name="rssEnabled" v-model="data.rss.enabled" label="启用 RSS 订阅"></FormKit>
-          <FormKit type="url" name="rssFeedUrl" v-if="data.rss.enabled" v-model="data.rss.feedUrl" label="订阅地址">
-            <template #suffix>
-              <button
-                type="button"
-                aria-label="发现订阅地址"
-                v-tooltip="{
-                  content: '发现订阅地址',
-                }"
-                class=":uno: group h-full flex cursor-pointer items-center border-0 bg-transparent px-3 transition-all"
-                @click="handleDiscoverFeed"
-              >
-                <VLoading v-if="isDiscoveringFeed" class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
-                <MdiRss v-else class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
-              </button>
-            </template>
-          </FormKit>
+          <FormKit
+            v-if="data.rss.enabled"
+            type="code"
+            name="rssFeedUrlsText"
+            v-model="rssFeedUrlsText"
+            label="订阅地址"
+            help="每行一个 RSS 或 Atom 地址"
+            language="yaml"
+            height="160px"
+            placeholder="https://example.com/rss.xml&#10;https://example.com/atom.xml"
+            :classes="{ inner: '!max-w-none' }"
+          ></FormKit>
+          <div class=":uno: pt-4">
+            <VButton size="sm" @click="handleDiscoverFeed" :loading="isDiscoveringFeed">
+              <template #icon>
+                <MdiRss class=":uno: size-4 text-gray-500" />
+              </template>
+              发现订阅地址
+            </VButton>
+          </div>
         </div>
       </div>
     </div>
