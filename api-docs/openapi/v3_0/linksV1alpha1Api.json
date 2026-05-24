@@ -1698,6 +1698,7 @@
         "description" : "Observed RSS or Atom refresh state for one configured feed URL."
       },
       "RssSpec" : {
+        "required" : [ "enabled", "feedUrls" ],
         "type" : "object",
         "properties" : {
           "enabled" : {
@@ -1705,11 +1706,13 @@
             "description" : "Whether RSS or Atom tracking is enabled for this link."
           },
           "feedUrls" : {
+            "minItems" : 1,
             "type" : "array",
             "description" : "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds.",
             "items" : {
+              "pattern" : "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$",
               "type" : "string",
-              "description" : "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds."
+              "format" : "uri"
             }
           }
         },

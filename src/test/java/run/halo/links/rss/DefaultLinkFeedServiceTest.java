@@ -427,11 +427,35 @@ class DefaultLinkFeedServiceTest {
         Link link = rssLink("link-a", " ");
 
         when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
 
         StepVerifier.create(service.refresh("link-a"))
             .expectErrorSatisfies(error -> assertThat(error)
-                .hasMessageContaining("RSS is not enabled"))
+                .hasMessageContaining("RSS feed URLs are required"))
             .verify();
+    }
+
+    @Test
+    void shouldRejectNonHttpFeedUrlsBeforeFetching() {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "ftp://example.com/feed.xml");
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .expectErrorSatisfies(error -> assertThat(error)
+                .hasMessageContaining("absolute HTTP or HTTPS URL"))
+            .verify();
+
+        verify(feedFetcher, never()).fetchFeed(anyString(), any(), any());
     }
 
     @Test

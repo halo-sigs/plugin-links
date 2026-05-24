@@ -3,6 +3,7 @@ package run.halo.links.extension;
 import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED;
 import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
@@ -64,10 +65,16 @@ public class Link extends AbstractExtension {
     @Data
     @Schema(description = "RSS or Atom feed tracking settings.")
     public static class RssSpec {
-        @Schema(description = "Whether RSS or Atom tracking is enabled for this link.")
+        @Schema(description = "Whether RSS or Atom tracking is enabled for this link.",
+            requiredMode = REQUIRED)
         private Boolean enabled;
 
-        @Schema(description = "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds.")
+        @ArraySchema(
+            arraySchema = @Schema(description = "Absolute HTTP or HTTPS URLs of the RSS or Atom feeds.",
+                requiredMode = REQUIRED),
+            schema = @Schema(format = "uri", pattern = "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$"),
+            minItems = 1
+        )
         private List<String> feedUrls;
     }
 

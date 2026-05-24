@@ -37,6 +37,8 @@ public class DefaultLinkFeedService implements LinkFeedService {
 
     private static final int MAX_ITEMS_PER_FETCH = 100;
     private static final int MAX_SUMMARY_LENGTH = 500;
+    private static final String INVALID_FEED_URL_MESSAGE =
+        "RSS feed URL must be an absolute HTTP or HTTPS URL.";
     private static final List<String> HALO_DEFAULT_FEED_PATHS =
         List.of("/rss.xml", "/feed/moments/rss.xml");
 
@@ -344,9 +346,29 @@ public class DefaultLinkFeedService implements LinkFeedService {
         link.getSpec().getRss().getFeedUrls()
             .stream()
             .filter(StringUtils::hasText)
-            .map(String::trim)
+            .map(DefaultLinkFeedService::normalizeFeedUrl)
             .forEach(feedUrl -> normalized.putIfAbsent(feedUrl, feedUrl));
         return List.copyOf(normalized.values());
+    }
+
+    private static String normalizeFeedUrl(String feedUrl) {
+        String value = feedUrl.trim();
+        try {
+            URI uri = new URI(value);
+            String scheme = uri.getScheme();
+            if (!StringUtils.hasText(scheme)
+                || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))
+                || !StringUtils.hasText(uri.getHost())) {
+                throw invalidFeedUrlException();
+            }
+            return value;
+        } catch (URISyntaxException e) {
+            throw invalidFeedUrlException();
+        }
+    }
+
+    private static ResponseStatusException invalidFeedUrlException() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, INVALID_FEED_URL_MESSAGE);
     }
 
     private static Map<String, Link.RssFeedStatus> feedStatusByUrl(Link.RssStatus status) {
@@ -439,8 +461,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
     private static boolean isRssEnabled(Link link) {
         return link.getSpec() != null
             && link.getSpec().getRss() != null
-            && Boolean.TRUE.equals(link.getSpec().getRss().getEnabled())
-            && !rssFeedUrls(link).isEmpty();
+            && Boolean.TRUE.equals(link.getSpec().getRss().getEnabled());
     }
 
     private static String summaryValue(SyndEntry entry) {
