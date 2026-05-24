@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Link } from "@/api/generated";
+import LinkFeedBackToTopButton from "@/components/LinkFeedBackToTopButton.vue";
 import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
@@ -301,6 +302,8 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
       </div>
     </div>
   </div>
+
+  <LinkFeedBackToTopButton />
 
   <LinkFeedItemsModal
     v-if="readLaterModalVisible"
