@@ -130,6 +130,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
         return database.withCollection(COLLECTION_NAME, collection -> {
             List<LinkFeedItem> result = new ArrayList<>();
             collection.find(filter, FindOptions.orderBy("publishedAt", SortOrder.Descending)
+                    .thenOrderBy("id", SortOrder.Descending)
                     .limit(limit))
                 .forEach(doc -> parseDocument(doc).ifPresent(result::add));
             result.sort(recentComparator());

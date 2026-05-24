@@ -85,6 +85,35 @@ class NitriteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldPageItemsWithStableIdTieBreakerForSamePublishedTime() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            String samePublishedAt = "2026-05-20T10:00:00Z";
+            store.upsert(item("item-a", "link-a", "A", samePublishedAt));
+            store.upsert(item("item-c", "link-a", "C", samePublishedAt));
+            store.upsert(item("item-b", "link-a", "B", samePublishedAt));
+            store.upsert(item("older", "link-a", "Older", "2026-05-19T10:00:00Z"));
+
+            LinkFeedItemQuery firstPage = new LinkFeedItemQuery();
+            firstPage.setLimit(2);
+            assertThat(store.listRecent(firstPage))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("item-c", "item-b");
+
+            LinkFeedItemQuery secondPage = new LinkFeedItemQuery();
+            secondPage.setBeforePublishedAt(Instant.parse(samePublishedAt));
+            secondPage.setBeforeId("item-b");
+            secondPage.setLimit(2);
+            assertThat(store.listRecent(secondPage))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("item-a", "older");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldFilterAndPreserveReadState() {
         LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
         try {
