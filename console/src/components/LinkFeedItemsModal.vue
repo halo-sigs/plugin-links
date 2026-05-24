@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { VButton, VModal, VSpace } from "@halo-dev/components";
 import { computed, useTemplateRef } from "vue";
@@ -14,7 +13,6 @@ const props = defineProps<{
   title: string;
   feed: LinkFeedItems;
   sourceName: (linkName?: string) => string;
-  publishedAtText: (item: LinkFeedItem) => string;
   emptyText: string;
 }>();
 const isLoading = computed(() => props.feed.isLoading.value);
@@ -25,7 +23,6 @@ const isLoading = computed(() => props.feed.isLoading.value);
     <LinkFeedItemList
       :feed="feed"
       :source-name="sourceName"
-      :published-at-text="publishedAtText"
       :empty-text="emptyText"
       scrollable
     />

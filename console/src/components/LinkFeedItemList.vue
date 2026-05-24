@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { VButton, VLoading } from "@halo-dev/components";
 import { useIntersectionObserver } from "@vueuse/core";
@@ -9,7 +8,6 @@ import LinkFeedItemCard from "./LinkFeedItemCard.vue";
 const props = defineProps<{
   feed: LinkFeedItems;
   sourceName: (linkName?: string) => string;
-  publishedAtText: (item: LinkFeedItem) => string;
   emptyText: string;
   compact?: boolean;
   scrollable?: boolean;
@@ -60,7 +58,6 @@ watch([isLoadMoreTriggerVisible, hasNext, isLoading, isLoadingMore], () => {
       :compact="compact"
       :item="item"
       :source-name="sourceName(item.linkName)"
-      :published-at-text="publishedAtText(item)"
       :marking-read-item-id="markingReadItemId"
       :marking-favorite-item-id="markingFavoriteItemId"
       :marking-read-later-item-id="markingReadLaterItemId"

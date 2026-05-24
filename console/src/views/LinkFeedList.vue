@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Link, LinkFeedItem } from "@/api/generated";
+import type { Link } from "@/api/generated";
 import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
@@ -76,22 +76,6 @@ function openReadLaterModal() {
 
 function openFavoriteModal() {
   favoriteModalVisible.value = true;
-}
-
-function formatTime(value?: string) {
-  if (!value) {
-    return "未知时间";
-  }
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function itemTime(item: LinkFeedItem) {
-  return formatTime(item.publishedAt || item.updatedAt || item.fetchedAt);
 }
 
 async function handleRefreshCurrentSubscription() {
@@ -206,7 +190,6 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
         <LinkFeedItemList
           :feed="mainFeed"
           :source-name="sourceName"
-          :published-at-text="itemTime"
           empty-text="暂无友链动态"
         />
       </div>
@@ -218,7 +201,6 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
     title="稍后阅读"
     :feed="readLaterFeed"
     :source-name="sourceName"
-    :published-at-text="itemTime"
     empty-text="暂无稍后阅读文章"
     @close="readLaterModalVisible = false"
   />
@@ -228,7 +210,6 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
     title="收藏文章"
     :feed="favoriteFeed"
     :source-name="sourceName"
-    :published-at-text="itemTime"
     empty-text="暂无收藏文章"
     @close="favoriteModalVisible = false"
   />
