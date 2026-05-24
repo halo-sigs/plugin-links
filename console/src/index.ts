@@ -34,6 +34,7 @@ export default definePlugin({
         meta: {
           permissions: ["plugin:links:view"],
           title: "友链动态",
+          hideFooter: true,
           menu: {
             name: "友链动态",
             group: "content",
