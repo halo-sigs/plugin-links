@@ -245,7 +245,7 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
 }
 
 .feed-item__action-icon--read-later {
-  color: rgb(37 99 235);
+  color: rgb(37 99 235 / 0.78);
 }
 
 .feed-item__action-icon--unread {
@@ -341,9 +341,9 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
 }
 
 .feed-item__badge--read-later {
-  border-color: rgb(191 219 254);
-  background: rgb(239 246 255);
-  color: rgb(29 78 216);
+  border-color: rgb(219 234 254);
+  background: rgb(239 246 255 / 0.72);
+  color: rgb(30 64 175);
 }
 
 @media (max-width: 767px) {
