@@ -365,6 +365,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
     :feed="favoriteFeed"
     :source-name="sourceName"
     empty-text="暂无收藏文章"
+    item-action-mode="favorite-only"
     @close="favoriteModalVisible = false"
   />
 </template>

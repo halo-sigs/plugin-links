@@ -9,12 +9,18 @@ const emit = defineEmits<{
 }>();
 
 const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
-const props = defineProps<{
-  title: string;
-  feed: LinkFeedItems;
-  sourceName: (linkName?: string) => string;
-  emptyText: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    title: string;
+    feed: LinkFeedItems;
+    sourceName: (linkName?: string) => string;
+    emptyText: string;
+    itemActionMode?: "all" | "favorite-only";
+  }>(),
+  {
+    itemActionMode: "all",
+  },
+);
 const isLoading = computed(() => props.feed.isLoading.value);
 </script>
 
@@ -24,6 +30,7 @@ const isLoading = computed(() => props.feed.isLoading.value);
       :feed="feed"
       :source-name="sourceName"
       :empty-text="emptyText"
+      :item-action-mode="itemActionMode"
     />
 
     <template #footer>

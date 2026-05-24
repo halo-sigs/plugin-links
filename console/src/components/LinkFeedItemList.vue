@@ -5,12 +5,18 @@ import { useIntersectionObserver } from "@vueuse/core";
 import { computed, shallowRef, useTemplateRef, watch } from "vue";
 import LinkFeedItemCard from "./LinkFeedItemCard.vue";
 
-const props = defineProps<{
-  feed: LinkFeedItems;
-  sourceName: (linkName?: string) => string;
-  emptyText: string;
-  compact?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    feed: LinkFeedItems;
+    sourceName: (linkName?: string) => string;
+    emptyText: string;
+    compact?: boolean;
+    itemActionMode?: "all" | "favorite-only";
+  }>(),
+  {
+    itemActionMode: "all",
+  },
+);
 
 const loadMoreTrigger = useTemplateRef<HTMLElement>("loadMoreTrigger");
 const isLoadMoreTriggerVisible = shallowRef(false);
@@ -51,6 +57,7 @@ watch([isLoadMoreTriggerVisible, hasNext, isLoading, isLoadingMore], () => {
       :key="item.id"
       :compact="compact"
       :item="item"
+      :item-action-mode="itemActionMode"
       :source-name="sourceName(item.linkName)"
     />
 

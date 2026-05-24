@@ -11,11 +11,17 @@ import MailOpenLineIcon from "~icons/mingcute/mail-open-line?width=unset&height=
 import StarFillIcon from "~icons/mingcute/star-fill?width=unset&height=unset";
 import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
-const props = defineProps<{
-  item: LinkFeedItem;
-  sourceName: string;
-  compact?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    item: LinkFeedItem;
+    sourceName: string;
+    compact?: boolean;
+    itemActionMode?: "all" | "favorite-only";
+  }>(),
+  {
+    itemActionMode: "all",
+  },
+);
 
 function articleTitle(item: LinkFeedItem) {
   return item.title || item.url || "未命名文章";
@@ -70,6 +76,7 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
             <StarLineIcon v-else class=":uno: feed-item__action-icon" />
           </VButton>
           <VButton
+            v-if="itemActionMode === 'all'"
             size="sm"
             ghost
             class=":uno: feed-item__action"
@@ -87,6 +94,7 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
             <CalendarTimeAddLineIcon v-else class=":uno: feed-item__action-icon" />
           </VButton>
           <VButton
+            v-if="itemActionMode === 'all'"
             size="sm"
             ghost
             class=":uno: feed-item__action"
