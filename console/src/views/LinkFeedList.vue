@@ -6,80 +6,42 @@ import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSideba
 import { useLinkFeedItems } from "@/composables/use-link-feed";
 import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
-import { IconArrowLeft, Toast, VButton, VModal, VPageHeader, VSpace } from "@halo-dev/components";
-import { computed, shallowRef, useTemplateRef } from "vue";
+import { IconArrowLeft, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
+import { computed, defineAsyncComponent, shallowRef } from "vue";
 import { useRouter } from "vue-router";
 import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
 import MdiRefresh from "~icons/mdi/refresh";
 import MdiRss from "~icons/mdi/rss";
 import MdiStar from "~icons/mdi/star";
 
-type LinkFeedItemsState = ReturnType<typeof useLinkFeedItems>;
+const LinkFeedItemsModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-feed-items-modal" */ "@/components/LinkFeedItemsModal.vue"),
+);
 
 const router = useRouter();
 const { data: groupsWithLinks, isLoading: isLoadingLinks } = useRssLinksFetch();
 
+const favoriteModalVisible = shallowRef(false);
+const readLaterModalVisible = shallowRef(false);
 const mainFeed = useLinkFeedItems();
 const readLaterFeed = useLinkFeedItems({
-  autoLoad: false,
+  enabled: readLaterModalVisible,
   fixedFilter: {
     readLater: true,
   },
 });
 const favoriteFeed = useLinkFeedItems({
-  autoLoad: false,
+  enabled: favoriteModalVisible,
   fixedFilter: {
     favorite: true,
   },
 });
 
-const {
-  items,
-  selectedLinkName,
-  selectedReadStatus,
-  hasNext,
-  isLoading,
-  isLoadingMore,
-  markingReadItemId,
-  markingFavoriteItemId,
-  markingReadLaterItemId,
-  load,
-  selectLink,
-  selectReadStatus,
-} = mainFeed;
+const { selectedLinkName, selectedReadStatus, isLoading, reload, selectLink, selectReadStatus } = mainFeed;
 
-const {
-  items: readLaterItems,
-  hasNext: readLaterHasNext,
-  isLoading: readLaterIsLoading,
-  isLoadingMore: readLaterIsLoadingMore,
-  markingReadItemId: readLaterMarkingReadItemId,
-  markingFavoriteItemId: readLaterMarkingFavoriteItemId,
-  markingReadLaterItemId: readLaterMarkingReadLaterItemId,
-} = readLaterFeed;
-
-const {
-  items: favoriteItems,
-  hasNext: favoriteHasNext,
-  isLoading: favoriteIsLoading,
-  isLoadingMore: favoriteIsLoadingMore,
-  markingReadItemId: favoriteMarkingReadItemId,
-  markingFavoriteItemId: favoriteMarkingFavoriteItemId,
-  markingReadLaterItemId: favoriteMarkingReadLaterItemId,
-} = favoriteFeed;
-
-const favoriteModalVisible = shallowRef(false);
-const favoriteModal = useTemplateRef<InstanceType<typeof VModal>>("favoriteModal");
-const readLaterModalVisible = shallowRef(false);
-const readLaterModal = useTemplateRef<InstanceType<typeof VModal>>("readLaterModal");
-const {
-  isRefreshing: isRefreshingCurrentSubscription,
-  refreshLinks: refreshCurrentSubscriptions,
-} = useLinkFeedRefresh();
-const {
-  isRefreshing: isRefreshingAllSubscriptions,
-  refreshLinks: refreshAllSubscriptions,
-} = useLinkFeedRefresh();
+const { isRefreshing: isRefreshingCurrentSubscription, refreshLinks: refreshCurrentSubscriptions } =
+  useLinkFeedRefresh();
+const { isRefreshing: isRefreshingAllSubscriptions, refreshLinks: refreshAllSubscriptions } = useLinkFeedRefresh();
 
 const allLinks = computed(() => {
   return groupsWithLinks.value?.flatMap((group) => group.links) || [];
@@ -108,58 +70,12 @@ function sourceName(linkName?: string) {
   return sourceLink(linkName)?.spec?.displayName || linkName || "未知链接";
 }
 
-async function openReadLaterModal() {
+function openReadLaterModal() {
   readLaterModalVisible.value = true;
-  await readLaterFeed.load();
 }
 
-async function openFavoriteModal() {
+function openFavoriteModal() {
   favoriteModalVisible.value = true;
-  await favoriteFeed.load();
-}
-
-async function handleOpenItem(feed: LinkFeedItemsState, item: LinkFeedItem) {
-  const updated = await feed.openItem(item);
-  if (!updated) {
-    return;
-  }
-  syncItemState(item);
-}
-
-async function handleMarkItemRead(feed: LinkFeedItemsState, item: LinkFeedItem, read: boolean) {
-  const updated = await feed.markItemRead(item, read);
-  if (!updated) {
-    return;
-  }
-  syncItemState(item);
-}
-
-async function handleMarkItemFavorite(feed: LinkFeedItemsState, item: LinkFeedItem, favorite: boolean) {
-  const updated = await feed.markItemFavorite(item, favorite);
-  if (!updated) {
-    return;
-  }
-  syncItemState(item);
-  if (favoriteModalVisible.value) {
-    await favoriteFeed.load();
-  }
-}
-
-async function handleMarkItemReadLater(feed: LinkFeedItemsState, item: LinkFeedItem, readLater: boolean) {
-  const updated = await feed.markItemReadLater(item, readLater);
-  if (!updated) {
-    return;
-  }
-  syncItemState(item);
-  if (readLaterModalVisible.value) {
-    await readLaterFeed.load();
-  }
-}
-
-function syncItemState(item: LinkFeedItem) {
-  mainFeed.patchItemState(item);
-  readLaterFeed.patchItemState(item);
-  favoriteFeed.patchItemState(item);
 }
 
 function formatTime(value?: string) {
@@ -183,7 +99,7 @@ async function handleRefreshCurrentSubscription() {
     return;
   }
   const summary = await refreshCurrentSubscriptions(selectedLink.value);
-  await load();
+  await reload();
   showRefreshSummary(summary, "当前订阅");
 }
 
@@ -192,7 +108,7 @@ async function handleRefreshAllSubscriptions() {
     return;
   }
   const summary = await refreshAllSubscriptions(allLinks.value);
-  await load();
+  await reload();
   showRefreshSummary(summary, "全部订阅");
 }
 
@@ -201,18 +117,16 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
     return;
   }
 
-  const failedLikeCount = summary.failureCount + summary.partialFailureCount;
-  if (!failedLikeCount) {
+  if (summary.failureCount) {
+    return;
+  }
+
+  if (!summary.partialFailureCount) {
     Toast.success(`${label}刷新完成：成功刷新 ${summary.successCount} 个订阅`);
     return;
   }
 
-  if (summary.failureCount === summary.totalCount) {
-    Toast.error(`${label}刷新失败：${summary.failureCount} 个订阅未刷新成功`);
-    return;
-  }
-
-  Toast.warning(`${label}刷新完成：成功 ${summary.successCount} 个，${failedLikeCount} 个存在失败`);
+  Toast.warning(`${label}刷新完成：成功 ${summary.successCount} 个，${summary.partialFailureCount} 个存在失败`);
 }
 </script>
 
@@ -280,7 +194,7 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
               </template>
               刷新全部
             </VButton>
-            <VButton size="sm" ghost :loading="isLoading" @click="load()">
+            <VButton size="sm" ghost :loading="isLoading" @click="reload()">
               <template #icon>
                 <MdiRefresh class=":uno: size-full" />
               </template>
@@ -290,93 +204,32 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
         </div>
 
         <LinkFeedItemList
-          :items="items"
+          :feed="mainFeed"
           :source-name="sourceName"
           :published-at-text="itemTime"
           empty-text="暂无友链动态"
-          :has-next="hasNext"
-          :is-loading="isLoading"
-          :is-loading-more="isLoadingMore"
-          :marking-read-item-id="markingReadItemId"
-          :marking-favorite-item-id="markingFavoriteItemId"
-          :marking-read-later-item-id="markingReadLaterItemId"
-          @open="handleOpenItem(mainFeed, $event)"
-          @toggle-favorite="(target, favorite) => handleMarkItemFavorite(mainFeed, target, favorite)"
-          @toggle-read-later="(target, readLater) => handleMarkItemReadLater(mainFeed, target, readLater)"
-          @toggle-read="(target, read) => handleMarkItemRead(mainFeed, target, read)"
-          @load-more="mainFeed.load({ append: true })"
         />
       </div>
     </div>
   </div>
 
-  <VModal
-    ref="readLaterModal"
-    v-model:visible="readLaterModalVisible"
-    :centered="false"
+  <LinkFeedItemsModal
+    v-if="readLaterModalVisible"
     title="稍后阅读"
-    :mount-to-body="true"
-    :width="860"
-  >
-    <LinkFeedItemList
-      :items="readLaterItems"
-      :source-name="sourceName"
-      :published-at-text="itemTime"
-      empty-text="暂无稍后阅读文章"
-      scrollable
-      :has-next="readLaterHasNext"
-      :is-loading="readLaterIsLoading"
-      :is-loading-more="readLaterIsLoadingMore"
-      :marking-read-item-id="readLaterMarkingReadItemId"
-      :marking-favorite-item-id="readLaterMarkingFavoriteItemId"
-      :marking-read-later-item-id="readLaterMarkingReadLaterItemId"
-      @open="handleOpenItem(readLaterFeed, $event)"
-      @toggle-favorite="(target, favorite) => handleMarkItemFavorite(readLaterFeed, target, favorite)"
-      @toggle-read-later="(target, readLater) => handleMarkItemReadLater(readLaterFeed, target, readLater)"
-      @toggle-read="(target, read) => handleMarkItemRead(readLaterFeed, target, read)"
-      @load-more="readLaterFeed.load({ append: true })"
-    />
+    :feed="readLaterFeed"
+    :source-name="sourceName"
+    :published-at-text="itemTime"
+    empty-text="暂无稍后阅读文章"
+    @close="readLaterModalVisible = false"
+  />
 
-    <template #footer>
-      <VSpace>
-        <VButton type="secondary" :loading="readLaterIsLoading" @click="readLaterFeed.load()">重新加载</VButton>
-        <VButton @click="readLaterModal?.close()">关闭</VButton>
-      </VSpace>
-    </template>
-  </VModal>
-
-  <VModal
-    ref="favoriteModal"
-    v-model:visible="favoriteModalVisible"
-    :centered="false"
+  <LinkFeedItemsModal
+    v-if="favoriteModalVisible"
     title="收藏文章"
-    :mount-to-body="true"
-    :width="860"
-  >
-    <LinkFeedItemList
-      :items="favoriteItems"
-      :source-name="sourceName"
-      :published-at-text="itemTime"
-      empty-text="暂无收藏文章"
-      scrollable
-      :has-next="favoriteHasNext"
-      :is-loading="favoriteIsLoading"
-      :is-loading-more="favoriteIsLoadingMore"
-      :marking-read-item-id="favoriteMarkingReadItemId"
-      :marking-favorite-item-id="favoriteMarkingFavoriteItemId"
-      :marking-read-later-item-id="favoriteMarkingReadLaterItemId"
-      @open="handleOpenItem(favoriteFeed, $event)"
-      @toggle-favorite="(target, favorite) => handleMarkItemFavorite(favoriteFeed, target, favorite)"
-      @toggle-read-later="(target, readLater) => handleMarkItemReadLater(favoriteFeed, target, readLater)"
-      @toggle-read="(target, read) => handleMarkItemRead(favoriteFeed, target, read)"
-      @load-more="favoriteFeed.load({ append: true })"
-    />
-
-    <template #footer>
-      <VSpace>
-        <VButton type="secondary" :loading="favoriteIsLoading" @click="favoriteFeed.load()">重新加载</VButton>
-        <VButton @click="favoriteModal?.close()">关闭</VButton>
-      </VSpace>
-    </template>
-  </VModal>
+    :feed="favoriteFeed"
+    :source-name="sourceName"
+    :published-at-text="itemTime"
+    empty-text="暂无收藏文章"
+    @close="favoriteModalVisible = false"
+  />
 </template>

@@ -1,9 +1,10 @@
 import { linksConsoleApiClient } from "@/api";
-import type { LinkFeedItem } from "@/api/generated";
-import { Toast } from "@halo-dev/components";
-import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from "vue";
+import type { LinkFeedItem, LinkFeedItemPage } from "@/api/generated";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
+import { computed, shallowRef, toValue, type MaybeRefOrGetter } from "vue";
 
 export const QK_LINK_FEED_ITEMS = "plugin:links:feed-items";
+const LINK_FEED_PAGE_SIZE = 30;
 
 export type LinkFeedReadStatus = "" | "unread" | "read";
 
@@ -17,77 +18,126 @@ export interface LinkFeedItemsFilter {
 
 export interface UseLinkFeedItemsOptions {
   autoLoad?: boolean;
+  enabled?: MaybeRefOrGetter<boolean>;
   fixedFilter?: MaybeRefOrGetter<LinkFeedItemsFilter | undefined>;
 }
 
+interface LinkFeedPageCursor {
+  beforePublishedAt?: string;
+  beforeId?: string;
+}
+
+interface MarkReadVariables {
+  id: string;
+  read: boolean;
+}
+
+interface MarkFavoriteVariables {
+  id: string;
+  favorite: boolean;
+}
+
+interface MarkReadLaterVariables {
+  id: string;
+  readLater: boolean;
+}
+
 export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
+  const queryClient = useQueryClient();
   const { autoLoad = true } = options;
-  const items = ref<LinkFeedItem[]>([]);
   const selectedLinkName = shallowRef("");
-  const selectedGroupName = shallowRef("");
   const selectedReadStatus = shallowRef<LinkFeedReadStatus>("");
-  const nextBeforePublishedAt = shallowRef<string | undefined>();
-  const nextBeforeId = shallowRef<string | undefined>();
-  const hasNext = shallowRef(false);
-  const isLoading = shallowRef(false);
-  const isLoadingMore = shallowRef(false);
-  const markingReadItemId = shallowRef("");
-  const markingFavoriteItemId = shallowRef("");
-  const markingReadLaterItemId = shallowRef("");
+  const queryEnabled = computed(() => {
+    return options.enabled === undefined ? autoLoad : toValue(options.enabled);
+  });
 
   const activeFilter = computed<LinkFeedItemsFilter>(() => ({
     linkName: selectedLinkName.value || undefined,
-    groupName: selectedGroupName.value || undefined,
-    read:
-      selectedReadStatus.value === "read"
-        ? true
-        : selectedReadStatus.value === "unread"
-          ? false
-          : undefined,
+    read: selectedReadStatus.value === "read" ? true : selectedReadStatus.value === "unread" ? false : undefined,
     ...toValue(options.fixedFilter),
   }));
 
-  async function load({ append = false }: { append?: boolean } = {}) {
-    if ((append && !hasNext.value) || isLoading.value || isLoadingMore.value) {
-      return;
-    }
-    if (append) {
-      isLoadingMore.value = true;
-    } else {
-      isLoading.value = true;
-      nextBeforePublishedAt.value = undefined;
-      nextBeforeId.value = undefined;
-    }
-    try {
+  const queryKey = computed(() => [QK_LINK_FEED_ITEMS, activeFilter.value] as const);
+
+  const query = useInfiniteQuery<LinkFeedItemPage>({
+    queryKey,
+    enabled: queryEnabled,
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam as LinkFeedPageCursor | undefined;
       const { data } = await linksConsoleApiClient.feed.listLinkFeedItems({
         ...activeFilter.value,
-        beforePublishedAt: append ? nextBeforePublishedAt.value : undefined,
-        beforeId: append ? nextBeforeId.value : undefined,
-        limit: 30,
+        beforePublishedAt: cursor?.beforePublishedAt,
+        beforeId: cursor?.beforeId,
+        limit: LINK_FEED_PAGE_SIZE,
       });
-      const pageItems = data.items || [];
-      items.value = append ? [...items.value, ...pageItems] : pageItems;
-      nextBeforePublishedAt.value = data.nextBeforePublishedAt;
-      nextBeforeId.value = data.nextBeforeId;
-      hasNext.value = data.hasNext ?? false;
-    } finally {
-      isLoading.value = false;
-      isLoadingMore.value = false;
+      return data;
+    },
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.hasNext) {
+        return undefined;
+      }
+      return {
+        beforePublishedAt: lastPage.nextBeforePublishedAt,
+        beforeId: lastPage.nextBeforeId,
+      } satisfies LinkFeedPageCursor;
+    },
+  });
+
+  const items = computed(() => query.data.value?.pages.flatMap((page) => page.items || []) || []);
+  const hasNext = computed(() => Boolean(query.hasNextPage?.value));
+  const isLoading = computed(
+    () => query.isLoading.value || (query.isFetching.value && !query.isFetchingNextPage.value),
+  );
+  const isLoadingMore = computed(() => query.isFetchingNextPage.value);
+
+  const readMutation = useMutation<void, unknown, MarkReadVariables>({
+    mutationFn: async ({ id, read }) => {
+      await linksConsoleApiClient.feed.markLinkFeedItemRead({ id, read });
+    },
+    onSuccess: invalidateFeedItems,
+  });
+
+  const favoriteMutation = useMutation<void, unknown, MarkFavoriteVariables>({
+    mutationFn: async ({ id, favorite }) => {
+      await linksConsoleApiClient.feed.markLinkFeedItemFavorite({ id, favorite });
+    },
+    onSuccess: invalidateFeedItems,
+  });
+
+  const readLaterMutation = useMutation<void, unknown, MarkReadLaterVariables>({
+    mutationFn: async ({ id, readLater }) => {
+      await linksConsoleApiClient.feed.markLinkFeedItemReadLater({ id, readLater });
+    },
+    onSuccess: invalidateFeedItems,
+  });
+
+  const markingReadItemId = computed(() =>
+    readMutation.isPending.value ? readMutation.variables.value?.id || "" : "",
+  );
+  const markingFavoriteItemId = computed(() =>
+    favoriteMutation.isPending.value ? favoriteMutation.variables.value?.id || "" : "",
+  );
+  const markingReadLaterItemId = computed(() =>
+    readLaterMutation.isPending.value ? readLaterMutation.variables.value?.id || "" : "",
+  );
+
+  async function invalidateFeedItems() {
+    await queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] });
+  }
+
+  async function reload() {
+    await queryClient.resetQueries({ queryKey: queryKey.value, exact: true });
+  }
+
+  async function fetchNextPage() {
+    if (!query.hasNextPage?.value || query.isFetchingNextPage.value) {
+      return;
     }
+    await query.fetchNextPage();
   }
 
   function selectLink(name: string) {
     selectedLinkName.value = name;
-    if (name) {
-      selectedGroupName.value = "";
-    }
-  }
-
-  function selectGroup(name: string) {
-    selectedGroupName.value = name;
-    if (name) {
-      selectedLinkName.value = "";
-    }
   }
 
   function selectReadStatus(status: LinkFeedReadStatus) {
@@ -95,116 +145,58 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   }
 
   async function markItemRead(item: LinkFeedItem, read: boolean) {
-    if (!item.id || markingReadItemId.value) {
+    if (!item.id || readMutation.isPending.value) {
       return false;
     }
-    markingReadItemId.value = item.id;
     try {
-      await linksConsoleApiClient.feed.markLinkFeedItemRead({
-        id: item.id,
-        read,
-      });
-      item.read = read;
-      removeIfExcluded(item);
+      await readMutation.mutateAsync({ id: item.id, read });
       return true;
     } catch {
-      Toast.error("更新阅读状态失败");
       return false;
-    } finally {
-      markingReadItemId.value = "";
     }
   }
 
   async function markItemFavorite(item: LinkFeedItem, favorite: boolean) {
-    if (!item.id || markingFavoriteItemId.value) {
+    if (!item.id || favoriteMutation.isPending.value) {
       return false;
     }
-    markingFavoriteItemId.value = item.id;
     try {
-      await linksConsoleApiClient.feed.markLinkFeedItemFavorite({
-        id: item.id,
-        favorite,
-      });
-      item.favorite = favorite;
-      removeIfExcluded(item);
+      await favoriteMutation.mutateAsync({ id: item.id, favorite });
       return true;
     } catch {
-      Toast.error("更新收藏状态失败");
       return false;
-    } finally {
-      markingFavoriteItemId.value = "";
     }
   }
 
   async function markItemReadLater(item: LinkFeedItem, readLater: boolean) {
-    if (!item.id || markingReadLaterItemId.value) {
+    if (!item.id || readLaterMutation.isPending.value) {
       return false;
     }
-    markingReadLaterItemId.value = item.id;
     try {
-      await linksConsoleApiClient.feed.markLinkFeedItemReadLater({
-        id: item.id,
-        readLater,
-      });
-      item.readLater = readLater;
-      removeIfExcluded(item);
+      await readLaterMutation.mutateAsync({ id: item.id, readLater });
       return true;
     } catch {
-      Toast.error("更新稍后阅读状态失败");
       return false;
-    } finally {
-      markingReadLaterItemId.value = "";
     }
   }
 
   async function openItem(item: LinkFeedItem) {
-    const markedRead = item.read || (await markItemRead(item, true));
-    if (markedRead && item.readLater) {
+    if (!item.read) {
+      const markedRead = await markItemRead(item, true);
+      if (!markedRead) {
+        return false;
+      }
+    }
+
+    if (item.readLater) {
       return await markItemReadLater(item, false);
     }
-    return markedRead;
+    return true;
   }
-
-  function patchItemState(item: LinkFeedItem) {
-    const current = items.value.find((candidate) => candidate.id === item.id);
-    if (!current) {
-      return;
-    }
-    Object.assign(current, {
-      favorite: item.favorite,
-      read: item.read,
-      readLater: item.readLater,
-    });
-    removeIfExcluded(current);
-  }
-
-  function removeIfExcluded(item: LinkFeedItem) {
-    if (!matchesActiveFilter(item)) {
-      items.value = items.value.filter((current) => current.id !== item.id);
-    }
-  }
-
-  function matchesActiveFilter(item: LinkFeedItem) {
-    const filter = activeFilter.value;
-    return (
-      (filter.read === undefined || Boolean(item.read) === filter.read)
-      && (filter.favorite === undefined || Boolean(item.favorite) === filter.favorite)
-      && (filter.readLater === undefined || Boolean(item.readLater) === filter.readLater)
-    );
-  }
-
-  watch(
-    [selectedLinkName, selectedGroupName, selectedReadStatus, () => toValue(options.fixedFilter)],
-    () => load(),
-    {
-      immediate: autoLoad,
-    },
-  );
 
   return {
     items,
     selectedLinkName,
-    selectedGroupName,
     selectedReadStatus,
     hasNext,
     isLoading,
@@ -212,14 +204,15 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
     markingReadItemId,
     markingFavoriteItemId,
     markingReadLaterItemId,
-    load,
+    reload,
+    fetchNextPage,
     selectLink,
-    selectGroup,
     selectReadStatus,
     markItemRead,
     markItemFavorite,
     markItemReadLater,
     openItem,
-    patchItemState,
   };
 }
+
+export type LinkFeedItems = ReturnType<typeof useLinkFeedItems>;

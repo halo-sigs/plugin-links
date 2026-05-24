@@ -96,7 +96,7 @@ const handleDiscoverFeed = async () => {
     }
     Toast.info("未发现订阅地址");
   } catch {
-    Toast.error("发现订阅地址失败");
+    // Halo's API interceptor shows request failure toasts.
   } finally {
     isDiscoveringFeed.value = false;
   }

@@ -78,7 +78,7 @@ const { mutate, isPending } = useMutation({
         });
         Toast.success("RSS 已自动刷新");
       } catch {
-        Toast.error("RSS 自动刷新失败");
+        // Halo's API interceptor shows request failure toasts.
       }
     }
     modal.value?.close();
@@ -114,7 +114,7 @@ async function handleRefreshFeed() {
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
   } catch {
-    Toast.error("刷新 RSS 失败");
+    // Halo's API interceptor shows request failure toasts.
   } finally {
     isRefreshingFeed.value = false;
   }

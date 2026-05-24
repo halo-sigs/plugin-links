@@ -70,7 +70,7 @@ async function handleSubmit(data: LinkImportSubmitData) {
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     modal.value?.close();
   } catch {
-    Toast.error("导入失败，请稍后重试");
+    // Halo's API interceptor shows request failure toasts.
   } finally {
     isImporting.value = false;
   }

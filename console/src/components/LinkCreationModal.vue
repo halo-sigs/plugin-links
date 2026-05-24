@@ -65,7 +65,7 @@ const { mutate, isPending } = useMutation({
         await linksConsoleApiClient.feed.refreshLinkFeed({ name: linkName });
         Toast.success("RSS 已自动刷新");
       } catch {
-        Toast.error("RSS 自动刷新失败");
+        // Halo's API interceptor shows request failure toasts.
       }
     }
     modal.value?.close();
