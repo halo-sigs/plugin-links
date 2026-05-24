@@ -264,7 +264,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
         <div class=":uno: feed-toolbar">
           <LinkFeedReadStatusTabs :selected-status="selectedReadStatus" @select="selectReadStatus" />
           <div class=":uno: feed-toolbar__actions">
-            <VSpace>
+            <VSpace class=":uno: flex-wrap">
               <VButton
                 size="sm"
                 :disabled="!selectedLink || isRemoteRefreshing"
@@ -406,6 +406,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
   padding: 0.5rem;
   box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
   backdrop-filter: blur(14px);
+  flex-wrap: wrap;
 }
 
 .feed-toolbar__actions {

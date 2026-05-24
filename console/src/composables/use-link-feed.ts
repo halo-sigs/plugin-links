@@ -1,7 +1,9 @@
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFeedItemPage } from "@/api/generated";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/vue-query";
-import { computed, shallowRef, toValue, type MaybeRefOrGetter } from "vue";
+import { useLocalStorage } from "@vueuse/core";
+import { useRouteQuery } from "@vueuse/router";
+import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
 export const QK_LINK_FEED_ITEMS = "plugin:links:feed-items";
 const LINK_FEED_PAGE_SIZE = 30;
@@ -30,8 +32,8 @@ interface LinkFeedPageCursor {
 export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   const queryClient = useQueryClient();
   const { autoLoad = true } = options;
-  const selectedLinkName = shallowRef("");
-  const selectedReadStatus = shallowRef<LinkFeedReadStatus>("");
+  const selectedLinkName = useRouteQuery("link", "");
+  const selectedReadStatus = useLocalStorage<LinkFeedReadStatus>("plugin:links:selected-read-status", "");
   const queryEnabled = computed(() => {
     return options.enabled === undefined ? autoLoad : toValue(options.enabled);
   });
