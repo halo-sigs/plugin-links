@@ -32,7 +32,7 @@ interface LinkFeedPageCursor {
 export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   const queryClient = useQueryClient();
   const { autoLoad = true } = options;
-  const selectedLinkName = useRouteQuery("link", "");
+  const selectedLinkName = useRouteQuery<string>("link", "");
   const selectedReadStatus = useLocalStorage<LinkFeedReadStatus>("plugin:links:selected-read-status", "");
   const queryEnabled = computed(() => {
     return options.enabled === undefined ? autoLoad : toValue(options.enabled);

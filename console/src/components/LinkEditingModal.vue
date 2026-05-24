@@ -6,7 +6,7 @@ import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/us
 import type { LinkFormState } from "@/types";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
-import { shallowRef, useTemplateRef } from "vue";
+import { useTemplateRef } from "vue";
 import LinkForm from "./LinkForm.vue";
 
 const props = withDefaults(
@@ -23,7 +23,6 @@ const emit = defineEmits<{
 const queryClient = useQueryClient();
 
 const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
-const isRefreshingFeed = shallowRef(false);
 
 const { mutate, isPending } = useMutation({
   mutationFn: (data: LinkFormState) => {

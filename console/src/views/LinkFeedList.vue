@@ -5,12 +5,14 @@ import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
 import { useLinkFeedItems } from "@/composables/use-link-feed";
+import { useLinkFeedMarkAllRead, type LinkFeedMarkAllReadSummary } from "@/composables/use-link-feed-mark-all-read";
 import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
-import { IconArrowLeft, IconRefreshLine, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
+import { Dialog, IconArrowLeft, IconRefreshLine, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed, defineAsyncComponent, shallowRef } from "vue";
 import { useRouter } from "vue-router";
 import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
+import MailOpenLineIcon from "~icons/mingcute/mail-open-line?width=unset&height=unset";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
@@ -40,6 +42,9 @@ const favoriteFeed = useLinkFeedItems({
 });
 
 const { selectedLinkName, selectedReadStatus, isFetching, reload, selectLink, selectReadStatus } = mainFeed;
+const { loadedUnreadCount, hasLoadedUnreadItems, isMarkingAllRead, markAllRead } = useLinkFeedMarkAllRead(
+  mainFeed.items,
+);
 
 const {
   isRefreshing: isRefreshingCurrentSubscription,
@@ -167,6 +172,36 @@ async function handleRefreshAllSubscriptions() {
   showRefreshSummary(summary, "全部订阅");
 }
 
+function handleMarkAllRead() {
+  if (!hasLoadedUnreadItems.value || isMarkingAllRead.value) {
+    return;
+  }
+
+  Dialog.warning({
+    title: "全部标为已读",
+    description: `确认将当前列表中已加载的 ${loadedUnreadCount.value} 篇未读文章标为已读吗？未加载的更早文章不会受到影响。`,
+    confirmType: "primary",
+    onConfirm: async () => {
+      const summary = await markAllRead();
+      await reload();
+      showMarkAllReadSummary(summary);
+    },
+  });
+}
+
+function showMarkAllReadSummary(summary: LinkFeedMarkAllReadSummary | undefined) {
+  if (!summary || !summary.requestedCount) {
+    return;
+  }
+
+  if (!summary.failureCount) {
+    Toast.success(`已将当前列表中的 ${summary.successCount} 篇文章标为已读`);
+    return;
+  }
+
+  Toast.warning(`已将 ${summary.successCount}/${summary.requestedCount} 篇文章标为已读`);
+}
+
 function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: string) {
   if (!summary || !summary.totalCount) {
     return;
@@ -286,6 +321,17 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                   <IconRefreshLine />
                 </template>
                 {{ allRefreshButtonText }}
+              </VButton>
+              <VButton
+                size="sm"
+                :disabled="!hasLoadedUnreadItems || isMarkingAllRead"
+                :loading="isMarkingAllRead"
+                @click="handleMarkAllRead"
+              >
+                <template #icon>
+                  <MailOpenLineIcon />
+                </template>
+                全部标为已读
               </VButton>
               <VButton size="sm" ghost :loading="isFetching" @click="reload()">
                 <template #icon>
