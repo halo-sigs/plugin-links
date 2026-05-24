@@ -28,4 +28,6 @@ public interface LinkFeedItemStore {
     void deleteExcess(long keepCount);
 
     void deleteExcessByLinkName(String linkName, long keepCount);
+
+    void deleteByLinkName(String linkName);
 }

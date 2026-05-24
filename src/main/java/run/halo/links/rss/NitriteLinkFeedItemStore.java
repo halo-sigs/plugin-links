@@ -265,6 +265,18 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
         database.commit();
     }
 
+    @Override
+    public void deleteByLinkName(String linkName) {
+        if (!StringUtils.hasText(linkName)) {
+            return;
+        }
+        database.withCollection(COLLECTION_NAME, collection -> {
+            collection.remove(where("linkName").eq(linkName));
+            return null;
+        });
+        database.commit();
+    }
+
     private Filter buildFilter(LinkFeedItemQuery query) {
         Filter filter = Filter.ALL;
         if (StringUtils.hasText(query.getLinkName())) {

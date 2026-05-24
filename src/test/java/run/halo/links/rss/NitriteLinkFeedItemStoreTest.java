@@ -322,6 +322,31 @@ class NitriteLinkFeedItemStoreTest {
         }
     }
 
+    @Test
+    void shouldDeleteAllItemsByLinkNameIncludingSavedStates() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("a-read", "link-a", "Read", "2026-05-20T10:00:00Z"));
+            store.upsert(item("a-favorite", "link-a", "Favorite", "2026-05-21T10:00:00Z",
+                true, false));
+            store.upsert(item("a-later", "link-a", "Later", "2026-05-22T10:00:00Z",
+                false, true));
+            store.upsert(item("b-saved", "link-b", "Other", "2026-05-23T10:00:00Z",
+                true, true));
+            store.updateRead("a-read", true);
+
+            store.deleteByLinkName("link-a");
+
+            assertThat(store.countByLinkName("link-a")).isZero();
+            assertThat(store.listRecent(new LinkFeedItemQuery()))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("b-saved");
+        } finally {
+            database.destroy();
+        }
+    }
+
     private static LinkFeedItem item(String id, String linkName, String title, String publishedAt) {
         return item(id, linkName, title, publishedAt, false, false);
     }
