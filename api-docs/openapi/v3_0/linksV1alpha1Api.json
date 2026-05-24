@@ -1693,6 +1693,11 @@
           "url" : {
             "type" : "string",
             "description" : "Configured feed URL this status belongs to."
+          },
+          "validatorUpdatedAt" : {
+            "type" : "string",
+            "description" : "Last time the current conditional request validators were updated.",
+            "format" : "date-time"
           }
         },
         "description" : "Observed RSS or Atom refresh state for one configured feed URL."

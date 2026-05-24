@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URL;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -345,6 +346,9 @@ class DefaultLinkFeedServiceTest {
             .satisfies(feedStatus -> {
                 assertThat(feedStatus.getUrl()).isEqualTo("https://example.com/feed.xml");
                 assertThat(feedStatus.getEtag()).isEqualTo("\"feed-v1\"");
+                assertThat(feedStatus.getLastModified())
+                    .isEqualTo("Wed, 20 May 2026 10:00:00 GMT");
+                assertThat(feedStatus.getValidatorUpdatedAt()).isNotNull();
                 assertThat(feedStatus.getFailureCount()).isZero();
                 assertThat(feedStatus.getItemCount()).isEqualTo(1);
             });
@@ -362,9 +366,13 @@ class DefaultLinkFeedServiceTest {
         Link link = rssLink("link-a", "https://example.com/feed.xml");
         Link.RssStatus status = new Link.RssStatus();
         status.setFailureCount(2);
+        Instant validatorUpdatedAt = Instant.parse("2026-05-20T10:00:00Z");
         Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
         feedStatus.setUrl("https://example.com/feed.xml");
         feedStatus.setFailureCount(2);
+        feedStatus.setEtag("\"feed-v1\"");
+        feedStatus.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        feedStatus.setValidatorUpdatedAt(validatorUpdatedAt);
         status.setFeeds(List.of(feedStatus));
         link.getStatus().setRss(status);
 
@@ -396,6 +404,10 @@ class DefaultLinkFeedServiceTest {
                 assertThat(updatedFeed.getUrl()).isEqualTo("https://example.com/feed.xml");
                 assertThat(updatedFeed.getFailureCount()).isEqualTo(3);
                 assertThat(updatedFeed.getLastError()).contains("URL blocked");
+                assertThat(updatedFeed.getEtag()).isEqualTo("\"feed-v1\"");
+                assertThat(updatedFeed.getLastModified())
+                    .isEqualTo("Wed, 20 May 2026 10:00:00 GMT");
+                assertThat(updatedFeed.getValidatorUpdatedAt()).isEqualTo(validatorUpdatedAt);
             });
     }
 
@@ -489,6 +501,11 @@ class DefaultLinkFeedServiceTest {
             })
             .verifyComplete();
 
+        assertThat(link.getStatus().getRss().getFeeds())
+            .singleElement()
+            .satisfies(feedStatus ->
+                assertThat(feedStatus.getValidatorUpdatedAt()).isNull());
+
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<LinkFeedItem>> itemsCaptor = ArgumentCaptor.forClass(List.class);
         verify(itemStore).upsertAll(itemsCaptor.capture());
@@ -511,6 +528,7 @@ class DefaultLinkFeedServiceTest {
         feedStatus.setUrl("https://example.com/feed.xml");
         feedStatus.setEtag("\"feed-v1\"");
         feedStatus.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        feedStatus.setValidatorUpdatedAt(Instant.now().minus(Duration.ofDays(1)));
         status.setFeeds(List.of(feedStatus));
         link.getStatus().setRss(status);
 
@@ -535,6 +553,193 @@ class DefaultLinkFeedServiceTest {
             .verifyComplete();
 
         verify(feedFetcher).fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull());
+    }
+
+    @Test
+    void shouldSendFreshConditionalHeadersWhenCachedItemsExist() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml");
+        Link.RssStatus status = new Link.RssStatus();
+        Instant validatorUpdatedAt = Instant.now().minus(Duration.ofDays(1));
+        Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
+        feedStatus.setUrl("https://example.com/feed.xml");
+        feedStatus.setEtag("\"feed-v1\"");
+        feedStatus.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        feedStatus.setValidatorUpdatedAt(validatorUpdatedAt);
+        feedStatus.setLatestPublishedAt(Instant.parse("2026-05-20T10:00:00Z"));
+        status.setFeeds(List.of(feedStatus));
+        link.getStatus().setRss(status);
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), eq("\"feed-v1\""),
+            eq("Wed, 20 May 2026 10:00:00 GMT")))
+            .thenReturn(new SafeUrlFetcher.FetchResult(
+                new URL("https://example.com/feed.xml"),
+                304,
+                "",
+                null,
+                null,
+                null
+            ));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> {
+                assertThat(result.getItemCount()).isEqualTo(1);
+                assertThat(result.getFeeds())
+                    .singleElement()
+                    .satisfies(feed -> assertThat(feed.isNotModified()).isTrue());
+            })
+            .verifyComplete();
+
+        verify(feedFetcher).fetchFeed(eq("https://example.com/feed.xml"), eq("\"feed-v1\""),
+            eq("Wed, 20 May 2026 10:00:00 GMT"));
+        verify(itemStore, never()).upsertAll(anyList());
+        assertThat(link.getStatus().getRss().getFeeds())
+            .singleElement()
+            .satisfies(updatedFeed -> {
+                assertThat(updatedFeed.getEtag()).isEqualTo("\"feed-v1\"");
+                assertThat(updatedFeed.getLastModified())
+                    .isEqualTo("Wed, 20 May 2026 10:00:00 GMT");
+                assertThat(updatedFeed.getValidatorUpdatedAt()).isEqualTo(validatorUpdatedAt);
+            });
+    }
+
+    @Test
+    void shouldSkipConditionalHeadersWhenValidatorFreshnessIsMissing() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml");
+        Link.RssStatus status = new Link.RssStatus();
+        Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
+        feedStatus.setUrl("https://example.com/feed.xml");
+        feedStatus.setEtag("\"feed-v1\"");
+        feedStatus.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        status.setFeeds(List.of(feedStatus));
+        link.getStatus().setRss(status);
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L, 1L, 1L);
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull()))
+            .thenReturn(new SafeUrlFetcher.FetchResult(
+                new URL("https://example.com/feed.xml"),
+                200,
+                feedXml(),
+                null,
+                "\"feed-v2\"",
+                "Thu, 21 May 2026 10:00:00 GMT"
+            ));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> assertThat(result.getFetchedItemCount()).isEqualTo(1))
+            .verifyComplete();
+
+        verify(feedFetcher).fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull());
+        assertThat(link.getStatus().getRss().getFeeds())
+            .singleElement()
+            .satisfies(updatedFeed -> assertThat(updatedFeed.getValidatorUpdatedAt()).isNotNull());
+    }
+
+    @Test
+    void shouldSkipConditionalHeadersWhenValidatorFreshnessIsStale() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml");
+        Link.RssStatus status = new Link.RssStatus();
+        Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
+        feedStatus.setUrl("https://example.com/feed.xml");
+        feedStatus.setEtag("\"feed-v1\"");
+        feedStatus.setLastModified("Wed, 20 May 2026 10:00:00 GMT");
+        feedStatus.setValidatorUpdatedAt(Instant.now().minus(Duration.ofDays(9)));
+        status.setFeeds(List.of(feedStatus));
+        link.getStatus().setRss(status);
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L, 1L, 1L);
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull()))
+            .thenReturn(new SafeUrlFetcher.FetchResult(
+                new URL("https://example.com/feed.xml"),
+                200,
+                feedXml(),
+                null,
+                "\"feed-v2\"",
+                "Thu, 21 May 2026 10:00:00 GMT"
+            ));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> assertThat(result.getFetchedItemCount()).isEqualTo(1))
+            .verifyComplete();
+
+        verify(feedFetcher).fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull());
+        assertThat(link.getStatus().getRss().getFeeds())
+            .singleElement()
+            .satisfies(updatedFeed -> assertThat(updatedFeed.getValidatorUpdatedAt()).isNotNull());
+    }
+
+    @Test
+    void shouldOmitInvalid2038LastModifiedFromConditionalHeaders() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml");
+        Link.RssStatus status = new Link.RssStatus();
+        Link.RssFeedStatus feedStatus = new Link.RssFeedStatus();
+        feedStatus.setUrl("https://example.com/feed.xml");
+        feedStatus.setEtag("\"feed-v1\"");
+        feedStatus.setLastModified("Tue, 19 Jan 2038 03:14:07 GMT");
+        feedStatus.setValidatorUpdatedAt(Instant.now().minus(Duration.ofDays(1)));
+        status.setFeeds(List.of(feedStatus));
+        link.getStatus().setRss(status);
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), eq("\"feed-v1\""),
+            isNull()))
+            .thenReturn(new SafeUrlFetcher.FetchResult(
+                new URL("https://example.com/feed.xml"),
+                304,
+                "",
+                null,
+                null,
+                null
+            ));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> assertThat(result.getItemCount()).isEqualTo(1))
+            .verifyComplete();
+
+        verify(feedFetcher).fetchFeed(eq("https://example.com/feed.xml"), eq("\"feed-v1\""),
+            isNull());
     }
 
     @Test

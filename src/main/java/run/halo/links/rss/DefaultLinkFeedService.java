@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -41,6 +42,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
     private static final int MAX_SUMMARY_LENGTH = 500;
     private static final String INVALID_FEED_URL_MESSAGE =
         "RSS feed URL must be an absolute HTTP or HTTPS URL.";
+    private static final Duration CONDITIONAL_VALIDATOR_FRESHNESS = Duration.ofDays(8);
     private static final List<String> HALO_DEFAULT_FEED_PATHS =
         List.of("/rss.xml", "/feed/moments/rss.xml");
 
@@ -268,10 +270,11 @@ public class DefaultLinkFeedService implements LinkFeedService {
     private LinkFeedRefreshResult.FeedResult refreshFeedBlocking(String linkName, String feedUrl,
         Link.RssFeedStatus previousStatus, Instant fetchedAt) throws Exception {
         long cachedItemCount = itemStore.countByLinkNameAndFeedUrl(linkName, feedUrl);
+        boolean sendConditionalHeaders =
+            shouldSendConditionalHeaders(cachedItemCount, previousStatus, fetchedAt);
         var fetchResult = feedFetcher.fetchFeed(feedUrl,
-            cachedItemCount > 0 && previousStatus != null ? previousStatus.getEtag() : null,
-            cachedItemCount > 0 && previousStatus != null ? previousStatus.getLastModified()
-                : null);
+            sendConditionalHeaders ? conditionalEtag(previousStatus) : null,
+            sendConditionalHeaders ? conditionalLastModified(previousStatus) : null);
 
         LinkFeedRefreshResult.FeedResult result = new LinkFeedRefreshResult.FeedResult();
         result.setUrl(feedUrl);
@@ -454,6 +457,8 @@ public class DefaultLinkFeedService implements LinkFeedService {
                 : previousStatus.getLatestPublishedAt());
             status.setEtag(previousStatus == null ? null : previousStatus.getEtag());
             status.setLastModified(previousStatus == null ? null : previousStatus.getLastModified());
+            status.setValidatorUpdatedAt(previousStatus == null ? null
+                : previousStatus.getValidatorUpdatedAt());
             status.setLastError(result.getError());
             status.setFailureCount(Optional.ofNullable(previousStatus)
                 .map(Link.RssFeedStatus::getFailureCount)
@@ -468,7 +473,58 @@ public class DefaultLinkFeedService implements LinkFeedService {
             : previousStatus.getEtag(), result.isNotModified()));
         status.setLastModified(nextValidator(result.getLastModified(), previousStatus == null ? null
             : previousStatus.getLastModified(), result.isNotModified()));
+        status.setValidatorUpdatedAt(nextValidatorUpdatedAt(result, previousStatus));
         return status;
+    }
+
+    private static boolean shouldSendConditionalHeaders(long cachedItemCount,
+        Link.RssFeedStatus previousStatus, Instant fetchedAt) {
+        if (cachedItemCount <= 0 || previousStatus == null
+            || previousStatus.getValidatorUpdatedAt() == null) {
+            return false;
+        }
+        if (previousStatus.getValidatorUpdatedAt()
+            .plus(CONDITIONAL_VALIDATOR_FRESHNESS)
+            .isBefore(fetchedAt)) {
+            return false;
+        }
+        return StringUtils.hasText(previousStatus.getEtag())
+            || StringUtils.hasText(conditionalLastModified(previousStatus));
+    }
+
+    private static String conditionalEtag(Link.RssFeedStatus status) {
+        if (status == null || !StringUtils.hasText(status.getEtag())) {
+            return null;
+        }
+        return status.getEtag();
+    }
+
+    private static String conditionalLastModified(Link.RssFeedStatus status) {
+        if (status == null || !StringUtils.hasText(status.getLastModified())
+            || containsInvalid2038Timestamp(status.getLastModified())) {
+            return null;
+        }
+        return status.getLastModified();
+    }
+
+    private static boolean containsInvalid2038Timestamp(String lastModified) {
+        return StringUtils.hasText(lastModified) && lastModified.contains("2038");
+    }
+
+    private static Instant nextValidatorUpdatedAt(LinkFeedRefreshResult.FeedResult result,
+        Link.RssFeedStatus previousStatus) {
+        if (result.isNotModified()) {
+            return previousStatus == null ? null : previousStatus.getValidatorUpdatedAt();
+        }
+        if (hasResponseValidator(result)) {
+            return result.getFetchedAt();
+        }
+        return null;
+    }
+
+    private static boolean hasResponseValidator(LinkFeedRefreshResult.FeedResult result) {
+        return StringUtils.hasText(result.getEtag())
+            || StringUtils.hasText(result.getLastModified());
     }
 
     private static String nextValidator(String current, String previous, boolean notModified) {

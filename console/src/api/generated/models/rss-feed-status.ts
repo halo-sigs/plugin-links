@@ -74,4 +74,10 @@ export interface RssFeedStatus {
      * @memberof RssFeedStatus
      */
     'url'?: string;
+    /**
+     * Last time the current conditional request validators were updated.
+     * @type {string}
+     * @memberof RssFeedStatus
+     */
+    'validatorUpdatedAt'?: string;
 }

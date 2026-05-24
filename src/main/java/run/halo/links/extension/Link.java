@@ -134,6 +134,9 @@ public class Link extends AbstractExtension {
         @Schema(description = "Last-Modified value returned by this feed server.")
         private String lastModified;
 
+        @Schema(description = "Last time the current conditional request validators were updated.")
+        private Instant validatorUpdatedAt;
+
         @Schema(description = "Latest feed item publication time observed for this feed URL.")
         private Instant latestPublishedAt;
 
