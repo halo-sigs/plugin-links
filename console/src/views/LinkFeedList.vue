@@ -39,9 +39,18 @@ const favoriteFeed = useLinkFeedItems({
 
 const { selectedLinkName, selectedReadStatus, isLoading, reload, selectLink, selectReadStatus } = mainFeed;
 
-const { isRefreshing: isRefreshingCurrentSubscription, refreshLinks: refreshCurrentSubscriptions } =
-  useLinkFeedRefresh();
-const { isRefreshing: isRefreshingAllSubscriptions, refreshLinks: refreshAllSubscriptions } = useLinkFeedRefresh();
+const {
+  isRefreshing: isRefreshingCurrentSubscription,
+  totalCount: currentRefreshTotalCount,
+  completedCount: currentRefreshCompletedCount,
+  refreshLinks: refreshCurrentSubscriptions,
+} = useLinkFeedRefresh();
+const {
+  isRefreshing: isRefreshingAllSubscriptions,
+  totalCount: allRefreshTotalCount,
+  completedCount: allRefreshCompletedCount,
+  refreshLinks: refreshAllSubscriptions,
+} = useLinkFeedRefresh();
 
 const allLinks = computed(() => {
   return groupsWithLinks.value?.flatMap((group) => group.links) || [];
@@ -59,6 +68,38 @@ const isRemoteRefreshing = computed(() => {
   return isRefreshingCurrentSubscription.value || isRefreshingAllSubscriptions.value;
 });
 
+const currentRefreshButtonText = computed(() => {
+  return refreshButtonText(
+    "刷新当前",
+    isRefreshingCurrentSubscription.value,
+    currentRefreshCompletedCount.value,
+    currentRefreshTotalCount.value,
+  );
+});
+
+const allRefreshButtonText = computed(() => {
+  return refreshButtonText(
+    "刷新全部",
+    isRefreshingAllSubscriptions.value,
+    allRefreshCompletedCount.value,
+    allRefreshTotalCount.value,
+  );
+});
+
+const refreshProgressText = computed(() => {
+  if (isRefreshingCurrentSubscription.value) {
+    return refreshProgressTextByCount(
+      "正在刷新当前订阅",
+      currentRefreshCompletedCount.value,
+      currentRefreshTotalCount.value,
+    );
+  }
+  if (isRefreshingAllSubscriptions.value) {
+    return refreshProgressTextByCount("正在刷新全部订阅", allRefreshCompletedCount.value, allRefreshTotalCount.value);
+  }
+  return "";
+});
+
 function sourceLink(linkName?: string): Link | undefined {
   if (!linkName) {
     return undefined;
@@ -67,7 +108,14 @@ function sourceLink(linkName?: string): Link | undefined {
 }
 
 function sourceName(linkName?: string) {
-  return sourceLink(linkName)?.spec?.displayName || linkName || "未知链接";
+  if (!linkName) {
+    return "未知来源";
+  }
+  const link = sourceLink(linkName);
+  if (link) {
+    return link.spec?.displayName || link.metadata.name;
+  }
+  return isLoadingLinks.value ? "加载来源中" : "已删除链接";
 }
 
 function openReadLaterModal() {
@@ -101,16 +149,42 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
     return;
   }
 
-  if (summary.failureCount) {
-    return;
-  }
-
-  if (!summary.partialFailureCount) {
+  if (!summary.failureCount && !summary.partialFailureCount) {
     Toast.success(`${label}刷新完成：成功刷新 ${summary.successCount} 个订阅`);
     return;
   }
 
-  Toast.warning(`${label}刷新完成：成功 ${summary.successCount} 个，${summary.partialFailureCount} 个存在失败`);
+  const resultText = refreshSummaryText(summary);
+  if (summary.failureCount === summary.totalCount) {
+    Toast.error(`${label}刷新失败：${resultText}`);
+    return;
+  }
+
+  Toast.warning(`${label}刷新完成：${resultText}`);
+}
+
+function refreshButtonText(label: string, refreshing: boolean, completedCount: number, totalCount: number) {
+  if (!refreshing || !totalCount) {
+    return label;
+  }
+  return `${label} ${completedCount}/${totalCount}`;
+}
+
+function refreshProgressTextByCount(label: string, completedCount: number, totalCount: number) {
+  if (!totalCount) {
+    return label;
+  }
+  return `${label}：${completedCount}/${totalCount}`;
+}
+
+function refreshSummaryText(summary: LinkFeedRefreshSummary) {
+  return [
+    summary.successCount ? `成功 ${summary.successCount} 个` : "",
+    summary.partialFailureCount ? `部分失败 ${summary.partialFailureCount} 个` : "",
+    summary.failureCount ? `失败 ${summary.failureCount} 个` : "",
+  ]
+    .filter(Boolean)
+    .join("，");
 }
 </script>
 
@@ -155,36 +229,41 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
       <div class=":uno: min-w-0 flex-1">
         <div class=":uno: mb-4 flex flex-wrap items-center justify-between gap-3">
           <LinkFeedReadStatusTabs :selected-status="selectedReadStatus" @select="selectReadStatus" />
-          <VSpace>
-            <VButton
-              size="sm"
-              :disabled="!selectedLink || isRemoteRefreshing"
-              :loading="isRefreshingCurrentSubscription"
-              @click="handleRefreshCurrentSubscription"
-            >
-              <template #icon>
-                <MdiRefresh class=":uno: size-full" />
-              </template>
-              刷新当前
-            </VButton>
-            <VButton
-              size="sm"
-              :disabled="!allLinks.length || isRemoteRefreshing"
-              :loading="isRefreshingAllSubscriptions"
-              @click="handleRefreshAllSubscriptions"
-            >
-              <template #icon>
-                <MdiRefresh class=":uno: size-full" />
-              </template>
-              刷新全部
-            </VButton>
-            <VButton size="sm" ghost :loading="isLoading" @click="reload()">
-              <template #icon>
-                <MdiRefresh class=":uno: size-full" />
-              </template>
-              重新加载
-            </VButton>
-          </VSpace>
+          <div class=":uno: flex flex-wrap items-center justify-end gap-3">
+            <span v-if="refreshProgressText" class=":uno: text-xs text-gray-500" role="status">
+              {{ refreshProgressText }}
+            </span>
+            <VSpace>
+              <VButton
+                size="sm"
+                :disabled="!selectedLink || isRemoteRefreshing"
+                :loading="isRefreshingCurrentSubscription"
+                @click="handleRefreshCurrentSubscription"
+              >
+                <template #icon>
+                  <MdiRefresh class=":uno: size-full" />
+                </template>
+                {{ currentRefreshButtonText }}
+              </VButton>
+              <VButton
+                size="sm"
+                :disabled="!allLinks.length || isRemoteRefreshing"
+                :loading="isRefreshingAllSubscriptions"
+                @click="handleRefreshAllSubscriptions"
+              >
+                <template #icon>
+                  <MdiRefresh class=":uno: size-full" />
+                </template>
+                {{ allRefreshButtonText }}
+              </VButton>
+              <VButton size="sm" ghost :loading="isLoading" @click="reload()">
+                <template #icon>
+                  <MdiRefresh class=":uno: size-full" />
+                </template>
+                重新加载
+              </VButton>
+            </VSpace>
+          </div>
         </div>
 
         <LinkFeedItemList

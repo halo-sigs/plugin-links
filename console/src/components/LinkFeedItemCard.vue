@@ -6,6 +6,8 @@ import { utils } from "@halo-dev/ui-shared";
 import { computed } from "vue";
 import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
 import MdiClockOutline from "~icons/mdi/clock-outline";
+import MdiEmailOpenOutline from "~icons/mdi/email-open-outline";
+import MdiEmailOutline from "~icons/mdi/email-outline";
 import MdiStar from "~icons/mdi/star";
 import MdiStarOutline from "~icons/mdi/star-outline";
 
@@ -21,6 +23,10 @@ function articleTitle(item: LinkFeedItem) {
 
 const publishedAt = computed(() => {
   return props.item.publishedAt || props.item.updatedAt || props.item.fetchedAt;
+});
+
+const readActionLabel = computed(() => {
+  return props.item.read ? "标为未读" : "标为已读";
 });
 
 const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFavorite, toggleRead, toggleReadLater } =
@@ -103,8 +109,20 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
             <MdiClockOutline v-else class=":uno: size-full" />
           </template>
         </VButton>
-        <VButton size="sm" ghost :loading="isMarkingRead" @click="toggleRead()">
-          {{ item.read ? "标为未读" : "标为已读" }}
+        <VButton
+          size="sm"
+          ghost
+          :aria-label="readActionLabel"
+          :loading="isMarkingRead"
+          v-tooltip="{
+            content: readActionLabel,
+          }"
+          @click="toggleRead()"
+        >
+          <template #icon>
+            <MdiEmailOutline v-if="item.read" class=":uno: size-full" />
+            <MdiEmailOpenOutline v-else class=":uno: size-full text-green-600" />
+          </template>
         </VButton>
       </div>
     </div>
