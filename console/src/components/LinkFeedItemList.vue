@@ -19,9 +19,6 @@ const items = computed(() => props.feed.items.value);
 const hasNext = computed(() => props.feed.hasNext.value);
 const isLoading = computed(() => props.feed.isLoading.value);
 const isLoadingMore = computed(() => props.feed.isLoadingMore.value);
-const markingReadItemId = computed(() => props.feed.markingReadItemId.value);
-const markingFavoriteItemId = computed(() => props.feed.markingFavoriteItemId.value);
-const markingReadLaterItemId = computed(() => props.feed.markingReadLaterItemId.value);
 
 const { isSupported: isIntersectionObserverSupported } = useIntersectionObserver(
   loadMoreTrigger,
@@ -58,13 +55,6 @@ watch([isLoadMoreTriggerVisible, hasNext, isLoading, isLoadingMore], () => {
       :compact="compact"
       :item="item"
       :source-name="sourceName(item.linkName)"
-      :marking-read-item-id="markingReadItemId"
-      :marking-favorite-item-id="markingFavoriteItemId"
-      :marking-read-later-item-id="markingReadLaterItemId"
-      @open="feed.openItem($event)"
-      @toggle-favorite="(target, favorite) => feed.markItemFavorite(target, favorite)"
-      @toggle-read-later="(target, readLater) => feed.markItemReadLater(target, readLater)"
-      @toggle-read="(target, read) => feed.markItemRead(target, read)"
     />
 
     <div v-if="hasNext || isLoadingMore" ref="loadMoreTrigger" class=":uno: min-h-10 flex justify-center pt-2">

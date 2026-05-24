@@ -1,6 +1,6 @@
 import { linksConsoleApiClient } from "@/api";
-import type { LinkFeedItem, LinkFeedItemPage } from "@/api/generated";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
+import type { LinkFeedItemPage } from "@/api/generated";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, shallowRef, toValue, type MaybeRefOrGetter } from "vue";
 
 export const QK_LINK_FEED_ITEMS = "plugin:links:feed-items";
@@ -25,21 +25,6 @@ export interface UseLinkFeedItemsOptions {
 interface LinkFeedPageCursor {
   beforePublishedAt?: string;
   beforeId?: string;
-}
-
-interface MarkReadVariables {
-  id: string;
-  read: boolean;
-}
-
-interface MarkFavoriteVariables {
-  id: string;
-  favorite: boolean;
-}
-
-interface MarkReadLaterVariables {
-  id: string;
-  readLater: boolean;
 }
 
 export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
@@ -90,41 +75,6 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   );
   const isLoadingMore = computed(() => query.isFetchingNextPage.value);
 
-  const readMutation = useMutation<void, unknown, MarkReadVariables>({
-    mutationFn: async ({ id, read }) => {
-      await linksConsoleApiClient.feed.markLinkFeedItemRead({ id, read });
-    },
-    onSuccess: invalidateFeedItems,
-  });
-
-  const favoriteMutation = useMutation<void, unknown, MarkFavoriteVariables>({
-    mutationFn: async ({ id, favorite }) => {
-      await linksConsoleApiClient.feed.markLinkFeedItemFavorite({ id, favorite });
-    },
-    onSuccess: invalidateFeedItems,
-  });
-
-  const readLaterMutation = useMutation<void, unknown, MarkReadLaterVariables>({
-    mutationFn: async ({ id, readLater }) => {
-      await linksConsoleApiClient.feed.markLinkFeedItemReadLater({ id, readLater });
-    },
-    onSuccess: invalidateFeedItems,
-  });
-
-  const markingReadItemId = computed(() =>
-    readMutation.isPending.value ? readMutation.variables.value?.id || "" : "",
-  );
-  const markingFavoriteItemId = computed(() =>
-    favoriteMutation.isPending.value ? favoriteMutation.variables.value?.id || "" : "",
-  );
-  const markingReadLaterItemId = computed(() =>
-    readLaterMutation.isPending.value ? readLaterMutation.variables.value?.id || "" : "",
-  );
-
-  async function invalidateFeedItems() {
-    await queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] });
-  }
-
   async function reload() {
     await queryClient.resetQueries({ queryKey: queryKey.value, exact: true });
   }
@@ -144,56 +94,6 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
     selectedReadStatus.value = status;
   }
 
-  async function markItemRead(item: LinkFeedItem, read: boolean) {
-    if (!item.id || readMutation.isPending.value) {
-      return false;
-    }
-    try {
-      await readMutation.mutateAsync({ id: item.id, read });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async function markItemFavorite(item: LinkFeedItem, favorite: boolean) {
-    if (!item.id || favoriteMutation.isPending.value) {
-      return false;
-    }
-    try {
-      await favoriteMutation.mutateAsync({ id: item.id, favorite });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async function markItemReadLater(item: LinkFeedItem, readLater: boolean) {
-    if (!item.id || readLaterMutation.isPending.value) {
-      return false;
-    }
-    try {
-      await readLaterMutation.mutateAsync({ id: item.id, readLater });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async function openItem(item: LinkFeedItem) {
-    if (!item.read) {
-      const markedRead = await markItemRead(item, true);
-      if (!markedRead) {
-        return false;
-      }
-    }
-
-    if (item.readLater) {
-      return await markItemReadLater(item, false);
-    }
-    return true;
-  }
-
   return {
     items,
     selectedLinkName,
@@ -201,17 +101,10 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
     hasNext,
     isLoading,
     isLoadingMore,
-    markingReadItemId,
-    markingFavoriteItemId,
-    markingReadLaterItemId,
     reload,
     fetchNextPage,
     selectLink,
     selectReadStatus,
-    markItemRead,
-    markItemFavorite,
-    markItemReadLater,
-    openItem,
   };
 }
 

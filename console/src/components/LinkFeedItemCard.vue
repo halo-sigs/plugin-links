@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { LinkFeedItem } from "@/api/generated";
+import { useLinkFeedItemActions } from "@/composables/use-link-feed-item-actions";
 import { IconExternalLinkLine, VButton } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
 import { computed } from "vue";
@@ -11,17 +12,7 @@ import MdiStarOutline from "~icons/mdi/star-outline";
 const props = defineProps<{
   item: LinkFeedItem;
   sourceName: string;
-  markingReadItemId?: string;
-  markingFavoriteItemId?: string;
-  markingReadLaterItemId?: string;
   compact?: boolean;
-}>();
-
-const emit = defineEmits<{
-  (event: "open", item: LinkFeedItem): void;
-  (event: "toggleFavorite", item: LinkFeedItem, favorite: boolean): void;
-  (event: "toggleReadLater", item: LinkFeedItem, readLater: boolean): void;
-  (event: "toggleRead", item: LinkFeedItem, read: boolean): void;
 }>();
 
 function articleTitle(item: LinkFeedItem) {
@@ -31,6 +22,9 @@ function articleTitle(item: LinkFeedItem) {
 const publishedAt = computed(() => {
   return props.item.publishedAt || props.item.updatedAt || props.item.fetchedAt;
 });
+
+const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFavorite, toggleRead, toggleReadLater } =
+  useLinkFeedItemActions(() => props.item);
 </script>
 
 <template>
@@ -53,7 +47,7 @@ const publishedAt = computed(() => {
           :class="{
             ':uno: text-gray-500': item.read,
           }"
-          @click="emit('open', item)"
+          @click="openItem()"
         >
           <span class=":uno: truncate">{{ articleTitle(item) }}</span>
           <IconExternalLinkLine class=":uno: size-3.5 flex-none" />
@@ -83,11 +77,11 @@ const publishedAt = computed(() => {
           size="sm"
           ghost
           :aria-label="item.favorite ? '取消收藏' : '收藏'"
-          :loading="markingFavoriteItemId === item.id"
+          :loading="isMarkingFavorite"
           v-tooltip="{
             content: item.favorite ? '取消收藏' : '收藏',
           }"
-          @click="emit('toggleFavorite', item, !item.favorite)"
+          @click="toggleFavorite()"
         >
           <template #icon>
             <MdiStar v-if="item.favorite" class=":uno: size-full text-yellow-500" />
@@ -98,18 +92,18 @@ const publishedAt = computed(() => {
           size="sm"
           ghost
           :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
-          :loading="markingReadLaterItemId === item.id"
+          :loading="isMarkingReadLater"
           v-tooltip="{
             content: item.readLater ? '移出稍后阅读' : '稍后阅读',
           }"
-          @click="emit('toggleReadLater', item, !item.readLater)"
+          @click="toggleReadLater()"
         >
           <template #icon>
             <MdiClockCheckOutline v-if="item.readLater" class=":uno: size-full text-blue-600" />
             <MdiClockOutline v-else class=":uno: size-full" />
           </template>
         </VButton>
-        <VButton size="sm" ghost :loading="markingReadItemId === item.id" @click="emit('toggleRead', item, !item.read)">
+        <VButton size="sm" ghost :loading="isMarkingRead" @click="toggleRead()">
           {{ item.read ? "标为未读" : "标为已读" }}
         </VButton>
       </div>
