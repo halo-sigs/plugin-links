@@ -96,4 +96,3 @@ in the data model or UI contract.
 - [Risk] A candidate request can fail for reasons unrelated to feed absence. ->
   Mitigation: ignore individual candidate failures and fall back to HTML
   discovery when no valid default feed is found.
-
