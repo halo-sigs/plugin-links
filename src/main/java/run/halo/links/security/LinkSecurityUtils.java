@@ -77,7 +77,8 @@ public final class LinkSecurityUtils {
      * @return true if the address is private/reserved
      */
     public static boolean isPrivateAddress(InetAddress address) {
-        if (address.isLoopbackAddress() || address.isLinkLocalAddress()) {
+        if (address.isAnyLocalAddress() || address.isLoopbackAddress()
+            || address.isLinkLocalAddress() || address.isMulticastAddress()) {
             return true;
         }
 

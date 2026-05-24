@@ -80,6 +80,7 @@ class LinkRequestTest {
             security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
 
             jsoup.when(() -> Jsoup.connect("http://93.184.216.34")).thenReturn(mockConn);
+            jsoup.when(() -> Jsoup.parse("", "http://example.com")).thenReturn(doc);
 
             LinkDetailDTO detail = LinkRequest.getLinkDetail("http://example.com");
 

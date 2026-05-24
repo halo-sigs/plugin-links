@@ -1,5 +1,6 @@
 package run.halo.links.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -8,9 +9,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
@@ -102,6 +110,42 @@ class SafeUrlFetcherTest {
         }
     }
 
+    @Test
+    void shouldConnectHttpsThroughValidatedAddress() throws Exception {
+        URL startUrl = new URL("https://example.com/feed.xml");
+        InetAddress validatedAddress = InetAddress.getByName("203.0.113.10");
+        AtomicReference<URL> requestedUrl = new AtomicReference<>();
+        AtomicReference<InetAddress> connectedAddress = new AtomicReference<>();
+        FakeSocket socket = new FakeSocket("""
+            HTTP/1.1 200 OK\r
+            ETag: "feed-v1"\r
+            \r
+            <rss></rss>""");
+
+        SafeUrlFetcher.setPinnedHttpsConnectorForTesting((url, address, timeout) -> {
+            requestedUrl.set(url);
+            connectedAddress.set(address);
+            return socket;
+        });
+
+        try (MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class)) {
+            security.when(() -> LinkSecurityUtils.validateUrl(startUrl))
+                .thenReturn(validatedAddress);
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
+
+            SafeUrlFetcher.FetchResult result = SafeUrlFetcher.fetch(startUrl.toExternalForm(),
+                SafeUrlFetcher.FetchOptions.feed(startUrl.toExternalForm(), null, null));
+
+            assertThat(result.statusCode()).isEqualTo(200);
+            assertThat(result.body()).isEqualTo("<rss></rss>");
+            assertThat(requestedUrl).hasValue(startUrl);
+            assertThat(connectedAddress).hasValue(validatedAddress);
+            assertThat(socket.output()).contains("Host: example.com");
+        } finally {
+            SafeUrlFetcher.setPinnedHttpsConnectorForTesting(null);
+        }
+    }
+
     private static Connection.Response mockResponse(int statusCode, String location)
         throws IOException {
         Connection.Response response = mock(Response.class);
@@ -114,5 +158,28 @@ class SafeUrlFetcherTest {
     }
 
     private interface Response extends Connection.Response {
+    }
+
+    private static final class FakeSocket extends Socket {
+        private final ByteArrayInputStream input;
+        private final ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        private FakeSocket(String response) {
+            this.input = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return input;
+        }
+
+        @Override
+        public OutputStream getOutputStream() {
+            return output;
+        }
+
+        private String output() {
+            return output.toString(StandardCharsets.UTF_8);
+        }
     }
 }
