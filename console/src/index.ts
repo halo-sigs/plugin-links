@@ -33,10 +33,10 @@ export default definePlugin({
         component: () => import(/* webpackChunkName: "link-feed-list" */ "@/views/LinkFeedList.vue"),
         meta: {
           permissions: ["plugin:links:view"],
-          title: "友链动态",
+          title: "链接订阅",
           hideFooter: true,
           menu: {
-            name: "友链动态",
+            name: "订阅",
             group: "content",
             icon: markRaw(Rss2FillIcon),
             priority: 51,

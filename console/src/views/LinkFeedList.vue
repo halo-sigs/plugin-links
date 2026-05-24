@@ -247,7 +247,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
 </script>
 
 <template>
-  <VPageHeader title="友链动态">
+  <VPageHeader title="链接订阅">
     <template #icon>
       <Rss2FillIcon />
     </template>
@@ -343,7 +343,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
           </div>
         </div>
 
-        <LinkFeedItemList :feed="mainFeed" :source-name="sourceName" empty-text="暂无友链动态" />
+        <LinkFeedItemList :feed="mainFeed" :source-name="sourceName" empty-text="暂无订阅动态" />
       </div>
     </div>
   </div>
