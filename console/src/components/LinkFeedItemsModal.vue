@@ -24,7 +24,6 @@ const isLoading = computed(() => props.feed.isLoading.value);
       :feed="feed"
       :source-name="sourceName"
       :empty-text="emptyText"
-      scrollable
     />
 
     <template #footer>

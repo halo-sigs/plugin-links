@@ -10,7 +10,6 @@ const props = defineProps<{
   sourceName: (linkName?: string) => string;
   emptyText: string;
   compact?: boolean;
-  scrollable?: boolean;
 }>();
 
 const loadMoreTrigger = useTemplateRef<HTMLElement>("loadMoreTrigger");
@@ -48,7 +47,7 @@ watch([isLoadMoreTriggerVisible, hasNext, isLoading, isLoadingMore], () => {
     {{ emptyText }}
   </div>
 
-  <div v-else class=":uno: space-y-3" :class="{ ':uno: max-h-[65vh] overflow-auto pr-1': scrollable }">
+  <div v-else class=":uno: space-y-3">
     <LinkFeedItemCard
       v-for="item in items"
       :key="item.id"
