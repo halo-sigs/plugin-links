@@ -66,6 +66,27 @@ const selectedLink = computed(() => {
   return selectedLinkName.value ? linkByName.value.get(selectedLinkName.value) : undefined;
 });
 
+const totalFeedItemCount = computed(() => {
+  return allLinks.value.reduce((total, link) => total + (link.status?.rss?.itemCount || 0), 0);
+});
+
+const selectedSourceTitle = computed(() => {
+  if (!selectedLink.value) {
+    return "全部动态";
+  }
+  return selectedLink.value.spec?.displayName || selectedLink.value.metadata.name;
+});
+
+const selectedSourceMeta = computed(() => {
+  if (!selectedLink.value) {
+    return `${allLinks.value.length} 个订阅 / ${totalFeedItemCount.value} 篇缓存`;
+  }
+
+  const feedCount = selectedLink.value.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()).length || 0;
+  const itemCount = selectedLink.value.status?.rss?.itemCount || 0;
+  return `${feedCount} 个订阅源 / ${itemCount} 篇缓存`;
+});
+
 const isRemoteRefreshing = computed(() => {
   return isRefreshingCurrentSubscription.value || isRefreshingAllSubscriptions.value;
 });
@@ -220,7 +241,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
   </VPageHeader>
 
   <div class=":uno: p-4">
-    <div class=":uno: min-w-0 flex flex-col gap-4 lg:flex-row lg:items-start">
+    <div class=":uno: feed-workspace">
       <LinkFeedSubscriptionSidebar
         :links="allLinks"
         :selected-link-name="selectedLinkName"
@@ -228,13 +249,21 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
         @select-link="selectLink"
       />
 
-      <div class=":uno: min-w-0 flex-1">
-        <div class=":uno: mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class=":uno: feed-main">
+        <div class=":uno: feed-brief">
+          <div class=":uno: feed-brief__copy">
+            <span class=":uno: feed-brief__eyebrow">RSS 动态</span>
+            <strong class=":uno: feed-brief__title">{{ selectedSourceTitle }}</strong>
+            <span class=":uno: feed-brief__meta">{{ selectedSourceMeta }}</span>
+          </div>
+          <span v-if="refreshProgressText" class=":uno: feed-refresh-status" role="status">
+            {{ refreshProgressText }}
+          </span>
+        </div>
+
+        <div class=":uno: feed-toolbar">
           <LinkFeedReadStatusTabs :selected-status="selectedReadStatus" @select="selectReadStatus" />
-          <div class=":uno: flex flex-wrap items-center justify-end gap-3">
-            <span v-if="refreshProgressText" class=":uno: text-xs text-gray-500" role="status">
-              {{ refreshProgressText }}
-            </span>
+          <div class=":uno: feed-toolbar__actions">
             <VSpace>
               <VButton
                 size="sm"
@@ -291,3 +320,120 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
     @close="favoriteModalVisible = false"
   />
 </template>
+
+<style scoped>
+.feed-workspace {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feed-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.feed-brief {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(250 250 250 / 0.88)),
+    repeating-linear-gradient(135deg, rgb(24 24 27 / 0.035) 0 1px, transparent 1px 12px);
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.feed-brief__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.feed-brief__eyebrow {
+  color: rgb(113 113 122);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+}
+
+.feed-brief__title {
+  min-width: 0;
+  overflow: hidden;
+  color: rgb(24 24 27);
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-brief__meta,
+.feed-refresh-status {
+  color: rgb(113 113 122);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+
+.feed-refresh-status {
+  flex: none;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.76);
+  padding: 0.375rem 0.625rem;
+}
+
+.feed-toolbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.9);
+  padding: 0.5rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  backdrop-filter: blur(14px);
+}
+
+.feed-toolbar__actions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .feed-workspace {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .feed-brief,
+  .feed-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .feed-refresh-status {
+    align-self: flex-start;
+  }
+
+  .feed-toolbar__actions {
+    justify-content: flex-start;
+  }
+}
+</style>

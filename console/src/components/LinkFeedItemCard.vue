@@ -35,93 +35,335 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
 
 <template>
   <article
-    class=":uno: border border-gray-100 rounded-lg bg-white"
+    class=":uno: feed-item"
     :class="{
-      ':uno: bg-gray-50/80': item.read,
-      ':uno: p-3': compact,
-      ':uno: p-4 shadow-sm': !compact,
+      ':uno: feed-item--read': item.read,
+      ':uno: feed-item--compact': compact,
     }"
   >
-    <div class=":uno: flex flex-wrap items-start justify-between gap-3">
-      <div class=":uno: min-w-0 flex-1">
+    <div class=":uno: feed-item__rail">
+      <span class=":uno: feed-item__dot" :class="{ ':uno: feed-item__dot--read': item.read }"></span>
+    </div>
+
+    <div class=":uno: feed-item__content">
+      <div class=":uno: feed-item__header">
+        <div class=":uno: feed-item__meta">
+          <span class=":uno: feed-item__source">{{ sourceName }}</span>
+          <span v-if="publishedAt" v-tooltip="utils.date.format(publishedAt)">
+            {{ utils.date.timeAgo(publishedAt) }}
+          </span>
+        </div>
+
+        <div class=":uno: feed-item__actions">
+          <VButton
+            size="sm"
+            ghost
+            class=":uno: feed-item__action"
+            :aria-label="item.favorite ? '取消收藏' : '收藏'"
+            :loading="isMarkingFavorite"
+            v-tooltip="{
+              content: item.favorite ? '取消收藏' : '收藏',
+            }"
+            @click="toggleFavorite()"
+          >
+            <MdiStar v-if="item.favorite" class=":uno: feed-item__action-icon feed-item__action-icon--favorite" />
+            <MdiStarOutline v-else class=":uno: feed-item__action-icon" />
+          </VButton>
+          <VButton
+            size="sm"
+            ghost
+            class=":uno: feed-item__action"
+            :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
+            :loading="isMarkingReadLater"
+            v-tooltip="{
+              content: item.readLater ? '移出稍后阅读' : '稍后阅读',
+            }"
+            @click="toggleReadLater()"
+          >
+            <MdiClockCheckOutline
+              v-if="item.readLater"
+              class=":uno: feed-item__action-icon feed-item__action-icon--read-later"
+            />
+            <MdiClockOutline v-else class=":uno: feed-item__action-icon" />
+          </VButton>
+          <VButton
+            size="sm"
+            ghost
+            class=":uno: feed-item__action"
+            :aria-label="readActionLabel"
+            :loading="isMarkingRead"
+            v-tooltip="{
+              content: readActionLabel,
+            }"
+            @click="toggleRead()"
+          >
+            <MdiEmailOutline v-if="item.read" class=":uno: feed-item__action-icon" />
+            <MdiEmailOpenOutline v-else class=":uno: feed-item__action-icon feed-item__action-icon--unread" />
+          </VButton>
+        </div>
+      </div>
+
+      <div class=":uno: feed-item__body">
         <a
           v-if="item.url"
           :href="item.url"
           target="_blank"
           rel="noopener noreferrer"
-          class=":uno: hover:text-primary max-w-full inline-flex items-center gap-1 text-sm text-gray-900 font-medium"
-          :class="{
-            ':uno: text-gray-500': item.read,
-          }"
+          class=":uno: feed-item__title feed-item__title--link"
           @click="openItem()"
         >
-          <span class=":uno: truncate">{{ articleTitle(item) }}</span>
-          <IconExternalLinkLine class=":uno: size-3.5 flex-none" />
+          <span>{{ articleTitle(item) }}</span>
+          <IconExternalLinkLine class=":uno: feed-item__external-icon" />
         </a>
-        <div v-else class=":uno: truncate text-sm text-gray-900 font-medium">
-          {{ articleTitle(item) }}
+        <div v-else class=":uno: feed-item__title">
+          <span>{{ articleTitle(item) }}</span>
         </div>
-        <div class=":uno: mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-          <span>{{ sourceName }}</span>
-          <span v-if="publishedAt" v-tooltip="utils.date.format(publishedAt)">
-            {{ utils.date.timeAgo(publishedAt) }}
-          </span>
-          <span
-            class=":uno: rounded bg-gray-100 px-1.5 py-0.5"
-            :class="{
-              ':uno: bg-green-50 text-green-700': !item.read,
-            }"
-          >
+
+        <p v-if="item.summary && !compact" class=":uno: feed-item__summary">
+          {{ item.summary }}
+        </p>
+
+        <div class=":uno: feed-item__badges">
+          <span class=":uno: feed-item__badge" :class="{ ':uno: feed-item__badge--unread': !item.read }">
             {{ item.read ? "已读" : "未读" }}
           </span>
-          <span v-if="item.favorite" class=":uno: rounded bg-yellow-50 px-1.5 py-0.5 text-yellow-700"> 已收藏 </span>
-          <span v-if="item.readLater" class=":uno: rounded bg-blue-50 px-1.5 py-0.5 text-blue-700"> 稍后阅读 </span>
+          <span v-if="item.favorite" class=":uno: feed-item__badge feed-item__badge--favorite">已收藏</span>
+          <span v-if="item.readLater" class=":uno: feed-item__badge feed-item__badge--read-later">稍后阅读</span>
         </div>
       </div>
-      <div class=":uno: flex flex-none flex-wrap items-center justify-end gap-2">
-        <VButton
-          size="sm"
-          ghost
-          :aria-label="item.favorite ? '取消收藏' : '收藏'"
-          :loading="isMarkingFavorite"
-          v-tooltip="{
-            content: item.favorite ? '取消收藏' : '收藏',
-          }"
-          @click="toggleFavorite()"
-        >
-            <MdiStar v-if="item.favorite" class=":uno: size-full text-yellow-500" />
-            <MdiStarOutline v-else class=":uno: size-full" />
-        </VButton>
-        <VButton
-          size="sm"
-          ghost
-          :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
-          :loading="isMarkingReadLater"
-          v-tooltip="{
-            content: item.readLater ? '移出稍后阅读' : '稍后阅读',
-          }"
-          @click="toggleReadLater()"
-        >
-            <MdiClockCheckOutline v-if="item.readLater" class=":uno: size-full text-blue-600" />
-            <MdiClockOutline v-else class=":uno: size-full" />
-        </VButton>
-        <VButton
-          size="sm"
-          ghost
-          :aria-label="readActionLabel"
-          :loading="isMarkingRead"
-          v-tooltip="{
-            content: readActionLabel,
-          }"
-          @click="toggleRead()"
-        >
-          <MdiEmailOutline v-if="item.read" class=":uno: size-full" />
-          <MdiEmailOpenOutline v-else class=":uno: size-full text-green-600" />
-        </VButton>
-      </div>
     </div>
-    <p v-if="item.summary && !compact" class=":uno: line-clamp-3 mt-3 text-sm text-gray-600">
-      {{ item.summary }}
-    </p>
   </article>
 </template>
+
+<style scoped>
+.feed-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.875rem;
+  padding: 1rem;
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.feed-item + .feed-item {
+  border-top: 1px solid rgb(244 244 245);
+}
+
+.feed-item:hover {
+  background: rgb(250 250 250);
+}
+
+.feed-item--read {
+  background: rgb(250 250 250 / 0.72);
+}
+
+.feed-item--compact {
+  padding: 0.75rem;
+}
+
+.feed-item__rail {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.3125rem;
+}
+
+.feed-item__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgb(22 163 74);
+  box-shadow: 0 0 0 4px rgb(22 163 74 / 0.1);
+}
+
+.feed-item__dot--read {
+  background: rgb(212 212 216);
+  box-shadow: none;
+}
+
+.feed-item__content {
+  min-width: 0;
+}
+
+.feed-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.feed-item__meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  color: rgb(113 113 122);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.feed-item__source {
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  color: rgb(63 63 70);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-item__meta span {
+  white-space: nowrap;
+}
+
+.feed-item__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.feed-item__action-icon {
+  width: 100%;
+  height: 100%;
+  color: rgb(82 82 91);
+}
+
+.feed-item__action-icon--favorite {
+  color: rgb(202 138 4);
+}
+
+.feed-item__action-icon--read-later {
+  color: rgb(37 99 235);
+}
+
+.feed-item__action-icon--unread {
+  color: rgb(22 163 74);
+}
+
+.feed-item__body {
+  min-width: 0;
+  padding-top: 0.375rem;
+}
+
+.feed-item__title {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.375rem;
+  overflow: hidden;
+  color: rgb(24 24 27);
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.375rem;
+  text-decoration: none;
+}
+
+.feed-item__title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-item__title--link:hover {
+  color: rgb(0 112 243);
+}
+
+.feed-item--read .feed-item__title {
+  color: rgb(82 82 91);
+}
+
+.feed-item__external-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+  opacity: 0.55;
+}
+
+.feed-item__summary {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.5rem 0 0;
+  color: rgb(82 82 91);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.feed-item--read .feed-item__summary {
+  color: rgb(113 113 122);
+}
+
+.feed-item__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+
+.feed-item__badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 999px;
+  background: rgb(250 250 250);
+  color: rgb(82 82 91);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  padding: 0.1875rem 0.5rem;
+}
+
+.feed-item__badge--unread {
+  border-color: rgb(187 247 208);
+  background: rgb(240 253 244);
+  color: rgb(21 128 61);
+}
+
+.feed-item__badge--favorite {
+  border-color: rgb(254 240 138);
+  background: rgb(254 252 232);
+  color: rgb(161 98 7);
+}
+
+.feed-item__badge--read-later {
+  border-color: rgb(191 219 254);
+  background: rgb(239 246 255);
+  color: rgb(29 78 216);
+}
+
+@media (max-width: 767px) {
+  .feed-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.625rem;
+  }
+
+  .feed-item__rail {
+    display: none;
+  }
+
+  .feed-item__header {
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .feed-item__meta {
+    flex: 1;
+    flex-wrap: nowrap;
+  }
+
+  .feed-item__source {
+    flex: 1 1 auto;
+  }
+
+  .feed-item__actions {
+    justify-content: flex-end;
+  }
+}
+</style>

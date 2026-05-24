@@ -26,15 +26,14 @@ const tabs: { label: string; value: LinkFeedReadStatus }[] = [
 </script>
 
 <template>
-  <div class=":uno: inline-flex rounded-lg bg-gray-100 p-1">
+  <div class=":uno: feed-status-tabs">
     <button
       v-for="tab in tabs"
       :key="tab.value || 'all'"
       type="button"
-      class=":uno: h-8 min-w-14 rounded-md px-3 text-sm transition-colors"
+      class=":uno: feed-status-tabs__item"
       :class="{
-        ':uno: bg-white text-gray-900 shadow-sm': selectedStatus === tab.value,
-        ':uno: text-gray-500 hover:text-gray-900': selectedStatus !== tab.value,
+        ':uno: feed-status-tabs__item--active': selectedStatus === tab.value,
       }"
       :aria-pressed="selectedStatus === tab.value"
       @click="emit('select', tab.value)"
@@ -43,3 +42,47 @@ const tabs: { label: string; value: LinkFeedReadStatus }[] = [
     </button>
   </div>
 </template>
+
+<style scoped>
+.feed-status-tabs {
+  display: inline-flex;
+  flex: none;
+  gap: 0.25rem;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 8px;
+  background: rgb(250 250 250);
+  padding: 0.25rem;
+}
+
+.feed-status-tabs__item {
+  display: inline-flex;
+  min-width: 3.5rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgb(82 82 91);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease;
+}
+
+.feed-status-tabs__item:hover {
+  color: rgb(24 24 27);
+}
+
+.feed-status-tabs__item--active {
+  background: rgb(24 24 27);
+  color: rgb(250 250 250);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.16);
+}
+
+.feed-status-tabs__item--active:hover {
+  color: rgb(250 250 250);
+}
+</style>
