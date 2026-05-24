@@ -125,17 +125,14 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
     @Override
     public List<LinkFeedItem> listRecent(LinkFeedItemQuery query) {
         LinkFeedItemQuery normalized = Optional.ofNullable(query).orElse(new LinkFeedItemQuery());
-        int limit = normalized.normalizedLimit();
+        int limit = normalized.normalizedFetchLimit();
         Filter filter = buildFilter(normalized);
         return database.withCollection(COLLECTION_NAME, collection -> {
             List<LinkFeedItem> result = new ArrayList<>();
             collection.find(filter, FindOptions.orderBy("publishedAt", SortOrder.Descending)
-                    .limit(limit + 1L))
+                    .limit(limit))
                 .forEach(doc -> parseDocument(doc).ifPresent(result::add));
             result.sort(recentComparator());
-            if (result.size() > limit) {
-                return new ArrayList<>(result.subList(0, limit));
-            }
             return result;
         });
     }

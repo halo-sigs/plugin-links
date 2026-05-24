@@ -337,7 +337,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             linkQuery.setRead(query.getRead());
             linkQuery.setFavorite(query.getFavorite());
             linkQuery.setReadLater(query.getReadLater());
-            linkQuery.setLimit(Math.min(limit + 1, LinkFeedItemQuery.MAX_LIMIT));
+            linkQuery.setLimit(limit + 1);
             items.addAll(itemStore.listRecent(linkQuery));
         }
         items.sort(recentComparator());

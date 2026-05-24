@@ -80,7 +80,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         storeQuery.setRead(requested.getRead());
         storeQuery.setFavorite(requested.getFavorite());
         storeQuery.setReadLater(requested.getReadLater());
-        storeQuery.setLimit(Math.min(limit + 1, LinkFeedItemQuery.MAX_LIMIT));
+        storeQuery.setLimit(limit + 1);
 
         List<LinkFeedItem> items = itemStore.listRecent(storeQuery);
         boolean hasNext = items.size() > limit;

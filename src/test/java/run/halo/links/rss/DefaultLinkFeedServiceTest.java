@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.URL;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.jsoup.Jsoup;
@@ -250,6 +251,36 @@ class DefaultLinkFeedServiceTest {
                 assertThat(actual.getFavorite()).isTrue();
                 assertThat(actual.getReadLater()).isTrue();
             });
+    }
+
+    @Test
+    void shouldProbeOneExtraItemWhenListingAtMaxLimit() {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        List<LinkFeedItem> overFetchedItems = new ArrayList<>();
+        for (int i = 0; i < LinkFeedItemQuery.MAX_FETCH_LIMIT; i++) {
+            LinkFeedItem item = new LinkFeedItem();
+            item.setId("item-" + i);
+            item.setPublishedAt(Instant.parse("2026-05-20T10:00:00Z").minusSeconds(i));
+            overFetchedItems.add(item);
+        }
+        when(itemStore.listRecent(any(LinkFeedItemQuery.class))).thenReturn(overFetchedItems);
+
+        LinkFeedItemQuery query = new LinkFeedItemQuery();
+        query.setLimit(LinkFeedItemQuery.MAX_LIMIT);
+        LinkFeedItemPage page = service.listItems(query);
+
+        assertThat(page.getItems()).hasSize(LinkFeedItemQuery.MAX_LIMIT);
+        assertThat(page.isHasNext()).isTrue();
+        assertThat(page.getNextBeforeId()).isEqualTo("item-99");
+        ArgumentCaptor<LinkFeedItemQuery> queryCaptor =
+            ArgumentCaptor.forClass(LinkFeedItemQuery.class);
+        verify(itemStore).listRecent(queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getLimit()).isEqualTo(LinkFeedItemQuery.MAX_FETCH_LIMIT);
     }
 
     @Test
