@@ -16,11 +16,13 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -101,19 +103,20 @@ public class DefaultLinkFeedService implements LinkFeedService {
         if (!haloDefaultFeedUrls.isEmpty()) {
             return new LinkFeedDiscoveryResult(haloDefaultFeedUrls);
         }
+        if (isParseableFeed(websiteUrl)) {
+            return new LinkFeedDiscoveryResult(List.of(websiteUrl.trim()));
+        }
         var result = feedFetcher.fetchHtml(websiteUrl);
         if (!isSuccess(result.statusCode()) || result.document() == null) {
             return new LinkFeedDiscoveryResult();
         }
-        List<String> feedUrls = result.document()
-            .select("link[rel~=(?i)alternate]")
-            .stream()
-            .filter(DefaultLinkFeedService::isFeedLink)
-            .map(element -> element.absUrl("href"))
-            .filter(StringUtils::hasText)
-            .map(String::trim)
-            .distinct()
-            .toList();
+        List<String> feedUrls = htmlHeadFeedUrls(result.document());
+        if (feedUrls.isEmpty()) {
+            feedUrls = parseableFeedUrls(htmlBodyFeedCandidates(result.document()));
+        }
+        if (feedUrls.isEmpty()) {
+            feedUrls = parseableFeedUrls(commonFeedCandidates(websiteUrl));
+        }
         return new LinkFeedDiscoveryResult(feedUrls);
     }
 
@@ -145,8 +148,34 @@ public class DefaultLinkFeedService implements LinkFeedService {
         }
     }
 
+    static List<String> commonFeedCandidates(String websiteUrl) {
+        if (!StringUtils.hasText(websiteUrl)) {
+            return List.of();
+        }
+        try {
+            URI websiteUri = new URI(websiteUrl.trim());
+            if (!StringUtils.hasText(websiteUri.getScheme())
+                || !StringUtils.hasText(websiteUri.getHost())) {
+                return List.of();
+            }
+            String path = Optional.ofNullable(websiteUri.getPath()).orElse("/");
+            if (!path.endsWith("/")) {
+                path = path + "/";
+            }
+            URI base = new URI(websiteUri.getScheme(), null, websiteUri.getHost(),
+                websiteUri.getPort(), path, null, null);
+            return List.of(base.resolve("feed/").toString(),
+                base.resolve("index.xml").toString());
+        } catch (URISyntaxException e) {
+            return List.of();
+        }
+    }
+
     private boolean isParseableFeed(String feedUrl) {
         try {
+            if (!StringUtils.hasText(feedUrl)) {
+                return false;
+            }
             var result = feedFetcher.fetchFeed(feedUrl, null, null);
             if (!isSuccess(result.statusCode()) || !StringUtils.hasText(result.body())) {
                 return false;
@@ -156,6 +185,36 @@ public class DefaultLinkFeedService implements LinkFeedService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private List<String> parseableFeedUrls(List<String> candidates) {
+        return candidates.stream()
+            .filter(this::isParseableFeed)
+            .distinct()
+            .toList();
+    }
+
+    private static List<String> htmlHeadFeedUrls(Document document) {
+        return document.select("link[rel~=(?i)alternate]")
+            .stream()
+            .filter(DefaultLinkFeedService::isFeedLink)
+            .map(element -> element.absUrl("href"))
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .distinct()
+            .toList();
+    }
+
+    private static List<String> htmlBodyFeedCandidates(Document document) {
+        return document.select("a[href]")
+            .stream()
+            .filter(DefaultLinkFeedService::isBodyFeedLink)
+            .map(element -> element.absUrl("href"))
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .distinct()
+            .limit(10)
+            .toList();
     }
 
     private LinkFeedRefreshResult refreshBlocking(Link link) throws Exception {
@@ -452,10 +511,41 @@ public class DefaultLinkFeedService implements LinkFeedService {
     }
 
     private static boolean isFeedLink(Element element) {
-        String type = element.attr("type").toLowerCase();
+        if (StringUtils.hasText(element.attr("media"))
+            || StringUtils.hasText(element.attr("hreflang"))) {
+            return false;
+        }
         String href = element.attr("href");
-        return StringUtils.hasText(href)
-            && (type.contains("rss") || type.contains("atom") || type.contains("xml"));
+        if (!StringUtils.hasText(href)) {
+            return false;
+        }
+        String type = element.attr("type").toLowerCase(Locale.ROOT).trim();
+        if (!StringUtils.hasText(type)) {
+            return urlLooksLikeFeed(href);
+        }
+        String mimeType = type.split(";", 2)[0].trim();
+        if (mimeType.contains("rss") || mimeType.contains("atom")
+            || mimeType.contains("rdf")) {
+            return true;
+        }
+        if ("application/xml".equals(mimeType) || "text/xml".equals(mimeType)) {
+            return urlLooksLikeFeed(href);
+        }
+        return false;
+    }
+
+    private static boolean isBodyFeedLink(Element element) {
+        String href = element.attr("href");
+        return StringUtils.hasText(href) && urlLooksLikeFeed(href);
+    }
+
+    private static boolean urlLooksLikeFeed(String url) {
+        if (!StringUtils.hasText(url)) {
+            return false;
+        }
+        String lower = url.toLowerCase(Locale.ROOT).replace("buzzfeed", "_");
+        return lower.contains("feed") || lower.contains("rss") || lower.contains("atom")
+            || lower.contains(".xml");
     }
 
     private static boolean isRssEnabled(Link link) {

@@ -111,11 +111,184 @@ class DefaultLinkFeedServiceTest {
     }
 
     @Test
+    void shouldDiscoverEnteredFeedUrlWhenItIsParseable() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/custom.atom"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/custom.atom", 200, feedXml()));
+
+        StepVerifier.create(service.discover("https://example.com/custom.atom"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/custom.atom"))
+            .verifyComplete();
+
+        verify(feedFetcher, never()).fetchHtml(anyString());
+    }
+
+    @Test
+    void shouldDiscoverTypelessAlternateWhenHrefLooksLikeFeed() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        String html = """
+            <!doctype html>
+            <html>
+              <head>
+                <link rel="alternate" href="/rss">
+              </head>
+            </html>
+            """;
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com", 200, "<html></html>"));
+        when(feedFetcher.fetchHtml("https://example.com"))
+            .thenReturn(htmlResult("https://example.com", 200, html));
+
+        StepVerifier.create(service.discover("https://example.com"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/rss"))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldIgnoreMobileAndLanguageAlternatesDuringHtmlDiscovery() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        String html = """
+            <!doctype html>
+            <html>
+              <head>
+                <link rel="alternate" type="application/xhtml+xml" media="only screen"
+                  href="/mobile">
+                <link rel="alternate" type="application/xml" hreflang="zh-CN"
+                  href="/zh.xml">
+                <link rel="alternate" type="application/rss+xml" href="/feed.xml">
+              </head>
+            </html>
+            """;
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com", 200, "<html></html>"));
+        when(feedFetcher.fetchHtml("https://example.com"))
+            .thenReturn(htmlResult("https://example.com", 200, html));
+
+        StepVerifier.create(service.discover("https://example.com"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/feed.xml"))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldValidateBodyFeedLinksWhenHeadDoesNotExposeFeeds() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        String html = """
+            <!doctype html>
+            <html>
+              <body>
+                <a href="/feed.xml">RSS</a>
+              </body>
+            </html>
+            """;
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/blog"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/blog", 200, "<html></html>"));
+        when(feedFetcher.fetchHtml("https://example.com/blog"))
+            .thenReturn(htmlResult("https://example.com/blog", 200, html));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXml()));
+
+        StepVerifier.create(service.discover("https://example.com/blog"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/feed.xml"))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFallbackToCommonFeedPathsWhenHtmlHasNoCandidates() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        String html = """
+            <!doctype html>
+            <html>
+              <body>No feeds here.</body>
+            </html>
+            """;
+
+        when(feedFetcher.fetchFeed(eq("https://example.com/rss.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/rss.xml", 404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed/moments/rss.xml"), isNull(),
+            isNull())).thenReturn(feedResult("https://example.com/feed/moments/rss.xml",
+            404, ""));
+        when(feedFetcher.fetchFeed(eq("https://example.com/blog"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/blog", 200, "<html></html>"));
+        when(feedFetcher.fetchHtml("https://example.com/blog"))
+            .thenReturn(htmlResult("https://example.com/blog", 200, html));
+        when(feedFetcher.fetchFeed(eq("https://example.com/blog/feed/"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/blog/feed/", 200, feedXml()));
+        when(feedFetcher.fetchFeed(eq("https://example.com/blog/index.xml"), isNull(), isNull()))
+            .thenReturn(feedResult("https://example.com/blog/index.xml", 404, ""));
+
+        StepVerifier.create(service.discover("https://example.com/blog"))
+            .assertNext(result -> assertThat(result.getFeedUrls())
+                .containsExactly("https://example.com/blog/feed/"))
+            .verifyComplete();
+    }
+
+    @Test
     void shouldDeriveHaloDefaultFeedCandidatesFromWebsiteOrigin() {
         assertThat(DefaultLinkFeedService.haloDefaultFeedCandidates(
             "https://example.com:8443/posts/hello?preview=true"))
             .containsExactly("https://example.com:8443/rss.xml",
                 "https://example.com:8443/feed/moments/rss.xml");
+    }
+
+    @Test
+    void shouldDeriveCommonFeedCandidatesFromWebsitePath() {
+        assertThat(DefaultLinkFeedService.commonFeedCandidates(
+            "https://example.com:8443/blog?preview=true"))
+            .containsExactly("https://example.com:8443/blog/feed/",
+                "https://example.com:8443/blog/index.xml");
     }
 
     @Test
