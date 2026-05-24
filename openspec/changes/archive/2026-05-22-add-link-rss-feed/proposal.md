@@ -25,6 +25,6 @@ Friend links are currently static directory entries. Adding RSS/Atom awareness l
 
 - **Backend**: Extends `Link` with `spec.rss` and `status.rss`, adds feed fetch/discovery services, embedded database infrastructure, retention cleanup, scheduled/manual refresh logic, and Console endpoints.
 - **Frontend**: Adds RSS fields to link forms and a new Console view for recent friend-link articles, feed status, filtering, and manual refresh.
-- **Storage**: Keeps RSS configuration and lightweight status in Extension storage; stores large feed item collections in a plugin-local embedded database file such as `links-feed.nitrite`.
+- **Storage**: Keeps RSS configuration and lightweight status in Extension storage; stores large feed item collections in a plugin-local embedded database file such as `links.nitrite`.
 - **Dependencies**: Adds embedded database dependencies using the established Nitrite-based local persistence pattern, plus an RSS/Atom parser dependency.
 - **Security**: All server-side feed requests must reject unsafe URLs, private/reserved addresses, and unsafe redirects before connecting.

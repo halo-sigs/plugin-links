@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add `spec.rss` and `status.rss` models to `Link` with OpenAPI schema descriptions and disabled-by-default behavior
 - [x] 1.2 Add Nitrite and RSS/Atom parser dependencies to Gradle, matching the plugin dependency style
-- [x] 1.3 Create a shared Links embedded database component for `links-feed.nitrite` with open, close, backup, recovery, commit, and compact behavior
+- [x] 1.3 Create a shared Links embedded database component for `links.nitrite` with open, close, backup, recovery, commit, and compact behavior
 - [x] 1.4 Define feed item and feed query domain models for cached RSS item persistence
 - [x] 1.5 Implement `LinkFeedItemStore` with deterministic upsert, indexed cursor listing, count, and delete operations
 - [x] 1.6 Implement retention cleanup by per-link count, global count, and item age limits

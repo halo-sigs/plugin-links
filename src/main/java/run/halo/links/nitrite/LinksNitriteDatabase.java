@@ -305,7 +305,7 @@ public class LinksNitriteDatabase implements DisposableBean {
 
     private static Path resolveDbPath(PluginsRootGetter pluginsRootGetter) {
         Path pluginDataDir = pluginsRootGetter.get().resolve("links");
-        return pluginDataDir.resolve("links-feed.nitrite");
+        return pluginDataDir.resolve("links.nitrite");
     }
 
     @FunctionalInterface

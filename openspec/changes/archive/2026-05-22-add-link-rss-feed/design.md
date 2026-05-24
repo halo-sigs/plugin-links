@@ -64,7 +64,7 @@ status.rss.itemCount
 Add a shared embedded database component for the Links plugin, with a file such as:
 
 ```text
-<plugins-root>/links/links-feed.nitrite
+<plugins-root>/links/links.nitrite
 ```
 
 Create a `link-feed-items` collection with fields:
