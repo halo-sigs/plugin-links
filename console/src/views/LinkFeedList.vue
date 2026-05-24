@@ -4,8 +4,9 @@ import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
 import { useLinkFeedItems } from "@/composables/use-link-feed";
+import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
-import { IconArrowLeft, VButton, VModal, VPageHeader, VSpace } from "@halo-dev/components";
+import { IconArrowLeft, Toast, VButton, VModal, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed, shallowRef, useTemplateRef } from "vue";
 import { useRouter } from "vue-router";
 import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
@@ -71,6 +72,14 @@ const favoriteModalVisible = shallowRef(false);
 const favoriteModal = useTemplateRef<InstanceType<typeof VModal>>("favoriteModal");
 const readLaterModalVisible = shallowRef(false);
 const readLaterModal = useTemplateRef<InstanceType<typeof VModal>>("readLaterModal");
+const {
+  isRefreshing: isRefreshingCurrentSubscription,
+  refreshLinks: refreshCurrentSubscriptions,
+} = useLinkFeedRefresh();
+const {
+  isRefreshing: isRefreshingAllSubscriptions,
+  refreshLinks: refreshAllSubscriptions,
+} = useLinkFeedRefresh();
 
 const allLinks = computed(() => {
   return groupsWithLinks.value?.flatMap((group) => group.links) || [];
@@ -78,6 +87,14 @@ const allLinks = computed(() => {
 
 const linkByName = computed(() => {
   return new Map(allLinks.value.map((link) => [link.metadata.name, link]));
+});
+
+const selectedLink = computed(() => {
+  return selectedLinkName.value ? linkByName.value.get(selectedLinkName.value) : undefined;
+});
+
+const isRemoteRefreshing = computed(() => {
+  return isRefreshingCurrentSubscription.value || isRefreshingAllSubscriptions.value;
 });
 
 function sourceLink(linkName?: string): Link | undefined {
@@ -160,6 +177,43 @@ function formatTime(value?: string) {
 function itemTime(item: LinkFeedItem) {
   return formatTime(item.publishedAt || item.updatedAt || item.fetchedAt);
 }
+
+async function handleRefreshCurrentSubscription() {
+  if (!selectedLink.value || isRemoteRefreshing.value) {
+    return;
+  }
+  const summary = await refreshCurrentSubscriptions(selectedLink.value);
+  await load();
+  showRefreshSummary(summary, "当前订阅");
+}
+
+async function handleRefreshAllSubscriptions() {
+  if (!allLinks.value.length || isRemoteRefreshing.value) {
+    return;
+  }
+  const summary = await refreshAllSubscriptions(allLinks.value);
+  await load();
+  showRefreshSummary(summary, "全部订阅");
+}
+
+function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: string) {
+  if (!summary || !summary.totalCount) {
+    return;
+  }
+
+  const failedLikeCount = summary.failureCount + summary.partialFailureCount;
+  if (!failedLikeCount) {
+    Toast.success(`${label}刷新完成：成功刷新 ${summary.successCount} 个订阅`);
+    return;
+  }
+
+  if (summary.failureCount === summary.totalCount) {
+    Toast.error(`${label}刷新失败：${summary.failureCount} 个订阅未刷新成功`);
+    return;
+  }
+
+  Toast.warning(`${label}刷新完成：成功 ${summary.successCount} 个，${failedLikeCount} 个存在失败`);
+}
 </script>
 
 <template>
@@ -203,12 +257,36 @@ function itemTime(item: LinkFeedItem) {
       <div class=":uno: min-w-0 flex-1">
         <div class=":uno: mb-4 flex flex-wrap items-center justify-between gap-3">
           <LinkFeedReadStatusTabs :selected-status="selectedReadStatus" @select="selectReadStatus" />
-          <VButton size="sm" ghost :loading="isLoading" @click="load()">
-            <template #icon>
-              <MdiRefresh class=":uno: size-full" />
-            </template>
-            刷新
-          </VButton>
+          <VSpace>
+            <VButton
+              size="sm"
+              :disabled="!selectedLink || isRemoteRefreshing"
+              :loading="isRefreshingCurrentSubscription"
+              @click="handleRefreshCurrentSubscription"
+            >
+              <template #icon>
+                <MdiRefresh class=":uno: size-full" />
+              </template>
+              刷新当前
+            </VButton>
+            <VButton
+              size="sm"
+              :disabled="!allLinks.length || isRemoteRefreshing"
+              :loading="isRefreshingAllSubscriptions"
+              @click="handleRefreshAllSubscriptions"
+            >
+              <template #icon>
+                <MdiRefresh class=":uno: size-full" />
+              </template>
+              刷新全部
+            </VButton>
+            <VButton size="sm" ghost :loading="isLoading" @click="load()">
+              <template #icon>
+                <MdiRefresh class=":uno: size-full" />
+              </template>
+              重新加载
+            </VButton>
+          </VSpace>
         </div>
 
         <LinkFeedItemList
@@ -261,7 +339,7 @@ function itemTime(item: LinkFeedItem) {
 
     <template #footer>
       <VSpace>
-        <VButton type="secondary" :loading="readLaterIsLoading" @click="readLaterFeed.load()">刷新</VButton>
+        <VButton type="secondary" :loading="readLaterIsLoading" @click="readLaterFeed.load()">重新加载</VButton>
         <VButton @click="readLaterModal?.close()">关闭</VButton>
       </VSpace>
     </template>
@@ -296,7 +374,7 @@ function itemTime(item: LinkFeedItem) {
 
     <template #footer>
       <VSpace>
-        <VButton type="secondary" :loading="favoriteIsLoading" @click="favoriteFeed.load()">刷新</VButton>
+        <VButton type="secondary" :loading="favoriteIsLoading" @click="favoriteFeed.load()">重新加载</VButton>
         <VButton @click="favoriteModal?.close()">关闭</VButton>
       </VSpace>
     </template>
