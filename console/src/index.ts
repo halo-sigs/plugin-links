@@ -1,7 +1,7 @@
 import { definePlugin, type CommentSubjectRefProvider, type CommentSubjectRefResult } from "@halo-dev/ui-shared";
 import "uno.css";
 import { markRaw } from "vue";
-import MdiRss from "~icons/mdi/rss";
+import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import RiLinksLine from "~icons/ri/links-line";
 
 export default definePlugin({
@@ -38,7 +38,7 @@ export default definePlugin({
           menu: {
             name: "友链动态",
             group: "content",
-            icon: markRaw(MdiRss),
+            icon: markRaw(Rss2FillIcon),
             priority: 51,
           },
         },

@@ -34,6 +34,7 @@
   "devDependencies": {
     "@halo-dev/ui-plugin-bundler-kit": "^2.24.0",
     "@iconify-json/mdi": "^1.2.3",
+    "@iconify-json/mingcute": "^1.2.7",
     "@iconify-json/ri": "^1.2.10",
     "@rsbuild/core": "^2.0.3",
     "@types/node": "^24.12.2",

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, shallowRef } from "vue";
-import MdiArrowUp from "~icons/mdi/arrow-up";
+import ArrowUpFillIcon from '~icons/mingcute/arrow-up-fill?width=unset&height=unset';
 
 const VISIBLE_SCROLL_TOP = 360;
 
@@ -100,7 +100,7 @@ onUnmounted(() => {
       title="返回顶部"
       @click="scrollToTop"
     >
-      <MdiArrowUp class=":uno: feed-back-to-top__icon" aria-hidden="true" />
+      <ArrowUpFillIcon class=":uno: feed-back-to-top__icon" aria-hidden="true" />
     </button>
   </Transition>
 </template>

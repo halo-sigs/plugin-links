@@ -3,7 +3,7 @@ import { linksConsoleApiClient } from "@/api";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
-import MdiRss from "~icons/mdi/rss";
+import Rss2FillIcon from '~icons/mingcute/rss-2-fill';
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 
 const props = defineProps<{
@@ -210,14 +210,14 @@ async function onSubmit() {
             label="订阅地址"
             help="每行一个 RSS 或 Atom 地址"
             language="yaml"
-            height="160px"
+            height="70px"
             placeholder="https://example.com/rss.xml&#10;https://example.com/atom.xml"
             :classes="{ inner: '!max-w-none' }"
           ></FormKit>
-          <div class=":uno: pt-4">
+          <div v-if="data.rss.enabled" class=":uno: pt-4">
             <VButton size="sm" @click="handleDiscoverFeed" :loading="isDiscoveringFeed">
               <template #icon>
-                <MdiRss class=":uno: size-4 text-gray-500" />
+                <Rss2FillIcon class=":uno: size-4 text-gray-500" />
               </template>
               发现订阅地址
             </VButton>

@@ -2,7 +2,7 @@
 import type { Link } from "@/api/generated";
 import { IconExternalLinkLine } from "@halo-dev/components";
 import { computed } from "vue";
-import MdiRss from "~icons/mdi/rss";
+import Rss2FillIcon from '~icons/mingcute/rss-2-fill';
 
 const props = defineProps<{
   selectMode?: boolean;
@@ -38,15 +38,15 @@ const rssTooltip = computed(() => {
   const feedCount = rssFeedUrls(props.link).length;
   const feedCountText = feedCount > 1 ? `${feedCount} 个订阅源，` : "";
   if (hasPartialRssFailure(props.link)) {
-    return `RSS 部分订阅源刷新失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
+    return `RSS 部分订阅源获取失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
   }
   if (hasRssFailure(props.link) && rss?.lastError) {
-    return `RSS 刷新失败：${rss.lastError}`;
+    return `RSS 获取失败：${rss.lastError}`;
   }
   if (rss?.lastSuccessAt) {
     return `RSS 已启用，${feedCountText}缓存 ${rss.itemCount || 0} 篇`;
   }
-  return "RSS 已启用，等待刷新";
+  return "RSS 已启用，等待获取";
 });
 
 function rssFeedUrls(link: Link) {
@@ -108,7 +108,7 @@ function hasRssFailure(link: Link) {
       class=":uno: size-5 flex flex-none items-center justify-center rounded"
       :class="rssStatusClass"
     >
-      <MdiRss class=":uno: size-3.5" />
+      <Rss2FillIcon class=":uno: size-3.5" />
     </span>
     <a
       v-if="!selectMode && !sortMode && link.spec?.url"

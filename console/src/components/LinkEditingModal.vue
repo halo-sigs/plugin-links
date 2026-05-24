@@ -76,7 +76,7 @@ const { mutate, isPending } = useMutation({
         await linksConsoleApiClient.feed.refreshLinkFeed({
           name: props.link.metadata.name,
         });
-        Toast.success("RSS 已自动刷新");
+        Toast.success("RSS 已自动获取");
       } catch {
         // Halo's API interceptor shows request failure toasts.
       }
@@ -95,29 +95,10 @@ function onSubmit(data: LinkFormState) {
 function shouldRefreshFeedAfterSave(data: LinkFormState) {
   const nextFeedUrls = data.rss?.feedUrls || [];
   return Boolean(
-    data.rss?.enabled
-      && nextFeedUrls.length
-      && (!props.link.spec?.rss?.enabled || !sameFeedUrls(props.link.spec.rss.feedUrls || [], nextFeedUrls)),
+    data.rss?.enabled &&
+    nextFeedUrls.length &&
+    (!props.link.spec?.rss?.enabled || !sameFeedUrls(props.link.spec.rss.feedUrls || [], nextFeedUrls)),
   );
-}
-
-async function handleRefreshFeed() {
-  if (!props.link.spec?.rss?.enabled || !props.link.spec.rss.feedUrls?.length || isRefreshingFeed.value) {
-    return;
-  }
-  isRefreshingFeed.value = true;
-  try {
-    await linksConsoleApiClient.feed.refreshLinkFeed({
-      name: props.link.metadata.name,
-    });
-    Toast.success("刷新 RSS 成功");
-    queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
-    queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
-  } catch {
-    // Halo's API interceptor shows request failure toasts.
-  } finally {
-    isRefreshingFeed.value = false;
-  }
 }
 
 function sameFeedUrls(left: string[], right: string[]) {
@@ -170,13 +151,6 @@ function handleDelete() {
         <VSpace>
           <!-- @vue-ignore -->
           <VButton :loading="isPending" type="secondary" @click="$formkit.submit('link-form')"> 保存 </VButton>
-          <VButton
-            v-if="link.spec?.rss?.enabled && link.spec.rss.feedUrls?.length"
-            :loading="isRefreshingFeed"
-            @click="handleRefreshFeed"
-          >
-            刷新 RSS
-          </VButton>
           <VButton @click="modal?.close()">取消</VButton>
         </VSpace>
         <VButton type="danger" ghost @click="handleDelete">删除</VButton>

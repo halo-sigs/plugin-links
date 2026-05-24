@@ -4,12 +4,12 @@ import { useLinkFeedItemActions } from "@/composables/use-link-feed-item-actions
 import { IconExternalLinkLine, VButton } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
 import { computed } from "vue";
-import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
-import MdiClockOutline from "~icons/mdi/clock-outline";
-import MdiEmailOpenOutline from "~icons/mdi/email-open-outline";
-import MdiEmailOutline from "~icons/mdi/email-outline";
-import MdiStar from "~icons/mdi/star";
-import MdiStarOutline from "~icons/mdi/star-outline";
+import CalendarTimeAddFillIcon from "~icons/mingcute/calendar-time-add-fill?width=unset&height=unset";
+import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
+import MailLineIcon from "~icons/mingcute/mail-line?width=unset&height=unset";
+import MailOpenLineIcon from "~icons/mingcute/mail-open-line?width=unset&height=unset";
+import StarFillIcon from "~icons/mingcute/star-fill?width=unset&height=unset";
+import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
 const props = defineProps<{
   item: LinkFeedItem;
@@ -60,45 +60,45 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
             ghost
             class=":uno: feed-item__action"
             :aria-label="item.favorite ? '取消收藏' : '收藏'"
-            :loading="isMarkingFavorite"
             v-tooltip="{
               content: item.favorite ? '取消收藏' : '收藏',
             }"
             @click="toggleFavorite()"
+            :disabled="isMarkingFavorite"
           >
-            <MdiStar v-if="item.favorite" class=":uno: feed-item__action-icon feed-item__action-icon--favorite" />
-            <MdiStarOutline v-else class=":uno: feed-item__action-icon" />
+            <StarFillIcon v-if="item.favorite" class=":uno: feed-item__action-icon feed-item__action-icon--favorite" />
+            <StarLineIcon v-else class=":uno: feed-item__action-icon" />
           </VButton>
           <VButton
             size="sm"
             ghost
             class=":uno: feed-item__action"
             :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
-            :loading="isMarkingReadLater"
+            :disabled="isMarkingReadLater"
             v-tooltip="{
               content: item.readLater ? '移出稍后阅读' : '稍后阅读',
             }"
             @click="toggleReadLater()"
           >
-            <MdiClockCheckOutline
+            <CalendarTimeAddFillIcon
               v-if="item.readLater"
               class=":uno: feed-item__action-icon feed-item__action-icon--read-later"
             />
-            <MdiClockOutline v-else class=":uno: feed-item__action-icon" />
+            <CalendarTimeAddLineIcon v-else class=":uno: feed-item__action-icon" />
           </VButton>
           <VButton
             size="sm"
             ghost
             class=":uno: feed-item__action"
             :aria-label="readActionLabel"
-            :loading="isMarkingRead"
+            :disabled="isMarkingRead"
             v-tooltip="{
               content: readActionLabel,
             }"
             @click="toggleRead()"
           >
-            <MdiEmailOutline v-if="item.read" class=":uno: feed-item__action-icon" />
-            <MdiEmailOpenOutline v-else class=":uno: feed-item__action-icon feed-item__action-icon--unread" />
+            <MailOpenLineIcon v-if="item.read" class=":uno: feed-item__action-icon" />
+            <MailLineIcon v-else class=":uno: feed-item__action-icon feed-item__action-icon--unread" />
           </VButton>
         </div>
       </div>

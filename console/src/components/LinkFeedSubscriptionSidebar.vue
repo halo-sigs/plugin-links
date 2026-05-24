@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { Link } from "@/api/generated";
 import { computed } from "vue";
-import MdiRss from "~icons/mdi/rss";
+import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 
 const props = defineProps<{
   links: Link[];
@@ -39,15 +39,15 @@ function rssTooltip(link: Link) {
   const feedCount = rssFeedUrls(link).length;
   const feedCountText = feedCount > 1 ? `${feedCount} 个订阅源，` : "";
   if (hasPartialRssFailure(link)) {
-    return `RSS 部分订阅源刷新失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
+    return `RSS 部分订阅源获取失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
   }
   if (hasRssFailure(link) && rss?.lastError) {
-    return `RSS 刷新失败：${rss.lastError}`;
+    return `RSS 获取失败：${rss.lastError}`;
   }
   if (rss?.lastSuccessAt) {
     return `RSS 已启用，${feedCountText}缓存 ${rss.itemCount || 0} 篇`;
   }
-  return "RSS 已启用，等待刷新";
+  return "RSS 已启用，等待获取";
 }
 
 function rssFeedUrls(link: Link) {
@@ -106,7 +106,7 @@ function itemCountText(count?: number) {
         @click="emit('selectLink', '')"
       >
         <span class=":uno: subscription-avatar subscription-avatar--all">
-          <MdiRss class=":uno: subscription-avatar__icon" />
+          <Rss2FillIcon class=":uno: subscription-avatar__icon" />
         </span>
         <span class=":uno: subscription-item__content">
           <span class=":uno: subscription-item__title">全部动态</span>
@@ -128,14 +128,9 @@ function itemCountText(count?: number) {
         :aria-pressed="selectedLinkName === link.metadata.name"
         @click="emit('selectLink', link.metadata.name)"
       >
-        <img
-          v-if="link.spec?.logo"
-          :src="link.spec.logo"
-          class=":uno: subscription-avatar"
-          alt=""
-        />
+        <img v-if="link.spec?.logo" :src="link.spec.logo" class=":uno: subscription-avatar" alt="" />
         <span v-else class=":uno: subscription-avatar subscription-avatar--fallback">
-          <MdiRss class=":uno: subscription-avatar__icon" />
+          <Rss2FillIcon class=":uno: subscription-avatar__icon" />
         </span>
         <span class=":uno: subscription-item__content">
           <span class=":uno: subscription-item__title">{{ linkTitle(link) }}</span>
@@ -148,10 +143,7 @@ function itemCountText(count?: number) {
           class=":uno: subscription-status"
           :class="rssStatusClass(link)"
         >
-          <MdiRss class=":uno: subscription-status__icon" />
-        </span>
-        <span v-if="link.status?.rss?.itemCount" class=":uno: subscription-item__count">
-          {{ itemCountText(link.status.rss.itemCount) }}
+          <Rss2FillIcon class=":uno: subscription-status__icon" />
         </span>
       </button>
 

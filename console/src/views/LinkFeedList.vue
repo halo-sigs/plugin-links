@@ -7,13 +7,12 @@ import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSideba
 import { useLinkFeedItems } from "@/composables/use-link-feed";
 import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
-import { IconArrowLeft, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
+import { IconArrowLeft, IconRefreshLine, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed, defineAsyncComponent, shallowRef } from "vue";
 import { useRouter } from "vue-router";
-import MdiClockCheckOutline from "~icons/mdi/clock-check-outline";
-import MdiRefresh from "~icons/mdi/refresh";
-import MdiRss from "~icons/mdi/rss";
-import MdiStar from "~icons/mdi/star";
+import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
+import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
+import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
 const LinkFeedItemsModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-feed-items-modal" */ "@/components/LinkFeedItemsModal.vue"),
@@ -94,7 +93,7 @@ const isRemoteRefreshing = computed(() => {
 
 const currentRefreshButtonText = computed(() => {
   return refreshButtonText(
-    "刷新当前",
+    "获取当前",
     isRefreshingCurrentSubscription.value,
     currentRefreshCompletedCount.value,
     currentRefreshTotalCount.value,
@@ -103,7 +102,7 @@ const currentRefreshButtonText = computed(() => {
 
 const allRefreshButtonText = computed(() => {
   return refreshButtonText(
-    "刷新全部",
+    "获取全部",
     isRefreshingAllSubscriptions.value,
     allRefreshCompletedCount.value,
     allRefreshTotalCount.value,
@@ -113,13 +112,13 @@ const allRefreshButtonText = computed(() => {
 const refreshProgressText = computed(() => {
   if (isRefreshingCurrentSubscription.value) {
     return refreshProgressTextByCount(
-      "正在刷新当前订阅",
+      "正在获取当前订阅",
       currentRefreshCompletedCount.value,
       currentRefreshTotalCount.value,
     );
   }
   if (isRefreshingAllSubscriptions.value) {
-    return refreshProgressTextByCount("正在刷新全部订阅", allRefreshCompletedCount.value, allRefreshTotalCount.value);
+    return refreshProgressTextByCount("正在获取全部订阅", allRefreshCompletedCount.value, allRefreshTotalCount.value);
   }
   return "";
 });
@@ -174,17 +173,17 @@ function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: 
   }
 
   if (!summary.failureCount && !summary.partialFailureCount) {
-    Toast.success(`${label}刷新完成：成功刷新 ${summary.successCount} 个订阅`);
+    Toast.success(`${label}获取完成：成功获取 ${summary.successCount} 个订阅`);
     return;
   }
 
   const resultText = refreshSummaryText(summary);
   if (summary.failureCount === summary.totalCount) {
-    Toast.error(`${label}刷新失败：${resultText}`);
+    Toast.error(`${label}获取失败：${resultText}`);
     return;
   }
 
-  Toast.warning(`${label}刷新完成：${resultText}`);
+  Toast.warning(`${label}获取完成：${resultText}`);
 }
 
 function refreshButtonText(label: string, refreshing: boolean, completedCount: number, totalCount: number) {
@@ -215,25 +214,25 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
 <template>
   <VPageHeader title="友链动态">
     <template #icon>
-      <MdiRss />
+      <Rss2FillIcon />
     </template>
     <template #actions>
       <VSpace>
         <VButton size="sm" @click="openReadLaterModal">
           <template #icon>
-            <MdiClockCheckOutline class=":uno: size-full text-blue-600" />
+            <CalendarTimeAddLineIcon />
           </template>
           稍后阅读
         </VButton>
         <VButton size="sm" @click="openFavoriteModal">
           <template #icon>
-            <MdiStar class=":uno: size-full text-yellow-500" />
+            <StarLineIcon />
           </template>
           收藏
         </VButton>
         <VButton size="sm" @click="router.push({ name: 'Links' })">
           <template #icon>
-            <IconArrowLeft class=":uno: size-full" />
+            <IconArrowLeft />
           </template>
           返回链接
         </VButton>
@@ -273,7 +272,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                 @click="handleRefreshCurrentSubscription"
               >
                 <template #icon>
-                  <MdiRefresh class=":uno: size-full" />
+                  <IconRefreshLine />
                 </template>
                 {{ currentRefreshButtonText }}
               </VButton>
@@ -284,15 +283,15 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                 @click="handleRefreshAllSubscriptions"
               >
                 <template #icon>
-                  <MdiRefresh class=":uno: size-full" />
+                  <IconRefreshLine />
                 </template>
                 {{ allRefreshButtonText }}
               </VButton>
               <VButton size="sm" ghost :loading="isFetching" @click="reload()">
                 <template #icon>
-                  <MdiRefresh class=":uno: size-full" />
+                  <IconRefreshLine />
                 </template>
-                重新加载
+                刷新列表
               </VButton>
             </VSpace>
           </div>
