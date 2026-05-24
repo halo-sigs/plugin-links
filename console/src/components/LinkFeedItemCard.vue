@@ -89,10 +89,8 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
           }"
           @click="toggleFavorite()"
         >
-          <template #icon>
             <MdiStar v-if="item.favorite" class=":uno: size-full text-yellow-500" />
             <MdiStarOutline v-else class=":uno: size-full" />
-          </template>
         </VButton>
         <VButton
           size="sm"
@@ -104,10 +102,8 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
           }"
           @click="toggleReadLater()"
         >
-          <template #icon>
             <MdiClockCheckOutline v-if="item.readLater" class=":uno: size-full text-blue-600" />
             <MdiClockOutline v-else class=":uno: size-full" />
-          </template>
         </VButton>
         <VButton
           size="sm"
@@ -119,10 +115,8 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
           }"
           @click="toggleRead()"
         >
-          <template #icon>
-            <MdiEmailOutline v-if="item.read" class=":uno: size-full" />
-            <MdiEmailOpenOutline v-else class=":uno: size-full text-green-600" />
-          </template>
+          <MdiEmailOutline v-if="item.read" class=":uno: size-full" />
+          <MdiEmailOpenOutline v-else class=":uno: size-full text-green-600" />
         </VButton>
       </div>
     </div>

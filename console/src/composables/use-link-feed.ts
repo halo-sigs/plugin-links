@@ -73,6 +73,7 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   const isLoading = computed(
     () => query.isLoading.value || (query.isFetching.value && !query.isFetchingNextPage.value),
   );
+  const isFetching = computed(() => query.isFetching.value);
   const isLoadingMore = computed(() => query.isFetchingNextPage.value);
 
   async function reload() {
@@ -100,6 +101,7 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
     selectedReadStatus,
     hasNext,
     isLoading,
+    isFetching,
     isLoadingMore,
     reload,
     fetchNextPage,

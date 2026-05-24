@@ -24,12 +24,14 @@ const { data: groupsWithLinks, isLoading: isLoadingLinks } = useRssLinksFetch();
 const favoriteModalVisible = shallowRef(false);
 const readLaterModalVisible = shallowRef(false);
 const mainFeed = useLinkFeedItems();
+
 const readLaterFeed = useLinkFeedItems({
   enabled: readLaterModalVisible,
   fixedFilter: {
     readLater: true,
   },
 });
+
 const favoriteFeed = useLinkFeedItems({
   enabled: favoriteModalVisible,
   fixedFilter: {
@@ -37,7 +39,7 @@ const favoriteFeed = useLinkFeedItems({
   },
 });
 
-const { selectedLinkName, selectedReadStatus, isLoading, reload, selectLink, selectReadStatus } = mainFeed;
+const { selectedLinkName, selectedReadStatus, isFetching, reload, selectLink, selectReadStatus } = mainFeed;
 
 const {
   isRefreshing: isRefreshingCurrentSubscription,
@@ -256,7 +258,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                 </template>
                 {{ allRefreshButtonText }}
               </VButton>
-              <VButton size="sm" ghost :loading="isLoading" @click="reload()">
+              <VButton size="sm" ghost :loading="isFetching" @click="reload()">
                 <template #icon>
                   <MdiRefresh class=":uno: size-full" />
                 </template>
@@ -266,11 +268,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
           </div>
         </div>
 
-        <LinkFeedItemList
-          :feed="mainFeed"
-          :source-name="sourceName"
-          empty-text="暂无友链动态"
-        />
+        <LinkFeedItemList :feed="mainFeed" :source-name="sourceName" empty-text="暂无友链动态" />
       </div>
     </div>
   </div>
