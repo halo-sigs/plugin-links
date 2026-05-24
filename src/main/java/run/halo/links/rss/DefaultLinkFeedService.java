@@ -324,6 +324,7 @@ public class DefaultLinkFeedService implements LinkFeedService {
         item.setPublishedAt(publishedAt != null ? publishedAt
             : Optional.ofNullable(updatedAt).orElse(fetchedAt));
         item.setUpdatedAt(updatedAt);
+        item.setFirstSeenAt(fetchedAt);
         item.setFetchedAt(fetchedAt);
         item.setContentHash(sha256(firstText(title, "") + "|" + firstText(summary, "")));
         item.setRead(false);

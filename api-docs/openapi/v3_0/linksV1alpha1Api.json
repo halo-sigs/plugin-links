@@ -1177,6 +1177,10 @@
             "type" : "string",
             "format" : "date-time"
           },
+          "firstSeenAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
           "guid" : {
             "type" : "string"
           },

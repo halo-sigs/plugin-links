@@ -18,6 +18,7 @@ public class LinkFeedItem {
     private String author;
     private Instant publishedAt;
     private Instant updatedAt;
+    private Instant firstSeenAt;
     private Instant fetchedAt;
     private String contentHash;
     private Boolean read;

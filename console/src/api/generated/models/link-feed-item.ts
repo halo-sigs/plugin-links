@@ -55,6 +55,12 @@ export interface LinkFeedItem {
      * @type {string}
      * @memberof LinkFeedItem
      */
+    'firstSeenAt'?: string;
+    /**
+     *
+     * @type {string}
+     * @memberof LinkFeedItem
+     */
     'guid'?: string;
     /**
      *

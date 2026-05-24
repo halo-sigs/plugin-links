@@ -6,6 +6,7 @@ import static org.dizitart.no2.filters.Filter.or;
 import static org.dizitart.no2.filters.FluentFilter.where;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -46,6 +47,10 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE),
                     "publishedAt");
             }
+            if (!collection.hasIndex("firstSeenAt")) {
+                collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE),
+                    "firstSeenAt");
+            }
             if (!collection.hasIndex("fetchedAt")) {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE),
                     "fetchedAt");
@@ -59,21 +64,24 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             if (!collection.hasIndex("readLater")) {
                 collection.createIndex(IndexOptions.indexOptions(IndexType.NON_UNIQUE), "readLater");
             }
-            List<Document> docsWithMissingState = new ArrayList<>();
+            Instant migrationTime = Instant.now();
+            List<Document> docsToMigrate = new ArrayList<>();
             collection.find().forEach(doc -> {
                 if (doc.get("read", Boolean.class) == null
                     || doc.get("favorite", Boolean.class) == null
-                    || doc.get("readLater", Boolean.class) == null) {
-                    docsWithMissingState.add(doc);
+                    || doc.get("readLater", Boolean.class) == null
+                    || !StringUtils.hasText(doc.get("firstSeenAt", String.class))) {
+                    docsToMigrate.add(doc);
                 }
             });
-            docsWithMissingState.forEach(doc -> {
+            docsToMigrate.forEach(doc -> {
                 putDefaultState(doc, "read");
                 putDefaultState(doc, "favorite");
                 putDefaultState(doc, "readLater");
+                putDefaultFirstSeenAt(doc, migrationTime);
                 collection.update(where("id").eq(doc.get("id", String.class)), doc);
             });
-            return !docsWithMissingState.isEmpty();
+            return !docsToMigrate.isEmpty();
         });
         if (migrated) {
             database.commit();
@@ -190,7 +198,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             return;
         }
         database.withCollection(COLLECTION_NAME, collection -> {
-            collection.remove(and(where("publishedAt").lt(toString(cutoff)), unsavedFilter()));
+            collection.remove(and(where("firstSeenAt").lt(toString(cutoff)), unsavedFilter()));
             return null;
         });
         database.commit();
@@ -297,6 +305,13 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
         if (existing == null) {
             return;
         }
+        Instant firstSeenAt = parseInstantOrNull(existing.get("firstSeenAt", String.class));
+        if (firstSeenAt == null) {
+            firstSeenAt = parseInstantOrNull(existing.get("fetchedAt", String.class));
+        }
+        if (firstSeenAt != null) {
+            item.setFirstSeenAt(firstSeenAt);
+        }
         Boolean read = existing.get("read", Boolean.class);
         if (read != null) {
             item.setRead(read);
@@ -322,6 +337,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             .put("author", item.getAuthor())
             .put("publishedAt", toString(item.getPublishedAt()))
             .put("updatedAt", toString(item.getUpdatedAt()))
+            .put("firstSeenAt", toString(item.getFirstSeenAt()))
             .put("fetchedAt", toString(item.getFetchedAt()))
             .put("contentHash", item.getContentHash())
             .put("read", Boolean.TRUE.equals(item.getRead()))
@@ -346,6 +362,8 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             item.setPublishedAt(parseInstant(doc.get("publishedAt", String.class)));
             item.setUpdatedAt(parseInstant(doc.get("updatedAt", String.class)));
             item.setFetchedAt(parseInstant(doc.get("fetchedAt", String.class)));
+            Instant firstSeenAt = parseInstant(doc.get("firstSeenAt", String.class));
+            item.setFirstSeenAt(Optional.ofNullable(firstSeenAt).orElse(item.getFetchedAt()));
             item.setContentHash(doc.get("contentHash", String.class));
             item.setRead(Boolean.TRUE.equals(doc.get("read", Boolean.class)));
             item.setFavorite(Boolean.TRUE.equals(doc.get("favorite", Boolean.class)));
@@ -381,6 +399,25 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
     private static void putDefaultState(Document doc, String field) {
         if (doc.get(field, Boolean.class) == null) {
             doc.put(field, false);
+        }
+    }
+
+    private static void putDefaultFirstSeenAt(Document doc, Instant fallback) {
+        if (StringUtils.hasText(doc.get("firstSeenAt", String.class))) {
+            return;
+        }
+        Instant firstSeenAt = parseInstantOrNull(doc.get("fetchedAt", String.class));
+        doc.put("firstSeenAt", toString(Optional.ofNullable(firstSeenAt).orElse(fallback)));
+    }
+
+    private static Instant parseInstantOrNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
         }
     }
 

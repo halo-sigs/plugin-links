@@ -31,8 +31,11 @@ class NitriteLinkFeedItemStoreTest {
             assertThat(store.countByLinkName("link-a")).isEqualTo(1);
             assertThat(store.listRecent(query))
                 .singleElement()
-                .extracting(LinkFeedItem::getTitle)
-                .isEqualTo("Updated");
+                .satisfies(item -> {
+                    assertThat(item.getTitle()).isEqualTo("Updated");
+                    assertThat(item.getFirstSeenAt())
+                        .isEqualTo(Instant.parse("2026-05-22T12:00:00Z"));
+                });
         } finally {
             database.destroy();
         }
@@ -120,6 +123,7 @@ class NitriteLinkFeedItemStoreTest {
     void shouldBackfillMissingSavedStates() {
         LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
         try {
+            Instant beforeMigration = Instant.now();
             database.withCollection("link-feed-items", collection -> {
                 collection.insert(createDocument("id", "legacy")
                     .put("linkName", "link-a")
@@ -130,18 +134,62 @@ class NitriteLinkFeedItemStoreTest {
                     .put("publishedAt", "2026-05-20T10:00:00Z")
                     .put("fetchedAt", "2026-05-22T12:00:00Z")
                     .put("contentHash", "legacy"));
+                collection.insert(createDocument("id", "legacy-without-fetched-at")
+                    .put("linkName", "link-a")
+                    .put("feedUrl", "https://example.com/feed.xml")
+                    .put("guid", "legacy-without-fetched-at")
+                    .put("url", "https://example.com/legacy-without-fetched-at")
+                    .put("title", "Legacy Without Fetched At")
+                    .put("publishedAt", "2026-05-21T10:00:00Z")
+                    .put("contentHash", "legacy-without-fetched-at"));
                 return null;
             });
             database.commit();
 
             NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            Instant afterMigration = Instant.now();
+
+            assertThat(store.listRecent(new LinkFeedItemQuery()))
+                .satisfiesExactly(
+                    fallbackItem -> {
+                        assertThat(fallbackItem.getId()).isEqualTo("legacy-without-fetched-at");
+                        assertThat(fallbackItem.getFirstSeenAt())
+                            .isBetween(beforeMigration, afterMigration);
+                    },
+                    fetchedItem -> {
+                        assertThat(fetchedItem.getId()).isEqualTo("legacy");
+                        assertThat(fetchedItem.getRead()).isFalse();
+                        assertThat(fetchedItem.getFavorite()).isFalse();
+                        assertThat(fetchedItem.getReadLater()).isFalse();
+                        assertThat(fetchedItem.getFirstSeenAt())
+                            .isEqualTo(Instant.parse("2026-05-22T12:00:00Z"));
+                    });
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldPreserveFirstSeenAtWhenRefreshingExistingItem() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            LinkFeedItem first = item("item-1", "link-a", "Original", "2026-05-20T10:00:00Z",
+                "2026-05-21T12:00:00Z", "2026-05-21T12:00:00Z");
+            LinkFeedItem refreshed = item("item-1", "link-a", "Updated", "2026-05-20T10:00:00Z",
+                "2026-05-24T12:00:00Z", "2026-05-24T12:00:00Z");
+
+            store.upsert(first);
+            store.upsert(refreshed);
 
             assertThat(store.listRecent(new LinkFeedItemQuery()))
                 .singleElement()
                 .satisfies(item -> {
-                    assertThat(item.getRead()).isFalse();
-                    assertThat(item.getFavorite()).isFalse();
-                    assertThat(item.getReadLater()).isFalse();
+                    assertThat(item.getTitle()).isEqualTo("Updated");
+                    assertThat(item.getFirstSeenAt())
+                        .isEqualTo(Instant.parse("2026-05-21T12:00:00Z"));
+                    assertThat(item.getFetchedAt())
+                        .isEqualTo(Instant.parse("2026-05-24T12:00:00Z"));
                 });
         } finally {
             database.destroy();
@@ -196,11 +244,12 @@ class NitriteLinkFeedItemStoreTest {
         LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
         try {
             NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
-            store.upsert(item("old-unsaved", "link-a", "Old", "2026-05-20T10:00:00Z"));
+            store.upsert(item("old-unsaved", "link-a", "Old", "2026-05-20T10:00:00Z",
+                "2026-05-20T12:00:00Z", "2026-05-22T12:00:00Z"));
             store.upsert(item("old-favorite", "link-a", "Favorite", "2026-05-20T11:00:00Z",
-                true, false));
+                "2026-05-20T13:00:00Z", "2026-05-22T12:00:00Z", true, false));
             store.upsert(item("old-later", "link-a", "Later", "2026-05-20T12:00:00Z",
-                false, true));
+                "2026-05-20T14:00:00Z", "2026-05-22T12:00:00Z", false, true));
             store.upsert(item("new-unsaved", "link-a", "New", "2026-05-22T10:00:00Z"));
 
             store.deleteOlderThan(Instant.parse("2026-05-21T00:00:00Z"));
@@ -208,6 +257,24 @@ class NitriteLinkFeedItemStoreTest {
             assertThat(store.listRecent(new LinkFeedItemQuery()))
                 .extracting(LinkFeedItem::getId)
                 .containsExactly("new-unsaved", "old-later", "old-favorite");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldKeepRecentlySeenItemsWithOldPublishedAtWhenDeletingByAge() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links-feed.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("quiet-feed-item", "link-a", "Quiet", "2024-08-26T02:23:35Z",
+                "2026-05-22T12:00:00Z", "2026-05-22T12:00:00Z"));
+
+            store.deleteOlderThan(Instant.parse("2026-05-21T00:00:00Z"));
+
+            assertThat(store.listRecent(new LinkFeedItemQuery()))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("quiet-feed-item");
         } finally {
             database.destroy();
         }
@@ -268,6 +335,17 @@ class NitriteLinkFeedItemStoreTest {
 
     private static LinkFeedItem item(String id, String linkName, String title, String publishedAt,
         boolean favorite, boolean readLater) {
+        return item(id, linkName, title, publishedAt, "2026-05-22T12:00:00Z",
+            "2026-05-22T12:00:00Z", favorite, readLater);
+    }
+
+    private static LinkFeedItem item(String id, String linkName, String title, String publishedAt,
+        String firstSeenAt, String fetchedAt) {
+        return item(id, linkName, title, publishedAt, firstSeenAt, fetchedAt, false, false);
+    }
+
+    private static LinkFeedItem item(String id, String linkName, String title, String publishedAt,
+        String firstSeenAt, String fetchedAt, boolean favorite, boolean readLater) {
         LinkFeedItem item = new LinkFeedItem();
         item.setId(id);
         item.setLinkName(linkName);
@@ -276,7 +354,8 @@ class NitriteLinkFeedItemStoreTest {
         item.setUrl("https://example.com/" + id);
         item.setTitle(title);
         item.setPublishedAt(Instant.parse(publishedAt));
-        item.setFetchedAt(Instant.parse("2026-05-22T12:00:00Z"));
+        item.setFirstSeenAt(Instant.parse(firstSeenAt));
+        item.setFetchedAt(Instant.parse(fetchedAt));
         item.setContentHash(id);
         item.setRead(false);
         item.setFavorite(favorite);
