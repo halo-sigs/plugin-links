@@ -32,6 +32,8 @@ const readLaterFeed = useLinkFeedItems({
   fixedFilter: {
     readLater: true,
   },
+  useReadStatusFilter: false,
+  useRouteLinkFilter: false,
 });
 
 const favoriteFeed = useLinkFeedItems({
@@ -39,6 +41,8 @@ const favoriteFeed = useLinkFeedItems({
   fixedFilter: {
     favorite: true,
   },
+  useReadStatusFilter: false,
+  useRouteLinkFilter: false,
 });
 
 const { selectedLinkName, selectedReadStatus, isFetching, reload, selectLink, selectReadStatus } = mainFeed;

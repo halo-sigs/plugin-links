@@ -22,6 +22,8 @@ export interface UseLinkFeedItemsOptions {
   autoLoad?: boolean;
   enabled?: MaybeRefOrGetter<boolean>;
   fixedFilter?: MaybeRefOrGetter<LinkFeedItemsFilter | undefined>;
+  useReadStatusFilter?: boolean;
+  useRouteLinkFilter?: boolean;
 }
 
 interface LinkFeedPageCursor {
@@ -32,6 +34,8 @@ interface LinkFeedPageCursor {
 export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   const queryClient = useQueryClient();
   const { autoLoad = true } = options;
+  const useReadStatusFilter = options.useReadStatusFilter ?? true;
+  const useRouteLinkFilter = options.useRouteLinkFilter ?? true;
   const selectedLinkName = useRouteQuery<string>("link", "");
   const selectedReadStatus = useLocalStorage<LinkFeedReadStatus>("plugin:links:selected-read-status", "");
   const queryEnabled = computed(() => {
@@ -39,8 +43,14 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   });
 
   const activeFilter = computed<LinkFeedItemsFilter>(() => ({
-    linkName: selectedLinkName.value || undefined,
-    read: selectedReadStatus.value === "read" ? true : selectedReadStatus.value === "unread" ? false : undefined,
+    linkName: useRouteLinkFilter ? selectedLinkName.value || undefined : undefined,
+    read: useReadStatusFilter
+      ? selectedReadStatus.value === "read"
+        ? true
+        : selectedReadStatus.value === "unread"
+          ? false
+          : undefined
+      : undefined,
     ...toValue(options.fixedFilter),
   }));
 

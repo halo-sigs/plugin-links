@@ -1,6 +1,7 @@
 import { linksConsoleApiClient } from "@/api";
 import type { Link, LinkFeedRefreshResult } from "@/api/generated";
 import { shallowRef } from "vue";
+import { classifyLinkFeedRefreshResult } from "./link-feed-refresh-summary";
 
 export interface LinkFeedRefreshFailure {
   link: Link;
@@ -51,11 +52,16 @@ export function useLinkFeedRefresh() {
           const { data } = await linksConsoleApiClient.feed.refreshLinkFeed({
             name: link.metadata.name,
           });
-          summary.successes.push({ link, result: data });
-          if (data.partialFailure) {
+          const refreshState = classifyLinkFeedRefreshResult(data);
+          if (refreshState === "failed") {
+            summary.failureCount += 1;
+            summary.failures.push({ link, error: data });
+          } else if (refreshState === "partial") {
             summary.partialFailureCount += 1;
+            summary.successes.push({ link, result: data });
           } else {
             summary.successCount += 1;
+            summary.successes.push({ link, result: data });
           }
         } catch (error) {
           summary.failureCount += 1;
