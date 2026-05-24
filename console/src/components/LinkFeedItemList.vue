@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import type { LinkFeedItem } from "@/api/generated";
 import { VButton, VLoading } from "@halo-dev/components";
+import { useIntersectionObserver } from "@vueuse/core";
+import { shallowRef, useTemplateRef, watch } from "vue";
 import LinkFeedItemCard from "./LinkFeedItemCard.vue";
 
-defineProps<{
+const props = defineProps<{
   items: LinkFeedItem[];
   sourceName: (linkName?: string) => string;
   publishedAtText: (item: LinkFeedItem) => string;
@@ -25,6 +27,29 @@ const emit = defineEmits<{
   (event: "toggleRead", item: LinkFeedItem, read: boolean): void;
   (event: "loadMore"): void;
 }>();
+
+const loadMoreTrigger = useTemplateRef<HTMLElement>("loadMoreTrigger");
+const isLoadMoreTriggerVisible = shallowRef(false);
+
+const { isSupported: isIntersectionObserverSupported } = useIntersectionObserver(
+  loadMoreTrigger,
+  ([entry]) => {
+    isLoadMoreTriggerVisible.value = !!entry?.isIntersecting;
+  },
+  {
+    rootMargin: "160px 0px",
+  },
+);
+
+watch(
+  [isLoadMoreTriggerVisible, () => props.hasNext, () => props.isLoading, () => props.isLoadingMore],
+  () => {
+    if (!isLoadMoreTriggerVisible.value || !props.hasNext || props.isLoading || props.isLoadingMore) {
+      return;
+    }
+    emit("loadMore");
+  },
+);
 </script>
 
 <template>
@@ -51,8 +76,9 @@ const emit = defineEmits<{
       @toggle-read="(target, read) => emit('toggleRead', target, read)"
     />
 
-    <div v-if="hasNext" class=":uno: flex justify-center pt-2">
-      <VButton :loading="isLoadingMore" @click="emit('loadMore')">加载更多</VButton>
+    <div v-if="hasNext || isLoadingMore" ref="loadMoreTrigger" class=":uno: min-h-10 flex justify-center pt-2">
+      <span v-if="isLoadingMore" class=":uno: text-xs text-gray-500" role="status">加载中...</span>
+      <VButton v-else-if="hasNext && !isIntersectionObserverSupported" @click="emit('loadMore')">加载更多</VButton>
     </div>
   </div>
 </template>

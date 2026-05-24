@@ -48,6 +48,9 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
   }));
 
   async function load({ append = false }: { append?: boolean } = {}) {
+    if ((append && !hasNext.value) || isLoading.value || isLoadingMore.value) {
+      return;
+    }
     if (append) {
       isLoadingMore.value = true;
     } else {
