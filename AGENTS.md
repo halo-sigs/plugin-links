@@ -132,6 +132,9 @@ pnpm prettier
   endpoints use a different path prefix (e.g., `/apis/console.api.link.halo.run/v1alpha1/**`),
   add the prefix to `haloPlugin.openApi.groupingRules.pathsToMatch` in `build.gradle` first,
   otherwise the generator will skip them.
+  Requests made through the generated API client or `@halo-dev/api-client`'s `axiosInstance`
+  already use Halo's global error interceptor. Do not add extra failure toasts for those request
+  failures; keep only success feedback, local validation messages, or non-HTTP business summaries.
 - **Plugin Integration**: `console/src/index.ts` exports a plugin definition using `@halo-dev/ui-shared`'s `definePlugin`. It registers a route under `content` group and a `comment:subject-ref:create` extension point.
 
 ### Build Integration

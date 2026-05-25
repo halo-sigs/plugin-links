@@ -60,8 +60,12 @@ class LinkRequestTest {
         when(mockResponse.statusCode()).thenReturn(200);
         Document doc = new Document("http://example.com");
         when(mockResponse.parse()).thenReturn(doc);
+        when(mockResponse.header("Content-Length")).thenReturn(null);
+        when(mockResponse.body()).thenReturn("");
 
         when(mockConn.followRedirects(false)).thenReturn(mockConn);
+        when(mockConn.ignoreHttpErrors(true)).thenReturn(mockConn);
+        when(mockConn.ignoreContentType(false)).thenReturn(mockConn);
         when(mockConn.maxBodySize(anyInt())).thenReturn(mockConn);
         when(mockConn.timeout(anyInt())).thenReturn(mockConn);
         when(mockConn.headers(anyMap())).thenReturn(mockConn);
@@ -76,6 +80,7 @@ class LinkRequestTest {
             security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
 
             jsoup.when(() -> Jsoup.connect("http://93.184.216.34")).thenReturn(mockConn);
+            jsoup.when(() -> Jsoup.parse("", "http://example.com")).thenReturn(doc);
 
             LinkDetailDTO detail = LinkRequest.getLinkDetail("http://example.com");
 

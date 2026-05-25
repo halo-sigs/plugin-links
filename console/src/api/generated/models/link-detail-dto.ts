@@ -43,6 +43,6 @@ export interface LinkDetailDTO {
      * @type {string}
      * @memberof LinkDetailDTO
      */
-    'title': string;
+    'title'?: string;
 }
 

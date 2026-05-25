@@ -114,6 +114,18 @@ class LinkSecurityUtilsTest {
     }
 
     @Test
+    void shouldBlockAnyLocalAddress() throws Exception {
+        InetAddress anyLocal = InetAddress.getByName("0.0.0.0");
+        assertThat(LinkSecurityUtils.isPrivateAddress(anyLocal)).isTrue();
+    }
+
+    @Test
+    void shouldBlockMulticastAddress() throws Exception {
+        InetAddress multicast = InetAddress.getByName("224.0.0.1");
+        assertThat(LinkSecurityUtils.isPrivateAddress(multicast)).isTrue();
+    }
+
+    @Test
     void shouldAllowIpv6PublicAddress() throws Exception {
         InetAddress publicAddr = InetAddress.getByName("2001:db8::1");
         assertThat(LinkSecurityUtils.isPrivateAddress(publicAddr)).isFalse();

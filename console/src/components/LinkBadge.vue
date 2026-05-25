@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { Link } from "@/api/generated";
 import { IconExternalLinkLine } from "@halo-dev/components";
+import { computed } from "vue";
+import Rss2FillIcon from '~icons/mingcute/rss-2-fill';
 
 const props = defineProps<{
   selectMode?: boolean;
@@ -16,6 +18,52 @@ function handleClick() {
   if (!props.selectMode && !props.sortMode) {
     emit("open-edit");
   }
+}
+
+const rssStatusClass = computed(() => {
+  if (hasPartialRssFailure(props.link)) {
+    return ":uno: bg-amber-100 text-amber-600";
+  }
+  if (hasRssFailure(props.link)) {
+    return ":uno: bg-red-100 text-red-600";
+  }
+  if (props.link.status?.rss?.lastSuccessAt) {
+    return ":uno: bg-emerald-100 text-emerald-600";
+  }
+  return ":uno: bg-amber-100 text-amber-600";
+});
+
+const rssTooltip = computed(() => {
+  const rss = props.link.status?.rss;
+  const feedCount = rssFeedUrls(props.link).length;
+  const feedCountText = feedCount > 1 ? `${feedCount} 个订阅源，` : "";
+  if (hasPartialRssFailure(props.link)) {
+    return `RSS 部分订阅源获取失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
+  }
+  if (hasRssFailure(props.link) && rss?.lastError) {
+    return `RSS 获取失败：${rss.lastError}`;
+  }
+  if (rss?.lastSuccessAt) {
+    return `RSS 已启用，${feedCountText}缓存 ${rss.itemCount || 0} 篇`;
+  }
+  return "RSS 已启用，等待获取";
+});
+
+function rssFeedUrls(link: Link) {
+  return link.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()) || [];
+}
+
+function hasPartialRssFailure(link: Link) {
+  const feeds = link.status?.rss?.feeds || [];
+  return feeds.some((feed) => !!feed.lastError) && feeds.some((feed) => !feed.lastError && feed.lastSuccessAt);
+}
+
+function hasRssFailure(link: Link) {
+  const feeds = link.status?.rss?.feeds || [];
+  if (feeds.length) {
+    return feeds.every((feed) => !!feed.lastError);
+  }
+  return !!link.status?.rss?.lastError;
 }
 </script>
 <template>
@@ -52,6 +100,16 @@ function handleClick() {
         {{ link.spec?.url }}
       </span>
     </div>
+    <span
+      v-if="!selectMode && !sortMode && link.spec?.rss?.enabled"
+      v-tooltip="{
+        content: rssTooltip,
+      }"
+      class=":uno: size-5 flex flex-none items-center justify-center rounded"
+      :class="rssStatusClass"
+    >
+      <Rss2FillIcon class=":uno: size-3.5" />
+    </span>
     <a
       v-if="!selectMode && !sortMode && link.spec?.url"
       :href="link.spec.url"

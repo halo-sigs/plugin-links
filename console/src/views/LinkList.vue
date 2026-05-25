@@ -37,7 +37,7 @@ const linkImportModalVisible = ref(false);
         <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>
         <VButton @click="handleRouteToFront" size="sm" ghost>
           <template #icon>
-            <IconExternalLinkLine class=":uno: size-full" />
+            <IconExternalLinkLine />
           </template>
           跳转到前台
         </VButton>

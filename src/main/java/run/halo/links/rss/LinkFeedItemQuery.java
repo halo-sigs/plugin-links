@@ -1,0 +1,33 @@
+package run.halo.links.rss;
+
+import java.time.Instant;
+import lombok.Data;
+
+@Data
+public class LinkFeedItemQuery {
+    public static final int DEFAULT_LIMIT = 30;
+    public static final int MAX_LIMIT = 100;
+    static final int MAX_FETCH_LIMIT = MAX_LIMIT + 1;
+
+    private String linkName;
+    private Instant beforePublishedAt;
+    private String beforeId;
+    private Boolean read;
+    private Boolean favorite;
+    private Boolean readLater;
+    private int limit = DEFAULT_LIMIT;
+
+    public int normalizedLimit() {
+        if (limit <= 0) {
+            return DEFAULT_LIMIT;
+        }
+        return Math.min(limit, MAX_LIMIT);
+    }
+
+    int normalizedFetchLimit() {
+        if (limit <= 0) {
+            return DEFAULT_LIMIT;
+        }
+        return Math.min(limit, MAX_FETCH_LIMIT);
+    }
+}

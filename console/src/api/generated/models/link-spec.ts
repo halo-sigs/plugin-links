@@ -13,6 +13,9 @@
  */
 
 
+// May contain unused imports in some cases
+// @ts-ignore
+import type { RssSpec } from './rss-spec';
 
 /**
  * Configurable fields of a link.
@@ -50,6 +53,12 @@ export interface LinkSpec {
      * @memberof LinkSpec
      */
     'priority'?: number;
+    /**
+     * 
+     * @type {RssSpec}
+     * @memberof LinkSpec
+     */
+    'rss'?: RssSpec;
     /**
      * Absolute URL that the link points to.
      * @type {string}

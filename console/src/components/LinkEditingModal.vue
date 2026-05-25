@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
 import type { Link } from "@/api/generated";
+import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
-import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
@@ -51,22 +52,50 @@ const { mutate, isPending } = useMutation({
         },
         {
           op: "add",
+          path: "/spec/rss",
+          value:
+            data.rss?.enabled || data.rss?.feedUrls?.length
+              ? {
+                  enabled: data.rss.enabled ?? false,
+                  feedUrls: data.rss.feedUrls || [],
+                }
+              : null,
+        },
+        {
+          op: "add",
           path: "/metadata/annotations",
           value: data.annotations || {},
         },
       ],
     });
   },
-  onSuccess: () => {
+  onSuccess: (_, data) => {
     Toast.success("编辑链接成功");
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+    queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+    if (shouldRefreshFeedAfterSave(data)) {
+      startInitialLinkFeedRefresh({ linkName: props.link.metadata.name, queryClient });
+    }
   },
 });
 
 function onSubmit(data: LinkFormState) {
   mutate(data);
+}
+
+function shouldRefreshFeedAfterSave(data: LinkFormState) {
+  const nextFeedUrls = data.rss?.feedUrls || [];
+  return Boolean(
+    data.rss?.enabled &&
+    nextFeedUrls.length &&
+    (!props.link.spec?.rss?.enabled || !sameFeedUrls(props.link.spec.rss.feedUrls || [], nextFeedUrls)),
+  );
+}
+
+function sameFeedUrls(left: string[], right: string[]) {
+  return left.length === right.length && left.every((feedUrl, index) => feedUrl === right[index]);
 }
 
 function handleDelete() {
@@ -83,6 +112,7 @@ function handleDelete() {
 
       modal.value?.close();
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+      queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
     },
   });
 }
@@ -102,6 +132,7 @@ function handleDelete() {
           displayName: link.spec.displayName,
           logo: link.spec.logo,
           description: link.spec.description,
+          rss: link.spec.rss,
           annotations: link.metadata.annotations,
         }"
         @submit="onSubmit"
