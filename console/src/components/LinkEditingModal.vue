@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
+import { linksCoreApiClient } from "@/api";
 import type { Link } from "@/api/generated";
+import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
@@ -68,22 +69,15 @@ const { mutate, isPending } = useMutation({
       ],
     });
   },
-  onSuccess: async (_, data) => {
+  onSuccess: (_, data) => {
     Toast.success("编辑链接成功");
-    if (shouldRefreshFeedAfterSave(data)) {
-      try {
-        await linksConsoleApiClient.feed.refreshLinkFeed({
-          name: props.link.metadata.name,
-        });
-        Toast.success("RSS 已自动获取");
-      } catch {
-        // Halo's API interceptor shows request failure toasts.
-      }
-    }
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+    if (shouldRefreshFeedAfterSave(data)) {
+      startInitialLinkFeedRefresh({ linkName: props.link.metadata.name, queryClient });
+    }
   },
 });
 

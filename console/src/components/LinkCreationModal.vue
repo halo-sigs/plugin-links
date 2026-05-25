@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
+import { linksCoreApiClient } from "@/api";
 import type { LinkGroup } from "@/api/generated";
+import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
@@ -57,20 +58,15 @@ const { mutate, isPending } = useMutation({
       },
     });
   },
-  onSuccess: async (response, data) => {
+  onSuccess: (response, data) => {
     Toast.success("创建链接成功");
     const linkName = response.data.metadata.name;
-    if (shouldRefreshFeedAfterSave(data) && linkName) {
-      try {
-        await linksConsoleApiClient.feed.refreshLinkFeed({ name: linkName });
-        Toast.success("RSS 已自动获取");
-      } catch {
-        // Halo's API interceptor shows request failure toasts.
-      }
-    }
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+    if (shouldRefreshFeedAfterSave(data)) {
+      startInitialLinkFeedRefresh({ linkName, queryClient });
+    }
   },
 });
 

@@ -25,6 +25,12 @@ through `spec.rss` with a Link-level enable switch and a list of feed URLs.
 #### Scenario: User enables RSS tracking for the first time
 - **WHEN** a user creates a link with RSS tracking enabled or enables RSS tracking on an existing link
 - **THEN** the Console starts an initial RSS refresh after saving the link
+- **AND** the Console does not wait for the initial RSS refresh to complete before completing the save modal flow
+
+#### Scenario: Initial RSS refresh failure does not block saved link
+- **WHEN** the initial RSS refresh started after a successful link save fails
+- **THEN** the saved `Link` remains persisted with its RSS configuration
+- **AND** the Console does not reopen or keep open the save modal because of the RSS refresh failure
 
 #### Scenario: User disables RSS tracking
 - **WHEN** a user sets `spec.rss.enabled` to `false`
