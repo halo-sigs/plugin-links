@@ -17,14 +17,14 @@
 /**
  * 
  * @export
- * @interface LinkFeedDiscoveryResult
+ * @interface LinkFeedMarkReadResult
  */
-export interface LinkFeedDiscoveryResult {
+export interface LinkFeedMarkReadResult {
     /**
      * 
-     * @type {Array<string>}
-     * @memberof LinkFeedDiscoveryResult
+     * @type {number}
+     * @memberof LinkFeedMarkReadResult
      */
-    'feedUrls'?: Array<string>;
+    'updatedCount'?: number;
 }
 

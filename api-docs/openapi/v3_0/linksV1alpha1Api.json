@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:31573",
+    "url" : "http://localhost:57379",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -487,6 +487,33 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/LinkFeedItemPage"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/read" : {
+      "post" : {
+        "description" : "Mark all unread cached RSS or Atom feed items as read.",
+        "operationId" : "markLinkFeedItemsRead",
+        "parameters" : [ {
+          "description" : "Optional link metadata name used to limit the bulk update.",
+          "in" : "query",
+          "name" : "linkName",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedMarkReadResult"
                 }
               }
             },
@@ -1232,6 +1259,15 @@
           },
           "nextBeforePublishedAt" : {
             "type" : "string"
+          }
+        }
+      },
+      "LinkFeedMarkReadResult" : {
+        "type" : "object",
+        "properties" : {
+          "updatedCount" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },

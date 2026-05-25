@@ -24,6 +24,7 @@ models/link-feed-cleanup-result.ts
 models/link-feed-discovery-result.ts
 models/link-feed-item-page.ts
 models/link-feed-item.ts
+models/link-feed-mark-read-result.ts
 models/link-feed-refresh-result.ts
 models/link-group-list.ts
 models/link-group-spec.ts

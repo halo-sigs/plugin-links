@@ -149,6 +149,28 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
     }
 
     @Override
+    public long markUnreadAsRead(String linkName) {
+        Filter filter = where("read").eq(false);
+        if (StringUtils.hasText(linkName)) {
+            filter = and(filter, where("linkName").eq(linkName));
+        }
+        Filter updateFilter = filter;
+        long updated = database.withCollection(COLLECTION_NAME, collection -> {
+            List<Document> docsToUpdate = new ArrayList<>();
+            collection.find(updateFilter).forEach(docsToUpdate::add);
+            docsToUpdate.forEach(doc -> {
+                doc.put("read", true);
+                collection.update(where("id").eq(doc.get("id", String.class)), doc);
+            });
+            return docsToUpdate.size();
+        });
+        if (updated > 0) {
+            database.commit();
+        }
+        return updated;
+    }
+
+    @Override
     public boolean updateFavorite(String id, boolean favorite) {
         return updateBooleanState(id, "favorite", favorite);
     }

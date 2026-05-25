@@ -149,6 +149,85 @@ class NitriteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldMarkAllUnreadItemsAsRead() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("a-unread", "link-a", "Unread A", "2026-05-20T10:00:00Z"));
+            store.upsert(item("b-unread", "link-b", "Unread B", "2026-05-21T10:00:00Z"));
+            store.upsert(item("already-read", "link-b", "Read", "2026-05-22T10:00:00Z"));
+            store.updateRead("already-read", true);
+
+            assertThat(store.markUnreadAsRead(null)).isEqualTo(2);
+
+            LinkFeedItemQuery readQuery = new LinkFeedItemQuery();
+            readQuery.setRead(true);
+            assertThat(store.listRecent(readQuery))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("already-read", "b-unread", "a-unread");
+
+            LinkFeedItemQuery unreadQuery = new LinkFeedItemQuery();
+            unreadQuery.setRead(false);
+            assertThat(store.listRecent(unreadQuery)).isEmpty();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldMarkSelectedLinkUnreadItemsAsRead() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("a-unread-new", "link-a", "Unread A New",
+                "2026-05-22T10:00:00Z"));
+            store.upsert(item("a-unread-old", "link-a", "Unread A Old",
+                "2026-05-20T10:00:00Z"));
+            store.upsert(item("a-read", "link-a", "Read A", "2026-05-21T10:00:00Z"));
+            store.upsert(item("b-unread", "link-b", "Unread B", "2026-05-23T10:00:00Z"));
+            store.updateRead("a-read", true);
+
+            assertThat(store.markUnreadAsRead("link-a")).isEqualTo(2);
+
+            LinkFeedItemQuery linkAReadQuery = new LinkFeedItemQuery();
+            linkAReadQuery.setLinkName("link-a");
+            linkAReadQuery.setRead(true);
+            assertThat(store.listRecent(linkAReadQuery))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("a-unread-new", "a-read", "a-unread-old");
+
+            LinkFeedItemQuery unreadQuery = new LinkFeedItemQuery();
+            unreadQuery.setRead(false);
+            assertThat(store.listRecent(unreadQuery))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("b-unread");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldReturnZeroWhenMarkingReadWithoutUnreadItems() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("already-read", "link-a", "Read", "2026-05-20T10:00:00Z"));
+            store.updateRead("already-read", true);
+
+            assertThat(store.markUnreadAsRead(null)).isZero();
+            assertThat(store.markUnreadAsRead("missing-link")).isZero();
+
+            LinkFeedItemQuery readQuery = new LinkFeedItemQuery();
+            readQuery.setRead(true);
+            assertThat(store.listRecent(readQuery))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("already-read");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldBackfillMissingSavedStates() {
         LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
         try {

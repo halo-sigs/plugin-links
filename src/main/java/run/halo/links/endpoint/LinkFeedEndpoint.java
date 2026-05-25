@@ -36,6 +36,7 @@ import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemPage;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedMarkReadResult;
 import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedRetentionPolicy;
 import run.halo.links.rss.LinkFeedRetentionService;
@@ -143,6 +144,19 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                     )
                     .response(responseBuilder().implementation(LinkFeedItemPage.class));
             })
+            .POST("rss/items/-/read", this::markUnreadItemsRead, builder -> builder
+                .operationId("markLinkFeedItemsRead")
+                .description("Mark all unread cached RSS or Atom feed items as read.")
+                .tag(tag)
+                .parameter(parameterBuilder()
+                    .name("linkName")
+                    .description("Optional link metadata name used to limit the bulk update.")
+                    .in(ParameterIn.QUERY)
+                    .implementation(String.class)
+                    .required(false)
+                )
+                .response(responseBuilder().implementation(LinkFeedMarkReadResult.class))
+            )
             .POST("rss/items/{id}/read", this::markItemRead, builder -> builder
                 .operationId("markLinkFeedItemRead")
                 .description("Mark a cached RSS or Atom feed item as read or unread.")
@@ -264,6 +278,16 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }
+    }
+
+    private Mono<ServerResponse> markUnreadItemsRead(ServerRequest request) {
+        String linkName = request.queryParam("linkName")
+            .filter(StringUtils::hasText)
+            .orElse(null);
+        return Mono.fromCallable(() -> itemStore.markUnreadAsRead(linkName))
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap(updatedCount -> ServerResponse.ok()
+                .bodyValue(new LinkFeedMarkReadResult(updatedCount)));
     }
 
     private Mono<ServerResponse> markItemFavorite(ServerRequest request) {

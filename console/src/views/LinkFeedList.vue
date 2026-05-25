@@ -46,9 +46,7 @@ const favoriteFeed = useLinkFeedItems({
 });
 
 const { selectedLinkName, selectedReadStatus, isFetching, reload, selectLink, selectReadStatus } = mainFeed;
-const { loadedUnreadCount, hasLoadedUnreadItems, isMarkingAllRead, markAllRead } = useLinkFeedMarkAllRead(
-  mainFeed.items,
-);
+const { isMarkingAllRead, markAllRead } = useLinkFeedMarkAllRead();
 
 const {
   isRefreshing: isRefreshingCurrentSubscription,
@@ -94,6 +92,13 @@ const selectedSourceMeta = computed(() => {
   const feedCount = selectedLink.value.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()).length || 0;
   const itemCount = selectedLink.value.status?.rss?.itemCount || 0;
   return `${feedCount} 个订阅源 / ${itemCount} 篇缓存`;
+});
+
+const markAllReadScopeLabel = computed(() => {
+  if (!selectedLink.value) {
+    return "全部订阅";
+  }
+  return `「${selectedSourceTitle.value}」`;
 });
 
 const isRemoteRefreshing = computed(() => {
@@ -177,33 +182,34 @@ async function handleRefreshAllSubscriptions() {
 }
 
 function handleMarkAllRead() {
-  if (!hasLoadedUnreadItems.value || isMarkingAllRead.value) {
+  if (!allLinks.value.length || isMarkingAllRead.value) {
     return;
   }
 
   Dialog.warning({
     title: "全部标为已读",
-    description: `确认将当前列表中已加载的 ${loadedUnreadCount.value} 篇未读文章标为已读吗？未加载的更早文章不会受到影响。`,
+    description: `确认将${markAllReadScopeLabel.value}中的所有未读文章标为已读吗？此操作会包含当前未加载的更早文章。`,
     confirmType: "primary",
     onConfirm: async () => {
-      const summary = await markAllRead();
+      const scopeLabel = markAllReadScopeLabel.value;
+      const summary = await markAllRead(selectedLinkName.value);
       await reload();
-      showMarkAllReadSummary(summary);
+      showMarkAllReadSummary(summary, scopeLabel);
     },
   });
 }
 
-function showMarkAllReadSummary(summary: LinkFeedMarkAllReadSummary | undefined) {
-  if (!summary || !summary.requestedCount) {
+function showMarkAllReadSummary(summary: LinkFeedMarkAllReadSummary | undefined, scopeLabel: string) {
+  if (!summary) {
     return;
   }
 
-  if (!summary.failureCount) {
-    Toast.success(`已将当前列表中的 ${summary.successCount} 篇文章标为已读`);
+  if (!summary.updatedCount) {
+    Toast.info(`${scopeLabel}中暂无未读文章`);
     return;
   }
 
-  Toast.warning(`已将 ${summary.successCount}/${summary.requestedCount} 篇文章标为已读`);
+  Toast.success(`已将${scopeLabel}中的 ${summary.updatedCount} 篇文章标为已读`);
 }
 
 function showRefreshSummary(summary: LinkFeedRefreshSummary | undefined, label: string) {
@@ -328,7 +334,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
               </VButton>
               <VButton
                 size="sm"
-                :disabled="!hasLoadedUnreadItems || isMarkingAllRead"
+                :disabled="!allLinks.length || isMarkingAllRead"
                 :loading="isMarkingAllRead"
                 @click="handleMarkAllRead"
               >
