@@ -228,6 +228,34 @@ class NitriteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldCountUnreadItems() {
+        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        try {
+            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            store.upsert(item("a-unread-1", "link-a", "Unread A 1", "2026-05-20T10:00:00Z"));
+            store.upsert(item("a-unread-2", "link-a", "Unread A 2", "2026-05-21T10:00:00Z"));
+            store.upsert(item("a-read", "link-a", "Read A", "2026-05-22T10:00:00Z"));
+            store.upsert(item("b-unread", "link-b", "Unread B", "2026-05-23T10:00:00Z"));
+            store.updateRead("a-read", true);
+
+            assertThat(store.countUnread()).isEqualTo(3);
+            assertThat(store.countUnreadByLinkName())
+                .containsEntry("link-a", 2L)
+                .containsEntry("link-b", 1L)
+                .doesNotContainKey("missing-link");
+
+            store.markUnreadAsRead("link-a");
+
+            assertThat(store.countUnread()).isEqualTo(1);
+            assertThat(store.countUnreadByLinkName())
+                .doesNotContainKey("link-a")
+                .containsEntry("link-b", 1L);
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldBackfillMissingSavedStates() {
         LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
         try {

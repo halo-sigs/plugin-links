@@ -41,6 +41,7 @@ import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedRetentionPolicy;
 import run.halo.links.rss.LinkFeedRetentionService;
 import run.halo.links.rss.LinkFeedService;
+import run.halo.links.rss.LinkFeedUnreadSummary;
 
 @Component
 @RequiredArgsConstructor
@@ -144,6 +145,12 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                     )
                     .response(responseBuilder().implementation(LinkFeedItemPage.class));
             })
+            .GET("rss/items/-/unread-summary", this::getUnreadSummary, builder -> builder
+                .operationId("getLinkFeedUnreadSummary")
+                .description("Summarize unread cached RSS or Atom feed item counts.")
+                .tag(tag)
+                .response(responseBuilder().implementation(LinkFeedUnreadSummary.class))
+            )
             .POST("rss/items/-/read", this::markUnreadItemsRead, builder -> builder
                 .operationId("markLinkFeedItemsRead")
                 .description("Mark all unread cached RSS or Atom feed items as read.")
@@ -278,6 +285,13 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }
+    }
+
+    private Mono<ServerResponse> getUnreadSummary(ServerRequest request) {
+        return Mono.fromCallable(() -> new LinkFeedUnreadSummary(itemStore.countUnread(),
+                itemStore.countUnreadByLinkName()))
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap(summary -> ServerResponse.ok().bodyValue(summary));
     }
 
     private Mono<ServerResponse> markUnreadItemsRead(ServerRequest request) {

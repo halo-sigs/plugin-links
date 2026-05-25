@@ -1,6 +1,7 @@
 import { linksConsoleApiClient } from "@/api";
 import { Toast } from "@halo-dev/components";
 import { QK_LINK_FEED_ITEMS } from "./use-link-feed";
+import { QK_LINK_FEED_UNREAD_SUMMARY } from "./use-link-feed-unread-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "./use-link-fetch";
 
 export interface InitialLinkFeedRefreshApi {
@@ -50,6 +51,7 @@ export async function refreshInitialLinkFeed({
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] }),
       queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] }),
       queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] }),
+      queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_UNREAD_SUMMARY] }),
     ]);
   }
 }

@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:57379",
+    "url" : "http://localhost:42147",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -514,6 +514,25 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/LinkFeedMarkReadResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/unread-summary" : {
+      "get" : {
+        "description" : "Summarize unread cached RSS or Atom feed item counts.",
+        "operationId" : "getLinkFeedUnreadSummary",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedUnreadSummary"
                 }
               }
             },
@@ -1301,6 +1320,22 @@
           },
           "partialFailure" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "LinkFeedUnreadSummary" : {
+        "type" : "object",
+        "properties" : {
+          "totalUnreadCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "unreadCountsByLinkName" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
           }
         }
       },

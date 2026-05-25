@@ -2,10 +2,12 @@ package run.halo.links.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -80,6 +82,23 @@ class LinkFeedEndpointTest {
             .verifyComplete();
     }
 
+    @Test
+    void shouldReturnUnreadSummary() {
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        when(itemStore.countUnread()).thenReturn(3L);
+        when(itemStore.countUnreadByLinkName()).thenReturn(Map.of("link-a", 2L, "link-b", 1L));
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
+        MockServerRequest request = request(HttpMethod.GET, "/rss/items/-/unread-summary");
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
+            .verifyComplete();
+
+        verify(itemStore).countUnread();
+        verify(itemStore).countUnreadByLinkName();
+    }
+
     private static MockServerRequest buildRequest(HttpMethod method, String path, String id,
         String queryParam) {
         var httpRequest = MockServerHttpRequest.method(method, path).build();
@@ -89,6 +108,16 @@ class LinkFeedEndpointTest {
             .uri(URI.create(path))
             .queryParam(queryParam, "true")
             .pathVariable("id", id)
+            .exchange(exchange)
+            .build();
+    }
+
+    private static MockServerRequest request(HttpMethod method, String path) {
+        var httpRequest = MockServerHttpRequest.method(method, path).build();
+        var exchange = MockServerWebExchange.from(httpRequest);
+        return MockServerRequest.builder()
+            .method(method)
+            .uri(URI.create(path))
             .exchange(exchange)
             .build();
     }

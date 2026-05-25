@@ -9,7 +9,9 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.dizitart.no2.collection.Document;
@@ -168,6 +170,26 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             database.commit();
         }
         return updated;
+    }
+
+    @Override
+    public long countUnread() {
+        return database.withCollection(COLLECTION_NAME,
+            collection -> collection.find(where("read").eq(false)).size());
+    }
+
+    @Override
+    public Map<String, Long> countUnreadByLinkName() {
+        return database.withCollection(COLLECTION_NAME, collection -> {
+            Map<String, Long> counts = new LinkedHashMap<>();
+            collection.find(where("read").eq(false)).forEach(doc -> {
+                String linkName = doc.get("linkName", String.class);
+                if (StringUtils.hasText(linkName)) {
+                    counts.merge(linkName, 1L, Long::sum);
+                }
+            });
+            return counts;
+        });
     }
 
     @Override
