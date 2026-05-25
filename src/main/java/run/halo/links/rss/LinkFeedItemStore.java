@@ -2,6 +2,7 @@ package run.halo.links.rss;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public interface LinkFeedItemStore {
 
@@ -14,6 +15,10 @@ public interface LinkFeedItemStore {
     boolean updateRead(String id, boolean read);
 
     long markUnreadAsRead(String linkName);
+
+    long countUnread();
+
+    Map<String, Long> countUnreadByLinkName();
 
     boolean updateFavorite(String id, boolean favorite);
 

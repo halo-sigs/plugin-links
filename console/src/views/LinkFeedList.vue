@@ -3,10 +3,14 @@ import type { Link } from "@/api/generated";
 import LinkFeedBackToTopButton from "@/components/LinkFeedBackToTopButton.vue";
 import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
+import LinkFeedStatusBadge from "@/components/LinkFeedStatusBadge.vue";
+import LinkFeedStatusModal from "@/components/LinkFeedStatusModal.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
+import { aggregateLinkFeedStatusMeta, linkFeedStatusMeta } from "@/composables/link-feed-status";
 import { useLinkFeedItems } from "@/composables/use-link-feed";
 import { useLinkFeedMarkAllRead, type LinkFeedMarkAllReadSummary } from "@/composables/use-link-feed-mark-all-read";
 import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
+import { linkFeedUnreadCount, useLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
 import { Dialog, IconArrowLeft, IconRefreshLine, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
 import { computed, defineAsyncComponent, shallowRef } from "vue";
@@ -25,7 +29,9 @@ const { data: groupsWithLinks, isLoading: isLoadingLinks } = useRssLinksFetch();
 
 const favoriteModalVisible = shallowRef(false);
 const readLaterModalVisible = shallowRef(false);
+const statusModalVisible = shallowRef(false);
 const mainFeed = useLinkFeedItems();
+const { data: unreadSummary } = useLinkFeedUnreadSummary();
 
 const readLaterFeed = useLinkFeedItems({
   enabled: readLaterModalVisible,
@@ -77,6 +83,14 @@ const totalFeedItemCount = computed(() => {
   return allLinks.value.reduce((total, link) => total + (link.status?.rss?.itemCount || 0), 0);
 });
 
+const totalUnreadCount = computed(() => {
+  return unreadSummary.value?.totalUnreadCount || 0;
+});
+
+const selectedUnreadCount = computed(() => {
+  return linkFeedUnreadCount(unreadSummary.value, selectedLink.value?.metadata.name);
+});
+
 const selectedSourceTitle = computed(() => {
   if (!selectedLink.value) {
     return "全部动态";
@@ -86,12 +100,19 @@ const selectedSourceTitle = computed(() => {
 
 const selectedSourceMeta = computed(() => {
   if (!selectedLink.value) {
-    return `${allLinks.value.length} 个订阅 / ${totalFeedItemCount.value} 篇缓存`;
+    return `${allLinks.value.length} 个订阅 / ${totalFeedItemCount.value} 篇缓存 / ${totalUnreadCount.value} 篇未读`;
   }
 
   const feedCount = selectedLink.value.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()).length || 0;
   const itemCount = selectedLink.value.status?.rss?.itemCount || 0;
-  return `${feedCount} 个订阅源 / ${itemCount} 篇缓存`;
+  return `${feedCount} 个订阅源 / ${itemCount} 篇缓存 / ${selectedUnreadCount.value} 篇未读`;
+});
+
+const selectedSourceStatus = computed(() => {
+  if (selectedLink.value) {
+    return linkFeedStatusMeta(selectedLink.value);
+  }
+  return aggregateLinkFeedStatusMeta(allLinks.value);
 });
 
 const markAllReadScopeLabel = computed(() => {
@@ -161,6 +182,10 @@ function openReadLaterModal() {
 
 function openFavoriteModal() {
   favoriteModalVisible.value = true;
+}
+
+function openStatusModal() {
+  statusModalVisible.value = true;
 }
 
 async function handleRefreshCurrentSubscription() {
@@ -290,6 +315,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
       <LinkFeedSubscriptionSidebar
         :links="allLinks"
         :selected-link-name="selectedLinkName"
+        :unread-summary="unreadSummary"
         :loading="isLoadingLinks"
         @select-link="selectLink"
       />
@@ -298,7 +324,15 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
         <div class=":uno: feed-brief">
           <div class=":uno: feed-brief__copy">
             <span class=":uno: feed-brief__eyebrow">RSS 动态</span>
-            <strong class=":uno: feed-brief__title">{{ selectedSourceTitle }}</strong>
+            <div class=":uno: feed-brief__heading">
+              <strong class=":uno: feed-brief__title">{{ selectedSourceTitle }}</strong>
+              <LinkFeedStatusBadge
+                :tone="selectedSourceStatus.tone"
+                :label="selectedSourceStatus.label"
+                :description="selectedSourceStatus.description"
+                @open="openStatusModal"
+              />
+            </div>
             <span class=":uno: feed-brief__meta">{{ selectedSourceMeta }}</span>
           </div>
           <span v-if="refreshProgressText" class=":uno: feed-refresh-status" role="status">
@@ -378,6 +412,14 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
     item-action-mode="favorite-only"
     @close="favoriteModalVisible = false"
   />
+
+  <LinkFeedStatusModal
+    v-if="statusModalVisible"
+    :links="allLinks"
+    :selected-link-name="selectedLinkName"
+    :unread-summary="unreadSummary"
+    @close="statusModalVisible = false"
+  />
 </template>
 
 <style scoped>
@@ -413,6 +455,14 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.feed-brief__heading {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .feed-brief__eyebrow {

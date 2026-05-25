@@ -1,6 +1,7 @@
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFeedItem } from "@/api/generated";
 import { QK_LINK_FEED_ITEMS } from "@/composables/use-link-feed";
+import { invalidateLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
@@ -26,7 +27,7 @@ export function useLinkFeedItemActions(item: MaybeRefOrGetter<LinkFeedItem | und
     mutationFn: async ({ id, read }) => {
       await linksConsoleApiClient.feed.markLinkFeedItemRead({ id, read });
     },
-    onSuccess: invalidateFeedItems,
+    onSuccess: invalidateFeedReadState,
   });
 
   const favoriteMutation = useMutation<void, unknown, MarkFavoriteVariables>({
@@ -49,6 +50,10 @@ export function useLinkFeedItemActions(item: MaybeRefOrGetter<LinkFeedItem | und
 
   async function invalidateFeedItems() {
     await queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] });
+  }
+
+  async function invalidateFeedReadState() {
+    await Promise.all([invalidateFeedItems(), invalidateLinkFeedUnreadSummary(queryClient)]);
   }
 
   async function markRead(read: boolean) {

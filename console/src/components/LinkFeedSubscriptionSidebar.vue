@@ -1,11 +1,14 @@
 <script lang="ts" setup>
-import type { Link } from "@/api/generated";
+import type { Link, LinkFeedUnreadSummary } from "@/api/generated";
+import { linkTitle, rssFeedUrls } from "@/composables/link-feed-status";
+import { linkFeedUnreadCount } from "@/composables/use-link-feed-unread-summary";
 import { computed } from "vue";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 
 const props = defineProps<{
   links: Link[];
   selectedLinkName: string;
+  unreadSummary?: LinkFeedUnreadSummary;
   loading?: boolean;
 }>();
 
@@ -13,58 +16,12 @@ const emit = defineEmits<{
   (event: "selectLink", name: string): void;
 }>();
 
-const totalItemCount = computed(() => {
-  return props.links.reduce((total, link) => total + (link.status?.rss?.itemCount || 0), 0);
+const totalUnreadCount = computed(() => {
+  return props.unreadSummary?.totalUnreadCount || 0;
 });
 
-function linkTitle(link: Link) {
-  return link.spec?.displayName || link.metadata.name;
-}
-
-function rssStatusClass(link: Link) {
-  if (hasPartialRssFailure(link)) {
-    return "subscription-status--warning";
-  }
-  if (hasRssFailure(link)) {
-    return "subscription-status--danger";
-  }
-  if (link.status?.rss?.lastSuccessAt) {
-    return "subscription-status--success";
-  }
-  return "subscription-status--warning";
-}
-
-function rssTooltip(link: Link) {
-  const rss = link.status?.rss;
-  const feedCount = rssFeedUrls(link).length;
-  const feedCountText = feedCount > 1 ? `${feedCount} 个订阅源，` : "";
-  if (hasPartialRssFailure(link)) {
-    return `RSS 部分订阅源获取失败，${feedCountText}缓存 ${rss?.itemCount || 0} 篇`;
-  }
-  if (hasRssFailure(link) && rss?.lastError) {
-    return `RSS 获取失败：${rss.lastError}`;
-  }
-  if (rss?.lastSuccessAt) {
-    return `RSS 已启用，${feedCountText}缓存 ${rss.itemCount || 0} 篇`;
-  }
-  return "RSS 已启用，等待获取";
-}
-
-function rssFeedUrls(link: Link) {
-  return link.spec?.rss?.feedUrls?.filter((feedUrl) => !!feedUrl?.trim()) || [];
-}
-
-function hasPartialRssFailure(link: Link) {
-  const feeds = link.status?.rss?.feeds || [];
-  return feeds.some((feed) => !!feed.lastError) && feeds.some((feed) => !feed.lastError && feed.lastSuccessAt);
-}
-
-function hasRssFailure(link: Link) {
-  const feeds = link.status?.rss?.feeds || [];
-  if (feeds.length) {
-    return feeds.every((feed) => !!feed.lastError);
-  }
-  return !!link.status?.rss?.lastError;
+function unreadCount(link: Link) {
+  return linkFeedUnreadCount(props.unreadSummary, link.metadata.name);
 }
 
 function linkSubtitle(link: Link) {
@@ -76,7 +33,7 @@ function linkSubtitle(link: Link) {
 }
 
 function itemCountText(count?: number) {
-  if (!count) {
+  if (count === undefined) {
     return "";
   }
   return count > 999 ? "999+" : `${count}`;
@@ -112,8 +69,8 @@ function itemCountText(count?: number) {
           <span class=":uno: subscription-item__title">全部动态</span>
           <span class=":uno: subscription-item__subtitle">所有订阅源</span>
         </span>
-        <span v-if="totalItemCount" class=":uno: subscription-item__count">
-          {{ itemCountText(totalItemCount) }}
+        <span class=":uno: subscription-item__count" :class="{ ':uno: subscription-item__count--muted': !totalUnreadCount }">
+          {{ itemCountText(totalUnreadCount) }}
         </span>
       </button>
 
@@ -136,14 +93,8 @@ function itemCountText(count?: number) {
           <span class=":uno: subscription-item__title">{{ linkTitle(link) }}</span>
           <span class=":uno: subscription-item__subtitle">{{ linkSubtitle(link) }}</span>
         </span>
-        <span
-          v-tooltip="{
-            content: rssTooltip(link),
-          }"
-          class=":uno: subscription-status"
-          :class="rssStatusClass(link)"
-        >
-          <Rss2FillIcon class=":uno: subscription-status__icon" />
+        <span v-if="unreadCount(link)" class=":uno: subscription-item__count">
+          {{ itemCountText(unreadCount(link)) }}
         </span>
       </button>
 
@@ -319,34 +270,8 @@ function itemCountText(count?: number) {
   line-height: 1rem;
 }
 
-.subscription-status {
-  display: inline-flex;
-  width: 1.25rem;
-  height: 1.25rem;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-}
-
-.subscription-status__icon {
-  width: 0.8125rem;
-  height: 0.8125rem;
-}
-
-.subscription-status--success {
-  background: rgb(220 252 231);
-  color: rgb(22 101 52);
-}
-
-.subscription-status--warning {
-  background: rgb(254 243 199);
-  color: rgb(180 83 9);
-}
-
-.subscription-status--danger {
-  background: rgb(254 226 226);
-  color: rgb(185 28 28);
+.subscription-item__count--muted {
+  color: rgb(161 161 170);
 }
 
 .subscription-empty {

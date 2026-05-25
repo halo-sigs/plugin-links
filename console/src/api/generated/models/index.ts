@@ -10,6 +10,7 @@ export * from './link-feed-item';
 export * from './link-feed-item-page';
 export * from './link-feed-mark-read-result';
 export * from './link-feed-refresh-result';
+export * from './link-feed-unread-summary';
 export * from './link-group';
 export * from './link-group-list';
 export * from './link-group-spec';

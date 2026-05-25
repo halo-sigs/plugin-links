@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@rstest/core";
 import { refreshInitialLinkFeed, startInitialLinkFeedRefresh } from "./link-feed-initial-refresh";
 import { QK_LINK_FEED_ITEMS } from "./use-link-feed";
+import { QK_LINK_FEED_UNREAD_SUMMARY } from "./use-link-feed-unread-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "./use-link-fetch";
 
 function createDeferred<T>() {
@@ -70,7 +71,12 @@ describe("startInitialLinkFeedRefresh", () => {
     await flushPromises();
 
     expect(harness.successMessages).toEqual(["RSS 已自动获取"]);
-    expect(harness.invalidateCalls).toEqual([[QK_GROUPS_WITH_LINKS], [QK_RSS_GROUPS_WITH_LINKS], [QK_LINK_FEED_ITEMS]]);
+    expect(harness.invalidateCalls).toEqual([
+      [QK_GROUPS_WITH_LINKS],
+      [QK_RSS_GROUPS_WITH_LINKS],
+      [QK_LINK_FEED_ITEMS],
+      [QK_LINK_FEED_UNREAD_SUMMARY],
+    ]);
   });
 
   it("does nothing without a link name", () => {
@@ -102,6 +108,11 @@ describe("refreshInitialLinkFeed", () => {
     await refreshPromise;
 
     expect(harness.successMessages).toEqual([]);
-    expect(harness.invalidateCalls).toEqual([[QK_GROUPS_WITH_LINKS], [QK_RSS_GROUPS_WITH_LINKS], [QK_LINK_FEED_ITEMS]]);
+    expect(harness.invalidateCalls).toEqual([
+      [QK_GROUPS_WITH_LINKS],
+      [QK_RSS_GROUPS_WITH_LINKS],
+      [QK_LINK_FEED_ITEMS],
+      [QK_LINK_FEED_UNREAD_SUMMARY],
+    ]);
   });
 });
