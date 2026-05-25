@@ -26,7 +26,7 @@ public class LinkFeedScheduler {
     private final LinkFeedRetentionService retentionService;
     private final LinksNitriteDatabase database;
 
-    @Scheduled(fixedDelay = 15 * 60 * 1000L, initialDelay = 2 * 60 * 1000L)
+    @Scheduled(fixedDelay = 60 * 60 * 1000L, initialDelay = 2 * 60 * 1000L)
     public void refreshEnabledFeeds() {
         var options = ListOptions.builder()
             .andQuery(equal("spec.rss.enabled", Boolean.TRUE))
