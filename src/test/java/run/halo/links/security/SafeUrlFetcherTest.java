@@ -111,6 +111,64 @@ class SafeUrlFetcherTest {
     }
 
     @Test
+    void shouldKeepVerificationStatusWhenResponseOverMaximumBodySize() throws Exception {
+        URL startUrl = new URL("http://example.com");
+        InetAddress publicAddress = mock(InetAddress.class);
+        when(publicAddress.getHostAddress()).thenReturn("93.184.216.34");
+
+        Connection mockConn = mock(Connection.class);
+        Connection.Response oversizedResponse = mockResponse(200, null);
+        when(oversizedResponse.header("Content-Length")).thenReturn("65537");
+
+        when(mockConn.followRedirects(false)).thenReturn(mockConn);
+        when(mockConn.ignoreHttpErrors(true)).thenReturn(mockConn);
+        when(mockConn.ignoreContentType(true)).thenReturn(mockConn);
+        when(mockConn.maxBodySize(anyInt())).thenReturn(mockConn);
+        when(mockConn.timeout(anyInt())).thenReturn(mockConn);
+        when(mockConn.headers(anyMap())).thenReturn(mockConn);
+        when(mockConn.execute()).thenReturn(oversizedResponse);
+
+        try (MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class);
+             MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
+            security.when(() -> LinkSecurityUtils.validateUrl(startUrl)).thenReturn(publicAddress);
+            security.when(() -> LinkSecurityUtils.toConnectUrl(startUrl, publicAddress))
+                .thenReturn("http://93.184.216.34");
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
+            jsoup.when(() -> Jsoup.connect("http://93.184.216.34"))
+                .thenReturn(mockConn);
+
+            SafeUrlFetcher.FetchResult result = SafeUrlFetcher.fetch(startUrl.toExternalForm(),
+                SafeUrlFetcher.FetchOptions.verification(startUrl.toExternalForm(), 64 * 1024));
+
+            assertThat(result.statusCode()).isEqualTo(200);
+            assertThat(result.body()).isEmpty();
+        }
+    }
+
+    @Test
+    void shouldKeepHttpsVerificationStatusWhenResponseOverMaximumBodySize() throws Exception {
+        URL startUrl = new URL("https://example.com");
+        InetAddress validatedAddress = InetAddress.getByName("203.0.113.10");
+        FakeSocket socket = new FakeSocket("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+
+        SafeUrlFetcher.setPinnedHttpsConnectorForTesting((url, address, timeout) -> socket);
+
+        try (MockedStatic<LinkSecurityUtils> security = mockStatic(LinkSecurityUtils.class)) {
+            security.when(() -> LinkSecurityUtils.validateUrl(startUrl))
+                .thenReturn(validatedAddress);
+            security.when(LinkSecurityUtils::getMaxRedirects).thenReturn(3);
+
+            SafeUrlFetcher.FetchResult result = SafeUrlFetcher.fetch(startUrl.toExternalForm(),
+                SafeUrlFetcher.FetchOptions.verification(startUrl.toExternalForm(), 1));
+
+            assertThat(result.statusCode()).isEqualTo(200);
+            assertThat(result.body()).isEmpty();
+        } finally {
+            SafeUrlFetcher.setPinnedHttpsConnectorForTesting(null);
+        }
+    }
+
+    @Test
     void shouldConnectHttpsThroughValidatedAddress() throws Exception {
         URL startUrl = new URL("https://example.com/feed.xml");
         InetAddress validatedAddress = InetAddress.getByName("203.0.113.10");

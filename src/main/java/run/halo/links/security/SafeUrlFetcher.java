@@ -120,8 +120,8 @@ public final class SafeUrlFetcher {
             .timeout(options.timeout)
             .headers(headers)
             .execute();
-        assertBodyWithinLimit(response, options.maxBodySize);
-        return new FetchResponse(url, response.statusCode(), response.body(),
+        String body = bodyWithinLimit(response, options);
+        return new FetchResponse(url, response.statusCode(), body,
             response.header("ETag"), response.header("Last-Modified"),
             response.header("Location"));
     }
@@ -130,7 +130,7 @@ public final class SafeUrlFetcher {
         FetchOptions options) throws IOException {
         try (Socket socket = pinnedHttpsConnector.connect(url, validatedAddress, options.timeout)) {
             writeRequest(socket.getOutputStream(), url, options);
-            return readResponse(socket.getInputStream(), url, options.maxBodySize);
+            return readResponse(socket.getInputStream(), url, options);
         }
     }
 
@@ -175,7 +175,7 @@ public final class SafeUrlFetcher {
         outputStream.flush();
     }
 
-    private static FetchResponse readResponse(InputStream inputStream, URL url, int maxBodySize)
+    private static FetchResponse readResponse(InputStream inputStream, URL url, FetchOptions options)
         throws IOException {
         String statusLine = readAsciiLine(inputStream);
         if (statusLine == null || !statusLine.startsWith("HTTP/")) {
@@ -187,7 +187,15 @@ public final class SafeUrlFetcher {
         }
         int statusCode = Integer.parseInt(statusParts[1]);
         Map<String, List<String>> headers = readHeaders(inputStream);
-        byte[] body = readBody(inputStream, headers, maxBodySize);
+        byte[] body;
+        try {
+            body = readBody(inputStream, headers, options.maxBodySize);
+        } catch (ServerErrorException e) {
+            if (!options.allowOversizedBody || !isResponseTooLarge(e)) {
+                throw e;
+            }
+            body = new byte[0];
+        }
         String contentType = header(headers, "content-type");
         return new FetchResponse(url, statusCode, decodeBody(body, contentType),
             header(headers, "etag"), header(headers, "last-modified"),
@@ -357,30 +365,37 @@ public final class SafeUrlFetcher {
             new IllegalStateException(message));
     }
 
+    private static boolean isResponseTooLarge(ServerErrorException e) {
+        return "Response exceeds maximum size".equals(e.getReason());
+    }
+
     private static boolean isRedirect(int statusCode) {
         return statusCode == 301 || statusCode == 302
             || statusCode == 303 || statusCode == 307 || statusCode == 308;
     }
 
-    private static Connection.Response assertBodyWithinLimit(Connection.Response response,
-        int maxBodySize) {
+    private static String bodyWithinLimit(Connection.Response response, FetchOptions options) {
         String contentLength = response.header("Content-Length");
         if (contentLength != null && !contentLength.isBlank()) {
             try {
-                if (Long.parseLong(contentLength) > maxBodySize) {
-                    throw new ServerErrorException("Response exceeds maximum size",
-                        new IllegalStateException("Content-Length exceeds " + maxBodySize));
+                if (Long.parseLong(contentLength) > options.maxBodySize) {
+                    if (options.allowOversizedBody) {
+                        return "";
+                    }
+                    throw responseTooLarge("Content-Length exceeds " + options.maxBodySize);
                 }
             } catch (NumberFormatException ignored) {
                 // Ignore malformed Content-Length and fall back to body length.
             }
         }
         String body = response.body();
-        if (body != null && body.getBytes(StandardCharsets.UTF_8).length > maxBodySize) {
-            throw new ServerErrorException("Response exceeds maximum size",
-                new IllegalStateException("Body exceeds " + maxBodySize));
+        if (body != null && body.getBytes(StandardCharsets.UTF_8).length > options.maxBodySize) {
+            if (options.allowOversizedBody) {
+                return "";
+            }
+            throw responseTooLarge("Body exceeds " + options.maxBodySize);
         }
-        return response;
+        return body;
     }
 
     public record FetchResult(URL url, int statusCode, String body, Document document,
@@ -412,9 +427,11 @@ public final class SafeUrlFetcher {
         private final boolean parseDocument;
         private final String etag;
         private final String lastModified;
+        private final boolean allowOversizedBody;
 
         private FetchOptions(String accept, String referer, int timeout, int maxBodySize,
-            boolean ignoreContentType, boolean parseDocument, String etag, String lastModified) {
+            boolean ignoreContentType, boolean parseDocument, String etag, String lastModified,
+            boolean allowOversizedBody) {
             this.accept = accept;
             this.referer = referer;
             this.timeout = timeout;
@@ -423,17 +440,19 @@ public final class SafeUrlFetcher {
             this.parseDocument = parseDocument;
             this.etag = etag;
             this.lastModified = lastModified;
+            this.allowOversizedBody = allowOversizedBody;
         }
 
         public static FetchOptions html(String referer) {
             return new FetchOptions("text/html,application/xhtml+xml,application/xml",
-                referer, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BODY_SIZE, false, true, null, null);
+                referer, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BODY_SIZE, false, true, null, null,
+                false);
         }
 
         public static FetchOptions feed(String referer, String etag, String lastModified) {
             return new FetchOptions("application/rss+xml,application/atom+xml,application/xml,text/xml",
                 referer, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BODY_SIZE, true, false, etag,
-                lastModified);
+                lastModified, false);
         }
 
         public static FetchOptions verification(String referer, int maxBodySize) {
@@ -441,8 +460,9 @@ public final class SafeUrlFetcher {
         }
 
         public static FetchOptions verification(String referer, int maxBodySize, int timeout) {
+            // Reachability checks only need status and final URL, not an oversized body.
             return new FetchOptions("*/*", referer, timeout, maxBodySize, true, false, null,
-                null);
+                null, true);
         }
 
         public static FetchOptions verificationHtml(String referer, int maxBodySize) {
@@ -452,7 +472,7 @@ public final class SafeUrlFetcher {
         public static FetchOptions verificationHtml(String referer, int maxBodySize,
             int timeout) {
             return new FetchOptions("text/html,application/xhtml+xml,application/xml",
-                referer, timeout, maxBodySize, true, true, null, null);
+                referer, timeout, maxBodySize, true, true, null, null, false);
         }
     }
 }
