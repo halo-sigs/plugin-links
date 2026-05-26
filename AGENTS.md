@@ -58,9 +58,6 @@ Frontend-only commands (run from `console/`):
 ```bash
 cd console
 
-# Production build (outputs to src/main/resources/console)
-pnpm build
-
 # Type check
 pnpm type-check
 
