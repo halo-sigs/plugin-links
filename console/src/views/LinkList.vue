@@ -2,7 +2,7 @@
 import LinksCard from "@/components/LinksCard.vue";
 import { runLinkVerification } from "@/composables/link-verification";
 import { useLinksFetch } from "@/composables/use-link-fetch";
-import { IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
+import { Dialog, IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { defineAsyncComponent, ref, shallowRef } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
@@ -30,7 +30,20 @@ const groupSortModalVisible = ref(false);
 const linkImportModalVisible = ref(false);
 const isVerifyingAllLinks = shallowRef(false);
 
-async function handleVerifyAllLinks() {
+function handleVerifyAllLinks() {
+  if (isVerifyingAllLinks.value) {
+    return;
+  }
+
+  Dialog.warning({
+    title: "确认检测全部链接？",
+    description: "检测所有链接会在一段时间内发起较多访问与反链检测请求，可能导致服务资源占用升高。确认继续吗？",
+    confirmType: "primary",
+    onConfirm: verifyAllLinks,
+  });
+}
+
+async function verifyAllLinks() {
   if (isVerifyingAllLinks.value) {
     return;
   }
