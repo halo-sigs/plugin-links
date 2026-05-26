@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import LinksCard from "@/components/LinksCard.vue";
 import { runLinkVerification } from "@/composables/link-verification";
-import { useLinksFetch } from "@/composables/use-link-fetch";
+import {
+  matchesLinkVerificationStatusFilter,
+  type LinkVerificationStatusFilter,
+} from "@/composables/link-verification-status";
+import { useLinksFetch, type GroupWithLinks } from "@/composables/use-link-fetch";
 import { Dialog, IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { defineAsyncComponent, ref, shallowRef } from "vue";
+import { computed, defineAsyncComponent, ref, shallowRef } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
 import RiPulseLine from "~icons/ri/pulse-line";
 
@@ -29,6 +33,15 @@ const groupCreationModalVisible = ref(false);
 const groupSortModalVisible = ref(false);
 const linkImportModalVisible = ref(false);
 const isVerifyingAllLinks = shallowRef(false);
+const selectedStatusFilter = shallowRef<LinkVerificationStatusFilter>("all");
+
+const statusFilterOptions: Array<{ label: string; value: LinkVerificationStatusFilter }> = [
+  { label: "全部", value: "all" },
+  { label: "访问异常的链接", value: "access-error" },
+  { label: "没有反链的链接", value: "backlink-missing" },
+];
+
+const filteredGroups = computed(() => filterGroupsByStatus(data.value || [], selectedStatusFilter.value));
 
 function handleVerifyAllLinks() {
   if (isVerifyingAllLinks.value) {
@@ -37,7 +50,7 @@ function handleVerifyAllLinks() {
 
   Dialog.warning({
     title: "确认检测全部链接？",
-    description: "检测所有链接会在一段时间内发起较多访问与反链检测请求，可能导致服务资源占用升高。确认继续吗？",
+    description: "系统会在后台按队列逐个检测所有链接。检测可能需要一定时间，请稍后刷新页面查看。确认继续吗？",
     confirmType: "primary",
     onConfirm: verifyAllLinks,
   });
@@ -58,6 +71,19 @@ async function verifyAllLinks() {
     isVerifyingAllLinks.value = false;
   }
 }
+
+function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerificationStatusFilter) {
+  if (filter === "all") {
+    return groups;
+  }
+
+  return groups
+    .map((groupWithLinks) => ({
+      ...groupWithLinks,
+      links: groupWithLinks.links.filter((link) => matchesLinkVerificationStatusFilter(link, filter)),
+    }))
+    .filter((groupWithLinks) => groupWithLinks.links.length > 0);
+}
 </script>
 <template>
   <VPageHeader title="链接">
@@ -65,35 +91,48 @@ async function verifyAllLinks() {
       <RiLinksLine />
     </template>
     <template #actions>
-      <VSpace>
+      <VButton @click="handleRouteToFront" size="sm" ghost>
+        <template #icon>
+          <IconExternalLinkLine />
+        </template>
+        跳转到前台
+      </VButton>
+    </template>
+  </VPageHeader>
+  <div class=":uno: p-4">
+    <div
+      class=":uno: mb-4 flex flex-col gap-3 border border-gray-200 rounded-lg bg-white/90 p-3 shadow-sm md:flex-row md:items-center md:justify-between"
+    >
+      <VSpace class=":uno: flex-wrap">
+        <VButton size="sm" @click="groupCreationModalVisible = true">新建分组</VButton>
+        <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>
+        <VButton size="sm" @click="linkImportModalVisible = true">批量导入</VButton>
         <VButton size="sm" :loading="isVerifyingAllLinks" @click="handleVerifyAllLinks">
           <template #icon>
             <RiPulseLine />
           </template>
           检测全部
         </VButton>
-        <VButton size="sm" @click="linkImportModalVisible = true">批量导入</VButton>
-        <VButton size="sm" @click="groupCreationModalVisible = true">新建分组</VButton>
-        <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>
-        <VButton @click="handleRouteToFront" size="sm" ghost>
-          <template #icon>
-            <IconExternalLinkLine />
-          </template>
-          跳转到前台
-        </VButton>
       </VSpace>
-    </template>
-  </VPageHeader>
-  <div class=":uno: p-4">
+
+      <FilterDropdown v-model="selectedStatusFilter" label="状态" :items="statusFilterOptions" />
+    </div>
+
     <VLoading v-if="isLoading" />
 
-    <div class=":uno: space-y-4" v-else>
+    <div class=":uno: space-y-4" v-else-if="filteredGroups.length">
       <LinksCard
-        v-for="groupWithLinks in data"
+        v-for="groupWithLinks in filteredGroups"
         :group-with-links="groupWithLinks"
         :key="groupWithLinks.group?.metadata.name"
       >
       </LinksCard>
+    </div>
+    <div
+      v-else
+      class=":uno: border border-gray-200 rounded-lg border-dashed bg-white py-12 text-center text-sm text-gray-500"
+    >
+      暂无符合条件的链接
     </div>
   </div>
 

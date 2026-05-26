@@ -1,6 +1,7 @@
 import type { Link } from "@/api/generated";
 
 export type LinkVerificationTone = "danger" | "muted" | "success" | "warning";
+export type LinkVerificationStatusFilter = "access-error" | "all" | "backlink-missing";
 
 export interface LinkVerificationStatusMeta {
   description: string;
@@ -87,4 +88,26 @@ export function isLinkVerificationChecking(link: Link) {
 
 export function hasRunningLinkVerification(groups?: Array<{ links: Link[] }>) {
   return Boolean(groups?.some((group) => group.links.some(isLinkVerificationChecking)));
+}
+
+export function matchesLinkVerificationStatusFilter(link: Link, filter: LinkVerificationStatusFilter) {
+  switch (filter) {
+    case "access-error":
+      return link.status?.verification?.access?.state === "INACCESSIBLE";
+    case "backlink-missing":
+      return hasNoBacklink(link);
+    default:
+      return true;
+  }
+}
+
+function hasNoBacklink(link: Link) {
+  const backlinkState = link.status?.verification?.backlink?.state;
+  return (
+    backlinkState === "MISSING" || backlinkState === "NOT_CONFIGURED" || (!backlinkState && !hasBacklinkScanUrl(link))
+  );
+}
+
+function hasBacklinkScanUrl(link: Link) {
+  return Boolean(link.spec?.verification?.backlinkScanUrl?.trim());
 }

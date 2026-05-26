@@ -5,6 +5,7 @@ import {
   backlinkVerificationStatusMeta,
   hasRunningLinkVerification,
   isLinkVerificationChecking,
+  matchesLinkVerificationStatusFilter,
 } from "./link-verification-status";
 
 describe("accessVerificationStatusMeta", () => {
@@ -85,6 +86,36 @@ describe("verification checking helpers", () => {
     expect(isLinkVerificationChecking(checkingLink)).toBe(true);
     expect(hasRunningLinkVerification([{ links: [link(), checkingLink] }])).toBe(true);
     expect(hasRunningLinkVerification([{ links: [link()] }])).toBe(false);
+  });
+});
+
+describe("matchesLinkVerificationStatusFilter", () => {
+  it("matches access errors and links without usable backlinks only for their selected filters", () => {
+    const accessError = link({
+      access: {
+        state: "INACCESSIBLE",
+      },
+    });
+    const missingBacklink = link({
+      backlink: {
+        state: "MISSING",
+      },
+    });
+    const unconfiguredBacklink = link({
+      backlink: {
+        state: "NOT_CONFIGURED",
+      },
+    });
+    const unconfiguredWithoutStatus = link();
+    const configuredButUnchecked = link(undefined, "https://example.com/links");
+
+    expect(matchesLinkVerificationStatusFilter(accessError, "all")).toBe(true);
+    expect(matchesLinkVerificationStatusFilter(accessError, "access-error")).toBe(true);
+    expect(matchesLinkVerificationStatusFilter(missingBacklink, "access-error")).toBe(false);
+    expect(matchesLinkVerificationStatusFilter(missingBacklink, "backlink-missing")).toBe(true);
+    expect(matchesLinkVerificationStatusFilter(unconfiguredBacklink, "backlink-missing")).toBe(true);
+    expect(matchesLinkVerificationStatusFilter(unconfiguredWithoutStatus, "backlink-missing")).toBe(true);
+    expect(matchesLinkVerificationStatusFilter(configuredButUnchecked, "backlink-missing")).toBe(false);
   });
 });
 
