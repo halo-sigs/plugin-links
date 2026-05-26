@@ -7,9 +7,11 @@ import type {
 } from "@/api/generated";
 import { paginate } from "@halo-dev/api-client";
 import { useQuery } from "@tanstack/vue-query";
+import { hasRunningLinkVerification } from "./link-verification-status";
 
 export const QK_GROUPS_WITH_LINKS = "plugin:links:groups-with-links";
 export const QK_RSS_GROUPS_WITH_LINKS = "plugin:links:rss-groups-with-links";
+const LINK_VERIFICATION_REFETCH_INTERVAL = 3000;
 
 export interface GroupWithLinks {
   group?: LinkGroup;
@@ -77,6 +79,10 @@ export function useLinksFetch() {
 
       if (hasDeletingLink) {
         return 1000;
+      }
+
+      if (hasRunningLinkVerification(data)) {
+        return LINK_VERIFICATION_REFETCH_INTERVAL;
       }
 
       return false;

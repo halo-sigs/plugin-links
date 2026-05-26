@@ -3,8 +3,8 @@ import { linksConsoleApiClient } from "@/api";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
-import Rss2FillIcon from '~icons/mingcute/rss-2-fill';
 import MdiWebRefresh from "~icons/mdi/web-refresh";
+import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 
 const props = defineProps<{
   name?: string;
@@ -20,6 +20,9 @@ type LinkFormData = LinkFormState & {
     enabled: boolean;
     feedUrls: string[];
   };
+  verification: {
+    backlinkScanUrl: string;
+  };
 };
 
 const data = ref<LinkFormData>({
@@ -28,6 +31,9 @@ const data = ref<LinkFormData>({
   rss: {
     enabled: false,
     feedUrls: [],
+  },
+  verification: {
+    backlinkScanUrl: "",
   },
 });
 const rssFeedUrlsText = shallowRef("");
@@ -41,6 +47,9 @@ onMounted(() => {
       rss: {
         enabled: formState.rss?.enabled ?? false,
         feedUrls,
+      },
+      verification: {
+        backlinkScanUrl: formState.verification?.backlinkScanUrl || "",
       },
     };
     rssFeedUrlsText.value = feedUrlsToText(feedUrls);
@@ -120,6 +129,16 @@ function mergeFeedUrls(currentFeedUrls: string[], discoveredFeedUrls: string[]) 
   return normalizeFeedUrls([...currentFeedUrls, ...discoveredFeedUrls]);
 }
 
+function verificationSpec(backlinkScanUrl: string) {
+  const normalizedBacklinkScanUrl = backlinkScanUrl.trim();
+  if (!normalizedBacklinkScanUrl) {
+    return undefined;
+  }
+  return {
+    backlinkScanUrl: normalizedBacklinkScanUrl,
+  };
+}
+
 async function onSubmit() {
   annotationsForm.value?.handleSubmit();
   await nextTick();
@@ -145,6 +164,7 @@ async function onSubmit() {
       enabled: data.value.rss.enabled,
       feedUrls,
     },
+    verification: verificationSpec(data.value.verification.backlinkScanUrl),
     annotations: {
       ...annotations,
       ...customAnnotations,
@@ -186,7 +206,29 @@ async function onSubmit() {
             label="网站名称"
           ></FormKit>
           <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
-          <FormKit type="textarea" name="description" v-model="data.description" label="描述"></FormKit>
+          <FormKit type="textarea" name="description" v-model="data.description" label="描述" auto-height></FormKit>
+        </div>
+      </div>
+
+      <div class=":uno: py-5">
+        <div class=":uno: border-t border-gray-200"></div>
+      </div>
+
+      <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+        <div class=":uno: md:col-span-1">
+          <div class=":uno: sticky top-0">
+            <span class=":uno: text-base text-gray-900 font-medium"> 链接检测 </span>
+          </div>
+        </div>
+        <div class=":uno: mt-5 md:col-span-3 md:mt-0 divide-y divide-gray-100">
+          <FormKit
+            type="url"
+            name="backlinkScanUrl"
+            v-model="data.verification.backlinkScanUrl"
+            label="反链检测页面"
+            help="填写对方固定放置本站链接的页面，留空则不检测反链"
+            placeholder="https://example.com/links"
+          ></FormKit>
         </div>
       </div>
 

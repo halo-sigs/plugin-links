@@ -435,5 +435,24 @@ public final class SafeUrlFetcher {
                 referer, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BODY_SIZE, true, false, etag,
                 lastModified);
         }
+
+        public static FetchOptions verification(String referer, int maxBodySize) {
+            return verification(referer, maxBodySize, DEFAULT_TIMEOUT_MS);
+        }
+
+        public static FetchOptions verification(String referer, int maxBodySize, int timeout) {
+            return new FetchOptions("*/*", referer, timeout, maxBodySize, true, false, null,
+                null);
+        }
+
+        public static FetchOptions verificationHtml(String referer, int maxBodySize) {
+            return verificationHtml(referer, maxBodySize, DEFAULT_TIMEOUT_MS);
+        }
+
+        public static FetchOptions verificationHtml(String referer, int maxBodySize,
+            int timeout) {
+            return new FetchOptions("text/html,application/xhtml+xml,application/xml",
+                referer, timeout, maxBodySize, true, true, null, null);
+        }
     }
 }

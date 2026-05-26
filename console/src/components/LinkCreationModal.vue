@@ -2,6 +2,7 @@
 import { linksCoreApiClient } from "@/api";
 import type { LinkGroup } from "@/api/generated";
 import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
+import { startLinkVerification } from "@/composables/link-verification";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VModal, VSpace } from "@halo-dev/components";
@@ -49,6 +50,7 @@ const { mutate, isPending } = useMutation({
                   feedUrls: data.rss.feedUrls || [],
                 }
               : undefined,
+          verification: data.verification?.backlinkScanUrl ? data.verification : undefined,
         },
         metadata: {
           name: "",
@@ -64,6 +66,7 @@ const { mutate, isPending } = useMutation({
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+    startLinkVerification({ request: { names: [linkName] }, queryClient });
     if (shouldRefreshFeedAfterSave(data)) {
       startInitialLinkFeedRefresh({ linkName, queryClient });
     }

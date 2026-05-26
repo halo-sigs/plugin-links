@@ -14,7 +14,9 @@ common.ts
 configuration.ts
 git_push.sh
 index.ts
+models/access-status.ts
 models/add-operation.ts
+models/backlink-status.ts
 models/copy-operation.ts
 models/feed-result.ts
 models/index.ts
@@ -34,6 +36,8 @@ models/link-group.ts
 models/link-list.ts
 models/link-spec.ts
 models/link-status.ts
+models/link-verification-request.ts
+models/link-verification-trigger-result.ts
 models/link-vo-list.ts
 models/link-vo.ts
 models/link.ts
@@ -46,3 +50,5 @@ models/rss-spec.ts
 models/rss-status.ts
 models/sort-request.ts
 models/test-operation.ts
+models/verification-spec.ts
+models/verification-status.ts
