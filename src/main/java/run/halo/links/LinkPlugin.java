@@ -3,6 +3,7 @@ package run.halo.links;
 import run.halo.app.extension.index.IndexSpecs;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 import run.halo.app.extension.Scheme;
 import run.halo.app.extension.SchemeManager;
@@ -16,6 +17,7 @@ import run.halo.links.extension.LinkGroup;
  * @since 2.0.0
  */
 @Component
+@EnableScheduling
 public class LinkPlugin extends BasePlugin {
 
     private final SchemeManager schemeManager;
