@@ -34,7 +34,7 @@ import run.halo.links.security.SafeUrlFetcher;
 @Component
 public class DefaultLinkVerificationService implements LinkVerificationService {
 
-    private static final int VERIFICATION_CONCURRENCY = 3;
+    private static final int VERIFICATION_CONCURRENCY = 1;
     private static final int VERIFICATION_QUEUE_CAPACITY = 1024;
 
     private final ReactiveExtensionClient client;
