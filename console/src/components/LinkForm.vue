@@ -206,7 +206,7 @@ async function onSubmit() {
             label="网站名称"
           ></FormKit>
           <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
-          <FormKit type="textarea" name="description" v-model="data.description" label="描述"></FormKit>
+          <FormKit type="textarea" name="description" v-model="data.description" label="描述" auto-height></FormKit>
         </div>
       </div>
 
