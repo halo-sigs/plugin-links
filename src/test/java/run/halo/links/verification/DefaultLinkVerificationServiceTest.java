@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.AfterEach;
@@ -214,6 +215,57 @@ class DefaultLinkVerificationServiceTest {
         assertThat(second.getAlreadyRunningNames()).containsExactly("link-a");
 
         releaseFetch.countDown();
+    }
+
+    @Test
+    void shouldQueueBlockingChecksOnVerificationSchedulerWhenStatusUpdatesAreAsync()
+        throws Exception {
+        service = new DefaultLinkVerificationService(client, externalUrlSupplier, fetcher,
+            Schedulers.newSingle("verification-test"));
+        Link first = link("first", "https://first.example.com", null);
+        Link second = link("second", "https://second.example.com", null);
+        List<String> fetchThreads = new CopyOnWriteArrayList<>();
+        List<Link> finalUpdates = new CopyOnWriteArrayList<>();
+        CountDownLatch firstFetchStarted = new CountDownLatch(1);
+        CountDownLatch releaseFirstFetch = new CountDownLatch(1);
+        CountDownLatch secondFetchStarted = new CountDownLatch(1);
+        when(client.fetch(Link.class, "first")).thenReturn(Mono.just(first));
+        when(client.fetch(Link.class, "second")).thenReturn(Mono.just(second));
+        when(client.update(any(Link.class))).thenAnswer(invocation -> {
+            Link updated = invocation.getArgument(0);
+            Link.VerificationStatus status = updated.getStatus().getVerification();
+            if (status != null && status.getAccess() != null
+                && status.getAccess().getState() != Link.AccessState.CHECKING) {
+                finalUpdates.add(updated);
+            }
+            return Mono.delay(Duration.ofMillis(10), Schedulers.parallel())
+                .thenReturn(updated);
+        });
+        when(fetcher.fetchReachability("https://first.example.com")).thenAnswer(invocation -> {
+            fetchThreads.add(Thread.currentThread().getName());
+            firstFetchStarted.countDown();
+            assertThat(releaseFirstFetch.await(2, TimeUnit.SECONDS)).isTrue();
+            return fetchResult("https://first.example.com", 200, "");
+        });
+        when(fetcher.fetchReachability("https://second.example.com")).thenAnswer(invocation -> {
+            fetchThreads.add(Thread.currentThread().getName());
+            secondFetchStarted.countDown();
+            return fetchResult("https://second.example.com", 200, "");
+        });
+
+        LinkVerificationRequest request = new LinkVerificationRequest();
+        request.setNames(List.of("first", "second"));
+        LinkVerificationTriggerResult result = service.verify(request).block(Duration.ofSeconds(2));
+
+        assertThat(result.getAcceptedNames()).containsExactly("first", "second");
+        assertThat(firstFetchStarted.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(secondFetchStarted.await(200, TimeUnit.MILLISECONDS)).isFalse();
+
+        releaseFirstFetch.countDown();
+        assertThat(secondFetchStarted.await(2, TimeUnit.SECONDS)).isTrue();
+        awaitFinalUpdates(finalUpdates, 2);
+        assertThat(fetchThreads)
+            .allSatisfy(threadName -> assertThat(threadName).startsWith("verification-test-"));
     }
 
     @Test

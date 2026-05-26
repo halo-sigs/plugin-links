@@ -79,6 +79,7 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
                 return client.update(link);
             })
             .flatMap(link -> Mono.fromCallable(() -> verifyBlocking(link))
+                .subscribeOn(scheduler)
                 .map(status -> {
                     link.getStatus().setVerification(status);
                     return link;
@@ -126,13 +127,14 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
                 continue;
             }
             acceptedNames.add(name);
-            verifyLink(name)
-                .subscribeOn(scheduler)
+        }
+
+        Flux.fromIterable(acceptedNames)
+            .concatMap(name -> verifyLink(name)
                 .doOnError(error -> log.warn("Failed to verify link {}", name, error))
                 .onErrorResume(error -> Mono.empty())
-                .doFinally(signalType -> runningNames.remove(name))
-                .subscribe();
-        }
+                .doFinally(signalType -> runningNames.remove(name)))
+            .subscribe();
 
         LinkVerificationTriggerResult result = new LinkVerificationTriggerResult();
         result.setAcceptedNames(List.copyOf(acceptedNames));
