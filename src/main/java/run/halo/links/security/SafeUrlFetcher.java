@@ -437,13 +437,22 @@ public final class SafeUrlFetcher {
         }
 
         public static FetchOptions verification(String referer, int maxBodySize) {
-            return new FetchOptions("*/*", referer, DEFAULT_TIMEOUT_MS, maxBodySize, true,
-                false, null, null);
+            return verification(referer, maxBodySize, DEFAULT_TIMEOUT_MS);
+        }
+
+        public static FetchOptions verification(String referer, int maxBodySize, int timeout) {
+            return new FetchOptions("*/*", referer, timeout, maxBodySize, true, false, null,
+                null);
         }
 
         public static FetchOptions verificationHtml(String referer, int maxBodySize) {
+            return verificationHtml(referer, maxBodySize, DEFAULT_TIMEOUT_MS);
+        }
+
+        public static FetchOptions verificationHtml(String referer, int maxBodySize,
+            int timeout) {
             return new FetchOptions("text/html,application/xhtml+xml,application/xml",
-                referer, DEFAULT_TIMEOUT_MS, maxBodySize, true, true, null, null);
+                referer, timeout, maxBodySize, true, true, null, null);
         }
     }
 }

@@ -11,6 +11,7 @@ import { hasRunningLinkVerification } from "./link-verification-status";
 
 export const QK_GROUPS_WITH_LINKS = "plugin:links:groups-with-links";
 export const QK_RSS_GROUPS_WITH_LINKS = "plugin:links:rss-groups-with-links";
+const LINK_VERIFICATION_REFETCH_INTERVAL = 3000;
 
 export interface GroupWithLinks {
   group?: LinkGroup;
@@ -81,7 +82,7 @@ export function useLinksFetch() {
       }
 
       if (hasRunningLinkVerification(data)) {
-        return 1000;
+        return LINK_VERIFICATION_REFETCH_INTERVAL;
       }
 
       return false;
