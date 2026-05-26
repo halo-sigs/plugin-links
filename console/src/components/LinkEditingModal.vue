@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
-import type { Link } from "@/api/generated";
+import type { JsonPatchInner, Link } from "@/api/generated";
 import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
+import { startLinkVerification } from "@/composables/link-verification";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
@@ -27,46 +28,65 @@ const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const { mutate, isPending } = useMutation({
   mutationFn: (data: LinkFormState) => {
+    const jsonPatchInner: JsonPatchInner[] = [
+      {
+        op: "add",
+        path: "/spec/url",
+        value: data.url,
+      },
+      {
+        op: "add",
+        path: "/spec/displayName",
+        value: data.displayName,
+      },
+      {
+        op: "add",
+        path: "/spec/logo",
+        value: data.logo || "",
+      },
+      {
+        op: "add",
+        path: "/spec/description",
+        value: data.description || "",
+      },
+    ];
+
+    const rss = linkRssSpec(data);
+    if (rss) {
+      jsonPatchInner.push({
+        op: "add",
+        path: "/spec/rss",
+        value: rss,
+      });
+    } else if (props.link.spec?.rss) {
+      jsonPatchInner.push({
+        op: "remove",
+        path: "/spec/rss",
+      });
+    }
+
+    if (data.verification?.backlinkScanUrl) {
+      jsonPatchInner.push({
+        op: "add",
+        path: "/spec/verification",
+        value: data.verification,
+      });
+    } else if (props.link.spec?.verification) {
+      jsonPatchInner.push({
+        op: "remove",
+        path: "/spec/verification",
+      });
+    }
+
+    jsonPatchInner.push({
+      op: "add",
+      path: "/metadata/annotations",
+      value: data.annotations || {},
+    });
+
     return linksCoreApiClient.link.patchLink({
       name: props.link.metadata.name,
-      jsonPatchInner: [
-        {
-          op: "add",
-          path: "/spec/url",
-          value: data.url,
-        },
-        {
-          op: "add",
-          path: "/spec/displayName",
-          value: data.displayName,
-        },
-        {
-          op: "add",
-          path: "/spec/logo",
-          value: data.logo || "",
-        },
-        {
-          op: "add",
-          path: "/spec/description",
-          value: data.description || "",
-        },
-        {
-          op: "add",
-          path: "/spec/rss",
-          value:
-            data.rss?.enabled || data.rss?.feedUrls?.length
-              ? {
-                  enabled: data.rss.enabled ?? false,
-                  feedUrls: data.rss.feedUrls || [],
-                }
-              : null,
-        },
-        {
-          op: "add",
-          path: "/metadata/annotations",
-          value: data.annotations || {},
-        },
-      ],
+      jsonPatchInner,
     });
   },
   onSuccess: (_, data) => {
@@ -75,6 +95,7 @@ const { mutate, isPending } = useMutation({
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+    startLinkVerification({ request: { names: [props.link.metadata.name] }, queryClient });
     if (shouldRefreshFeedAfterSave(data)) {
       startInitialLinkFeedRefresh({ linkName: props.link.metadata.name, queryClient });
     }
@@ -83,6 +104,16 @@ const { mutate, isPending } = useMutation({
 
 function onSubmit(data: LinkFormState) {
   mutate(data);
+}
+
+function linkRssSpec(data: LinkFormState) {
+  if (!data.rss?.enabled && !data.rss?.feedUrls?.length) {
+    return undefined;
+  }
+  return {
+    enabled: data.rss.enabled ?? false,
+    feedUrls: data.rss.feedUrls || [],
+  };
 }
 
 function shouldRefreshFeedAfterSave(data: LinkFormState) {
@@ -133,6 +164,7 @@ function handleDelete() {
           logo: link.spec.logo,
           description: link.spec.description,
           rss: link.spec.rss,
+          verification: link.spec.verification,
           annotations: link.metadata.annotations,
         }"
         @submit="onSubmit"

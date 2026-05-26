@@ -59,7 +59,7 @@ async function handleSave() {
     </template>
     <VueDraggable
       v-model="links"
-      class=":uno: grid grid-cols-2 gap-2.5 2xl:grid-cols-7 lg:grid-cols-4 md:grid-cols-3 xl:grid-cols-6"
+      class=":uno: grid grid-cols-1 gap-2.5 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 5xl:grid-cols-8 lg:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4"
     >
       <LinkBadge v-for="link in links" :key="link.metadata.name" :link="link" sort-mode />
     </VueDraggable>

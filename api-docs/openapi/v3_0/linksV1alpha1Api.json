@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:42147",
+    "url" : "http://localhost:64999",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -339,6 +339,35 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/verification/check" : {
+      "post" : {
+        "description" : "Start asynchronous reachability and backlink verification for links.",
+        "operationId" : "verifyLinks",
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkVerificationRequest"
+              }
+            }
+          },
+          "description" : "Optional selected link names or group scope."
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkVerificationTriggerResult"
+                }
+              }
+            },
+            "description" : "Accepted"
           }
         },
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
@@ -1042,6 +1071,35 @@
   },
   "components" : {
     "schemas" : {
+      "AccessStatus" : {
+        "type" : "object",
+        "properties" : {
+          "checkedAt" : {
+            "type" : "string",
+            "description" : "Last time reachability was checked.",
+            "format" : "date-time"
+          },
+          "error" : {
+            "type" : "string",
+            "description" : "Reachability failure message."
+          },
+          "finalUrl" : {
+            "type" : "string",
+            "description" : "Final URL reached after redirects."
+          },
+          "state" : {
+            "type" : "string",
+            "description" : "Reachability verification state.",
+            "enum" : [ "CHECKING", "ACCESSIBLE", "INACCESSIBLE" ]
+          },
+          "statusCode" : {
+            "type" : "integer",
+            "description" : "Final HTTP response status code.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Observed reachability state."
+      },
       "AddOperation" : {
         "required" : [ "op", "path", "value" ],
         "type" : "object",
@@ -1060,6 +1118,38 @@
             "description" : "Value can be any JSON value"
           }
         }
+      },
+      "BacklinkStatus" : {
+        "type" : "object",
+        "properties" : {
+          "checkedAt" : {
+            "type" : "string",
+            "description" : "Last time reciprocal-link status was checked.",
+            "format" : "date-time"
+          },
+          "error" : {
+            "type" : "string",
+            "description" : "Reciprocal-link failure message."
+          },
+          "matchedUrl" : {
+            "type" : "string",
+            "description" : "Matched reciprocal-link URL found on the scan page."
+          },
+          "scanUrl" : {
+            "type" : "string",
+            "description" : "Configured URL scanned for a reciprocal link."
+          },
+          "state" : {
+            "type" : "string",
+            "description" : "Reciprocal-link verification state.",
+            "enum" : [ "CHECKING", "FOUND", "MISSING", "NOT_CONFIGURED", "FAILED" ]
+          },
+          "targetUrl" : {
+            "type" : "string",
+            "description" : "Halo external URL used as the reciprocal-link target."
+          }
+        },
+        "description" : "Observed reciprocal-link state."
       },
       "CopyOperation" : {
         "required" : [ "op", "from", "path" ],
@@ -1533,6 +1623,9 @@
           "url" : {
             "type" : "string",
             "description" : "Absolute URL that the link points to."
+          },
+          "verification" : {
+            "$ref" : "#/components/schemas/VerificationSpec"
           }
         },
         "description" : "Configurable fields of a link."
@@ -1542,9 +1635,75 @@
         "properties" : {
           "rss" : {
             "$ref" : "#/components/schemas/RssStatus"
+          },
+          "verification" : {
+            "$ref" : "#/components/schemas/VerificationStatus"
           }
         },
         "description" : "Observed state of a link."
+      },
+      "LinkVerificationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "groupName" : {
+            "type" : "string",
+            "description" : "Metadata name of the link group to verify when names is empty."
+          },
+          "names" : {
+            "type" : "array",
+            "description" : "Metadata names of links to verify. Takes precedence over groupName.",
+            "items" : {
+              "type" : "string",
+              "description" : "Metadata names of links to verify. Takes precedence over groupName."
+            }
+          }
+        },
+        "description" : "Request body for triggering link verification."
+      },
+      "LinkVerificationTriggerResult" : {
+        "type" : "object",
+        "properties" : {
+          "acceptedCount" : {
+            "type" : "integer",
+            "description" : "Number of links accepted for background verification.",
+            "format" : "int32"
+          },
+          "acceptedNames" : {
+            "type" : "array",
+            "description" : "Link names accepted for background verification.",
+            "items" : {
+              "type" : "string",
+              "description" : "Link names accepted for background verification."
+            }
+          },
+          "alreadyRunningCount" : {
+            "type" : "integer",
+            "description" : "Number of requested links already running verification.",
+            "format" : "int32"
+          },
+          "alreadyRunningNames" : {
+            "type" : "array",
+            "description" : "Link names skipped because verification is already running.",
+            "items" : {
+              "type" : "string",
+              "description" : "Link names skipped because verification is already running."
+            }
+          },
+          "skippedCount" : {
+            "type" : "integer",
+            "description" : "Number of requested links skipped because they could not be resolved.",
+            "format" : "int32"
+          },
+          "skippedNames" : {
+            "type" : "array",
+            "description" : "Requested link names skipped because they could not be resolved.",
+            "items" : {
+              "type" : "string",
+              "description" : "Requested link names skipped because they could not be resolved."
+            }
+          }
+        },
+        "description" : "Result returned after link verification work is accepted."
       },
       "LinkVo" : {
         "required" : [ "metadata" ],
@@ -1868,6 +2027,35 @@
             "description" : "Value can be any JSON value"
           }
         }
+      },
+      "VerificationSpec" : {
+        "type" : "object",
+        "properties" : {
+          "backlinkScanUrl" : {
+            "pattern" : "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$",
+            "type" : "string",
+            "description" : "Absolute HTTP or HTTPS page URL to scan for a reciprocal link.",
+            "format" : "uri"
+          }
+        },
+        "description" : "Link verification settings."
+      },
+      "VerificationStatus" : {
+        "type" : "object",
+        "properties" : {
+          "access" : {
+            "$ref" : "#/components/schemas/AccessStatus"
+          },
+          "backlink" : {
+            "$ref" : "#/components/schemas/BacklinkStatus"
+          },
+          "lastCheckedAt" : {
+            "type" : "string",
+            "description" : "Last time link verification was attempted.",
+            "format" : "date-time"
+          }
+        },
+        "description" : "Observed link verification state."
       }
     },
     "securitySchemes" : {

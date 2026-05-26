@@ -1,9 +1,12 @@
 <script lang="ts" setup>
 import LinksCard from "@/components/LinksCard.vue";
+import { runLinkVerification } from "@/composables/link-verification";
 import { useLinksFetch } from "@/composables/use-link-fetch";
 import { IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
-import { defineAsyncComponent, ref } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import { defineAsyncComponent, ref, shallowRef } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
+import RiPulseLine from "~icons/ri/pulse-line";
 
 const GroupCreationModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "group-creation-modal" */ "@/components/GroupCreationModal.vue"),
@@ -16,6 +19,7 @@ const LinkImportModal = defineAsyncComponent(
 );
 
 const { data, isLoading } = useLinksFetch();
+const queryClient = useQueryClient();
 
 const handleRouteToFront = () => {
   window.open("/links", "_blank");
@@ -24,6 +28,23 @@ const handleRouteToFront = () => {
 const groupCreationModalVisible = ref(false);
 const groupSortModalVisible = ref(false);
 const linkImportModalVisible = ref(false);
+const isVerifyingAllLinks = shallowRef(false);
+
+async function handleVerifyAllLinks() {
+  if (isVerifyingAllLinks.value) {
+    return;
+  }
+
+  isVerifyingAllLinks.value = true;
+  try {
+    await runLinkVerification({
+      queryClient,
+      showSuccess: true,
+    });
+  } finally {
+    isVerifyingAllLinks.value = false;
+  }
+}
 </script>
 <template>
   <VPageHeader title="链接">
@@ -32,6 +53,12 @@ const linkImportModalVisible = ref(false);
     </template>
     <template #actions>
       <VSpace>
+        <VButton size="sm" :loading="isVerifyingAllLinks" @click="handleVerifyAllLinks">
+          <template #icon>
+            <RiPulseLine />
+          </template>
+          检测全部
+        </VButton>
         <VButton size="sm" @click="linkImportModalVisible = true">批量导入</VButton>
         <VButton size="sm" @click="groupCreationModalVisible = true">新建分组</VButton>
         <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>

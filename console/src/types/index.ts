@@ -1,4 +1,4 @@
-import type { RssSpec } from "@/api/generated";
+import type { RssSpec, VerificationSpec } from "@/api/generated";
 
 export interface LinkFormState {
   url: string;
@@ -6,6 +6,7 @@ export interface LinkFormState {
   logo?: string;
   description?: string;
   rss?: RssSpec;
+  verification?: VerificationSpec;
   annotations?: Record<string, string>;
 }
 

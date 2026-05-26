@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import type { Link, LinkGroupVo } from "@/api/generated";
+import { runLinkVerification } from "@/composables/link-verification";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import type { GroupWithLinks } from "@/composables/use-link-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
@@ -18,7 +19,7 @@ import {
 } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { chunk } from "es-toolkit";
-import { computed, defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, ref, shallowRef } from "vue";
 import LinkBadge from "./LinkBadge.vue";
 import LinksSortableCard from "./LinksSortableCard.vue";
 
@@ -51,6 +52,8 @@ const groupEditingModalVisible = ref(false);
 
 const enabledSort = ref(false);
 const enabledSelect = ref(false);
+const isVerifyingGroup = shallowRef(false);
+const isVerifyingSelectedLinks = shallowRef(false);
 
 const selectedLinkNames = ref<string[]>([]);
 
@@ -91,6 +94,46 @@ function handleEditingModalClose() {
 
 function handleSelectAll() {
   selectedLinkNames.value = links.value.map((link) => link.metadata.name);
+}
+
+async function handleVerifyGroup() {
+  if (!links.value.length || isVerifyingGroup.value) {
+    return;
+  }
+
+  isVerifyingGroup.value = true;
+  try {
+    await runLinkVerification({
+      request: group.value
+        ? { groupName: group.value.metadata.name }
+        : { names: links.value.map((link) => link.metadata.name) },
+      queryClient,
+      showSuccess: true,
+    });
+  } finally {
+    isVerifyingGroup.value = false;
+  }
+}
+
+async function handleVerifySelectedLinks() {
+  if (!selectedLinkNames.value.length || isVerifyingSelectedLinks.value) {
+    return;
+  }
+
+  isVerifyingSelectedLinks.value = true;
+  try {
+    const result = await runLinkVerification({
+      request: { names: selectedLinkNames.value },
+      queryClient,
+      showSuccess: true,
+    });
+    if (result) {
+      enabledSelect.value = false;
+      selectedLinkNames.value.length = 0;
+    }
+  } finally {
+    isVerifyingSelectedLinks.value = false;
+  }
 }
 
 function handleDeleteInBatch() {
@@ -184,6 +227,14 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
           <VSpace v-if="enabledSelect" class=":uno: flex-wrap">
             <VButton size="sm" @click="handleSelectAll">全选</VButton>
             <VButton size="sm" @click="selectedLinkNames.length = 0">清空选择</VButton>
+            <VButton
+              size="sm"
+              :disabled="selectedLinkNames.length === 0"
+              :loading="isVerifyingSelectedLinks"
+              @click="handleVerifySelectedLinks"
+            >
+              检测
+            </VButton>
             <VDropdown>
               <VButton size="sm" :disabled="selectedLinkNames.length === 0 || !otherGroups?.length">移动</VButton>
               <template #popper>
@@ -210,6 +261,9 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
               <template #popper>
                 <VDropdownItem v-if="links.length" @click="enabledSort = true">排序</VDropdownItem>
                 <VDropdownItem v-if="links.length" @click="enabledSelect = true">批量选择</VDropdownItem>
+                <VDropdownItem v-if="links.length" @click="handleVerifyGroup">
+                  {{ isVerifyingGroup ? "检测中..." : "检测本组" }}
+                </VDropdownItem>
                 <VDropdownItem v-if="group" @click="groupEditingModalVisible = true">编辑分组</VDropdownItem>
                 <VDropdown>
                   <VDropdownItem v-if="group" type="danger">删除分组</VDropdownItem>
@@ -232,7 +286,10 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
       </div>
     </template>
     <div v-if="!links.length" class=":uno: px-4 py-3 text-center text-sm text-gray-500">此分组下暂无链接</div>
-    <div class=":uno: grid grid-cols-2 gap-2.5 2xl:grid-cols-7 lg:grid-cols-4 md:grid-cols-3 xl:grid-cols-6" v-else>
+    <div
+      class=":uno: grid grid-cols-1 gap-2.5 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 5xl:grid-cols-8 lg:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4"
+      v-else
+    >
       <LinkBadge
         v-for="link in links"
         :key="link.metadata.name"

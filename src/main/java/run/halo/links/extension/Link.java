@@ -60,6 +60,9 @@ public class Link extends AbstractExtension {
 
         @Schema(description = "RSS or Atom feed tracking settings for this link.")
         private RssSpec rss;
+
+        @Schema(description = "Link verification settings.")
+        private VerificationSpec verification;
     }
 
     @Data
@@ -83,6 +86,9 @@ public class Link extends AbstractExtension {
     public static class LinkStatus {
         @Schema(description = "Observed RSS or Atom feed refresh state.")
         private RssStatus rss;
+
+        @Schema(description = "Observed link verification state.")
+        private VerificationStatus verification;
     }
 
     @Data
@@ -142,5 +148,83 @@ public class Link extends AbstractExtension {
 
         @Schema(description = "Number of cached feed items for this feed URL.")
         private Long itemCount;
+    }
+
+    @Data
+    @Schema(description = "Link verification settings.")
+    public static class VerificationSpec {
+        @Schema(description = "Absolute HTTP or HTTPS page URL to scan for a reciprocal link.",
+            format = "uri", pattern = "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$")
+        private String backlinkScanUrl;
+    }
+
+    @Data
+    @Schema(description = "Observed link verification state.")
+    public static class VerificationStatus {
+        @Schema(description = "Last time link verification was attempted.")
+        private Instant lastCheckedAt;
+
+        @Schema(description = "Observed reachability state.")
+        private AccessStatus access;
+
+        @Schema(description = "Observed reciprocal-link state.")
+        private BacklinkStatus backlink;
+    }
+
+    @Data
+    @Schema(description = "Observed reachability state.")
+    public static class AccessStatus {
+        @Schema(description = "Reachability state.")
+        private AccessState state;
+
+        @Schema(description = "Last time reachability was checked.")
+        private Instant checkedAt;
+
+        @Schema(description = "Final HTTP response status code.")
+        private Integer statusCode;
+
+        @Schema(description = "Final URL reached after redirects.")
+        private String finalUrl;
+
+        @Schema(description = "Reachability failure message.")
+        private String error;
+    }
+
+    @Data
+    @Schema(description = "Observed reciprocal-link state.")
+    public static class BacklinkStatus {
+        @Schema(description = "Reciprocal-link state.")
+        private BacklinkState state;
+
+        @Schema(description = "Last time reciprocal-link status was checked.")
+        private Instant checkedAt;
+
+        @Schema(description = "Configured URL scanned for a reciprocal link.")
+        private String scanUrl;
+
+        @Schema(description = "Halo external URL used as the reciprocal-link target.")
+        private String targetUrl;
+
+        @Schema(description = "Matched reciprocal-link URL found on the scan page.")
+        private String matchedUrl;
+
+        @Schema(description = "Reciprocal-link failure message.")
+        private String error;
+    }
+
+    @Schema(description = "Reachability verification state.")
+    public enum AccessState {
+        CHECKING,
+        ACCESSIBLE,
+        INACCESSIBLE
+    }
+
+    @Schema(description = "Reciprocal-link verification state.")
+    public enum BacklinkState {
+        CHECKING,
+        FOUND,
+        MISSING,
+        NOT_CONFIGURED,
+        FAILED
     }
 }

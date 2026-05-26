@@ -27,6 +27,9 @@ import run.halo.links.dto.LinkRequest;
 import run.halo.links.dto.SortRequest;
 import run.halo.links.extension.Link;
 import run.halo.links.query.LinkQuery;
+import run.halo.links.verification.LinkVerificationRequest;
+import run.halo.links.verification.LinkVerificationService;
+import run.halo.links.verification.LinkVerificationTriggerResult;
 
 /**
  * Console endpoint for {@link Link} management.
@@ -36,6 +39,8 @@ import run.halo.links.query.LinkQuery;
 public class LinkEndpoint implements CustomEndpoint {
 
     private final ReactiveExtensionClient client;
+
+    private final LinkVerificationService linkVerificationService;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
@@ -74,6 +79,19 @@ public class LinkEndpoint implements CustomEndpoint {
                             .implementation(SortRequest.class))
                         .response(responseBuilder()
                             .responseCode("200"));
+                }
+            )
+            .POST("links/-/verification/check", this::verifyLinks,
+                builder -> {
+                    builder.operationId("verifyLinks")
+                        .description("Start asynchronous reachability and backlink verification for links.")
+                        .tag(tag)
+                        .requestBody(requestBodyBuilder()
+                            .description("Optional selected link names or group scope.")
+                            .implementation(LinkVerificationRequest.class))
+                        .response(responseBuilder()
+                            .responseCode("202")
+                            .implementation(LinkVerificationTriggerResult.class));
                 }
             )
             .build();
@@ -139,6 +157,13 @@ public class LinkEndpoint implements CustomEndpoint {
                     })
                     .then(ServerResponse.ok().build());
             });
+    }
+
+    Mono<ServerResponse> verifyLinks(ServerRequest request) {
+        return request.bodyToMono(LinkVerificationRequest.class)
+            .defaultIfEmpty(new LinkVerificationRequest())
+            .flatMap(linkVerificationService::verify)
+            .flatMap(result -> ServerResponse.accepted().bodyValue(result));
     }
 
 }
