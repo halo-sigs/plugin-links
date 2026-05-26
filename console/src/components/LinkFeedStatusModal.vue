@@ -167,7 +167,7 @@ function feedStatusLabel(status: RssFeedStatus) {
 </script>
 
 <template>
-  <VModal ref="modal" :centered="false" :title="modalTitle" :mount-to-body="true" :width="760" @close="emit('close')">
+  <VModal ref="modal" layer-closable :centered="false" :title="modalTitle" :mount-to-body="true" :width="760" @close="emit('close')">
     <div class=":uno: feed-status-modal">
       <section class=":uno: feed-status-modal__summary">
         <span
