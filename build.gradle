@@ -13,7 +13,9 @@ repositories {
 dependencies {
     implementation platform('run.halo.tools.platform:plugin:2.24.0')
     compileOnly 'run.halo.app:api'
-    implementation 'com.rometools:rome:2.1.0'
+    implementation('com.rometools:rome:2.1.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     implementation('org.dizitart:nitrite:4.3.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
