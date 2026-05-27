@@ -22,10 +22,14 @@ public class LinkVo implements ExtensionVoOperator {
     @Schema(description = "Configurable fields of the link.")
     Link.LinkSpec spec;
 
+    @Schema(description = "Observed state of the link.")
+    Link.LinkStatus status;
+
     public static LinkVo from(Link link) {
         return LinkVo.builder()
             .metadata(link.getMetadata())
             .spec(link.getSpec())
+            .status(link.getStatus())
             .build();
     }
 }
