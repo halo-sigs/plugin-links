@@ -6,7 +6,15 @@ import {
   type LinkVerificationStatusFilter,
 } from "@/composables/link-verification-status";
 import { useLinksFetch, type GroupWithLinks } from "@/composables/use-link-fetch";
-import { Dialog, IconExternalLinkLine, VButton, VLoading, VPageHeader, VSpace } from "@halo-dev/components";
+import {
+  Dialog,
+  IconExternalLinkLine,
+  IconRefreshLine,
+  VButton,
+  VLoading,
+  VPageHeader,
+  VSpace,
+} from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { computed, defineAsyncComponent, ref, shallowRef } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
@@ -22,7 +30,7 @@ const LinkImportModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-import-modal" */ "@/components/LinkImportModal.vue"),
 );
 
-const { data, isLoading } = useLinksFetch();
+const { data, isLoading, isFetching, refetch } = useLinksFetch();
 const queryClient = useQueryClient();
 
 const handleRouteToFront = () => {
@@ -115,7 +123,21 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
         </VButton>
       </VSpace>
 
-      <FilterDropdown v-model="selectedStatusFilter" label="状态" :items="statusFilterOptions" />
+      <div class=":uno: flex items-center gap-2">
+        <FilterDropdown v-model="selectedStatusFilter" label="状态" :items="statusFilterOptions" />
+
+        <button
+          v-tooltip="'刷新'"
+          type="button"
+          class=":uno: group cursor-pointer rounded p-1 hover:bg-gray-200"
+          @click="refetch()"
+        >
+          <IconRefreshLine
+            :class="{ ':uno: animate-spin text-gray-900': isFetching }"
+            class=":uno: h-4 w-4 text-gray-600 group-hover:text-gray-900"
+          />
+        </button>
+      </div>
     </div>
 
     <VLoading v-if="isLoading" />
