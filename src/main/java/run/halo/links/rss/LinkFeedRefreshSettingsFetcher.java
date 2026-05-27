@@ -20,7 +20,8 @@ class LinkFeedRefreshSettingsFetcher {
             .defaultIfEmpty(LinkFeedRefreshSettings.defaults())
             .map(LinkFeedRefreshSettings::normalized)
             .onErrorResume(error -> {
-                log.warn("Failed to load RSS refresh settings, using defaults", error);
+                log.warn("[plugin-links] Failed to load RSS refresh settings, using defaults",
+                    error);
                 return Mono.just(LinkFeedRefreshSettings.defaults().normalized());
             });
     }

@@ -20,8 +20,8 @@ class LinkVerificationSettingsFetcher {
             .defaultIfEmpty(LinkVerificationSettings.defaults())
             .map(LinkVerificationSettings::normalized)
             .onErrorResume(error -> {
-                log.warn("Failed to load link verification settings, disabling automatic checks",
-                    error);
+                log.warn("[plugin-links] Failed to load link verification settings, disabling "
+                    + "automatic checks", error);
                 return Mono.just(LinkVerificationSettings.defaults().normalized());
             });
     }

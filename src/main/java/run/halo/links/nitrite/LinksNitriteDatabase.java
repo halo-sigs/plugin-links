@@ -80,7 +80,7 @@ public class LinksNitriteDatabase implements DisposableBean {
             org.h2.mvstore.MVStore mvStore = (org.h2.mvstore.MVStore) mvStoreField.get(store);
             mvStore.compactFile(10_000);
         } catch (Exception e) {
-            log.warn("Failed to compact feed database", e);
+            log.warn("[plugin-links] Failed to compact feed database", e);
         }
     }
 
@@ -131,7 +131,8 @@ public class LinksNitriteDatabase implements DisposableBean {
         try {
             return openDatabase(dbPath);
         } catch (NitriteIOException e) {
-            log.warn("Feed database at {} is corrupted, attempting recovery", dbPath, e);
+            log.warn("[plugin-links] Feed database at {} is corrupted, attempting recovery",
+                dbPath, e);
             return recoverDatabase(dbPath);
         }
     }
@@ -143,7 +144,8 @@ public class LinksNitriteDatabase implements DisposableBean {
                 restoreCandidate(candidate, dbPath);
                 return openDatabase(dbPath);
             } catch (Exception e) {
-                log.warn("Restore from {} failed, trying next backup", candidate, e);
+                log.warn("[plugin-links] Restore from {} failed, trying next backup", candidate,
+                    e);
                 try {
                     Files.deleteIfExists(dbPath);
                 } catch (IOException ignored) {
@@ -151,7 +153,8 @@ public class LinksNitriteDatabase implements DisposableBean {
                 }
             }
         }
-        log.warn("No valid feed database backup found. Starting with an empty feed cache.");
+        log.warn("[plugin-links] No valid feed database backup found. Starting with an empty feed "
+            + "cache.");
         return openDatabase(dbPath);
     }
 
@@ -161,7 +164,8 @@ public class LinksNitriteDatabase implements DisposableBean {
                 restoreCandidate(candidate, dbPath);
                 return;
             } catch (Exception e) {
-                log.warn("Pre-open restore from {} failed, trying next backup", candidate, e);
+                log.warn("[plugin-links] Pre-open restore from {} failed, trying next backup",
+                    candidate, e);
                 try {
                     Files.deleteIfExists(dbPath);
                 } catch (IOException ignored) {
@@ -182,7 +186,7 @@ public class LinksNitriteDatabase implements DisposableBean {
                     .reversed())
                 .collect(Collectors.toList());
         } catch (IOException e) {
-            log.warn("Could not list feed database backups in {}", dir, e);
+            log.warn("[plugin-links] Could not list feed database backups in {}", dir, e);
             return List.of();
         }
     }
@@ -200,7 +204,7 @@ public class LinksNitriteDatabase implements DisposableBean {
             Exporter.withOptions(exportOptions).exportTo(temp.toFile());
             moveReplacing(temp, target);
         } catch (Exception e) {
-            log.warn("Failed to create feed database backup at {}", target, e);
+            log.warn("[plugin-links] Failed to create feed database backup at {}", target, e);
             try {
                 Files.deleteIfExists(temp);
             } catch (IOException ignored) {
@@ -224,7 +228,7 @@ public class LinksNitriteDatabase implements DisposableBean {
                 Files.deleteIfExists(backups.get(i));
             }
         } catch (IOException e) {
-            log.warn("Failed to rotate feed database backups in {}", dir, e);
+            log.warn("[plugin-links] Failed to rotate feed database backups in {}", dir, e);
         }
     }
 
@@ -243,7 +247,7 @@ public class LinksNitriteDatabase implements DisposableBean {
             Files.move(dbPath, dbPath.resolveSibling(
                 dbPath.getFileName() + ".corrupted." + UUID.randomUUID()));
         } catch (IOException e) {
-            log.warn("Could not archive corrupted feed database at {}", dbPath, e);
+            log.warn("[plugin-links] Could not archive corrupted feed database at {}", dbPath, e);
             try {
                 Files.deleteIfExists(dbPath);
             } catch (IOException ignored) {
@@ -265,11 +269,12 @@ public class LinksNitriteDatabase implements DisposableBean {
                     try {
                         Files.deleteIfExists(path);
                     } catch (IOException e) {
-                        log.warn("Failed to delete orphaned feed database temp file {}", path, e);
+                        log.warn("[plugin-links] Failed to delete orphaned feed database temp "
+                            + "file {}", path, e);
                     }
                 });
         } catch (IOException e) {
-            log.warn("Failed to scan feed database temp files in {}", dir, e);
+            log.warn("[plugin-links] Failed to scan feed database temp files in {}", dir, e);
         }
     }
 
@@ -281,7 +286,7 @@ public class LinksNitriteDatabase implements DisposableBean {
             org.h2.mvstore.MVStore mvStore = (org.h2.mvstore.MVStore) mvStoreField.get(store);
             mvStore.sync();
         } catch (Exception e) {
-            log.warn("Failed to sync feed database", e);
+            log.warn("[plugin-links] Failed to sync feed database", e);
         }
     }
 

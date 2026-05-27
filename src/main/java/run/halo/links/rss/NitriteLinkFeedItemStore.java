@@ -424,7 +424,7 @@ public class NitriteLinkFeedItemStore implements LinkFeedItemStore {
             item.setReadLater(Boolean.TRUE.equals(doc.get("readLater", Boolean.class)));
             return Optional.of(item);
         } catch (Exception e) {
-            log.warn("Failed to parse cached feed item: {}", doc, e);
+            log.warn("[plugin-links] Failed to parse cached feed item: {}", doc, e);
             return Optional.empty();
         }
     }

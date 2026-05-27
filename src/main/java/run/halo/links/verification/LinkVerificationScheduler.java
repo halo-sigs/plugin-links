@@ -54,27 +54,43 @@ public class LinkVerificationScheduler {
         try {
             runIfDue().block();
         } catch (Throwable e) {
-            log.warn("Scheduled link verification failed before work was accepted", e);
+            log.warn("[plugin-links] Scheduled link verification failed before work was accepted",
+                e);
         }
     }
 
     Mono<LinkVerificationTriggerResult> runIfDue() {
         return settingsFetcher.fetch()
             .flatMap(settings -> {
-                if (!settings.automaticVerificationEnabled() || !isDue(settings)) {
+                if (!settings.automaticVerificationEnabled()) {
+                    log.debug("[plugin-links] Scheduled link verification is disabled");
+                    return Mono.empty();
+                }
+                if (!isDue(settings)) {
+                    log.debug("[plugin-links] Scheduled link verification is not due yet");
                     return Mono.empty();
                 }
                 Instant runAt = Instant.now(clock);
+                LinkVerificationMode mode = verificationMode(settings);
                 return selectLinkNames(settings.maxLinksPerRun())
                     .collectList()
                     .flatMap(names -> {
                         lastAutomaticRunAt = runAt;
+                        log.info("[plugin-links] Scheduled link verification selected {} link(s), "
+                                + "mode={}, intervalHours={}, maxLinksPerRun={}", names.size(),
+                            mode, settings.interval().toHours(), settings.maxLinksPerRun());
                         if (names.isEmpty()) {
                             return Mono.empty();
                         }
                         LinkVerificationRequest request = new LinkVerificationRequest();
                         request.setNames(names);
-                        return linkVerificationService.verify(request, verificationMode(settings));
+                        return linkVerificationService.verify(request, mode)
+                            .doOnNext(result -> log.info("[plugin-links] Scheduled link "
+                                    + "verification queued {} link(s), skipped={}, "
+                                    + "alreadyRunning={}",
+                                result.getAcceptedNames().size(),
+                                result.getSkippedNames().size(),
+                                result.getAlreadyRunningNames().size()));
                     });
             });
     }

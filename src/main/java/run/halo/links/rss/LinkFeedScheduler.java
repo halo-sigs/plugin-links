@@ -74,14 +74,19 @@ public class LinkFeedScheduler {
         try {
             refreshIfDue().block();
         } catch (Throwable e) {
-            log.warn("Scheduled RSS refresh failed before work was accepted", e);
+            log.warn("[plugin-links] Scheduled RSS refresh failed before work was accepted", e);
         }
     }
 
     Mono<Void> refreshIfDue() {
         return settingsFetcher.fetch()
             .flatMap(settings -> {
-                if (!settings.automaticRefreshEnabled() || !isDue(settings)) {
+                if (!settings.automaticRefreshEnabled()) {
+                    log.debug("[plugin-links] Scheduled RSS refresh is disabled");
+                    return Mono.empty();
+                }
+                if (!isDue(settings)) {
+                    log.debug("[plugin-links] Scheduled RSS refresh is not due yet");
                     return Mono.empty();
                 }
                 Instant runAt = Instant.now(clock);
@@ -89,13 +94,20 @@ public class LinkFeedScheduler {
                     .collectList()
                     .flatMap(names -> {
                         lastAutomaticRefreshAt = runAt;
+                        log.info("[plugin-links] Scheduled RSS refresh selected {} link(s), "
+                                + "intervalHours={}, maxLinksPerRun={}", names.size(),
+                            settings.interval().toHours(), settings.maxLinksPerRun());
                         return Flux.fromIterable(names)
                             .flatMap(name -> linkFeedService.refresh(name)
                                     .doOnError(error -> log.warn(
-                                        "Failed to refresh RSS feed for link {}", name, error))
+                                        "[plugin-links] Failed to refresh RSS feed for link {}",
+                                        name, error))
                                     .onErrorResume(error -> Mono.empty()),
                                 REFRESH_CONCURRENCY)
-                            .then();
+                            .then(Mono.fromRunnable(() -> log.info(
+                                "[plugin-links] Scheduled RSS refresh finished for {} selected "
+                                    + "link(s)",
+                                names.size())));
                     });
             });
     }
@@ -118,7 +130,7 @@ public class LinkFeedScheduler {
             retentionService.enforce(LinkFeedRetentionPolicy.defaults());
             database.compact();
         } catch (Throwable e) {
-            log.warn("Scheduled RSS retention cleanup failed", e);
+            log.warn("[plugin-links] Scheduled RSS retention cleanup failed", e);
         }
     }
 

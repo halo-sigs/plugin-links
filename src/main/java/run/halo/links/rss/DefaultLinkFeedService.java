@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -36,6 +37,7 @@ import run.halo.links.extension.Link;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class DefaultLinkFeedService implements LinkFeedService {
 
     private static final int MAX_ITEMS_PER_FETCH = 100;
@@ -226,6 +228,8 @@ public class DefaultLinkFeedService implements LinkFeedService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "RSS feed URLs are required for this link.");
         }
+        log.info("[plugin-links] Refreshing RSS feeds for link {} with {} configured feed URL(s)",
+            linkName, feedUrls.size());
         Link.RssStatus previousStatus = Optional.ofNullable(link.getStatus().getRss())
             .orElse(new Link.RssStatus());
         Instant fetchedAt = Instant.now();
@@ -263,6 +267,12 @@ public class DefaultLinkFeedService implements LinkFeedService {
             .filter(Objects::nonNull)
             .max(Comparator.naturalOrder())
             .orElse(previousStatus.getLatestPublishedAt()));
+        long failedFeedCount = feedResults.stream()
+            .filter(feedResult -> !isSuccessful(feedResult))
+            .count();
+        log.info("[plugin-links] RSS refresh completed for link {}: feeds={}, failedFeeds={}, "
+                + "fetchedItems={}, cachedItems={}", linkName, feedResults.size(), failedFeedCount,
+            result.getFetchedItemCount(), result.getItemCount());
 
         return result;
     }
@@ -321,7 +331,9 @@ public class DefaultLinkFeedService implements LinkFeedService {
         result.setItemCount(itemStore.countByLinkNameAndFeedUrl(linkName, feedUrl));
         result.setLatestPublishedAt(previousStatus == null ? null
             : previousStatus.getLatestPublishedAt());
-        result.setError(error.getMessage());
+        result.setError(errorMessage(error));
+        log.warn("[plugin-links] Failed to refresh RSS feed {} for link {}: {}", feedUrl, linkName,
+            errorMessage(error));
         return result;
     }
 
@@ -670,5 +682,10 @@ public class DefaultLinkFeedService implements LinkFeedService {
 
     private static boolean isSuccess(int statusCode) {
         return statusCode >= 200 && statusCode < 300;
+    }
+
+    private static String errorMessage(Throwable error) {
+        String message = error.getMessage();
+        return StringUtils.hasText(message) ? message : error.getClass().getSimpleName();
     }
 }

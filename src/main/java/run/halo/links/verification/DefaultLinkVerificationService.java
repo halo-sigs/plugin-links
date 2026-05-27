@@ -101,7 +101,12 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
                         return link;
                     })
                     .flatMap(client::update)
+                    .doOnNext(updatedLink -> log.info("[plugin-links] Link verification completed "
+                            + "for {}: access={}, backlink={}", linkName,
+                        accessState(updatedLink), backlinkState(updatedLink)))
                     .onErrorResume(error -> {
+                        log.warn("[plugin-links] Unexpected failure while verifying link {}",
+                            linkName, error);
                         link.getStatus().setVerification(unexpectedFailureStatus(link, error,
                             previousBacklink, normalizedMode));
                         return client.update(link);
@@ -150,7 +155,8 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
 
         Flux.fromIterable(acceptedNames)
             .concatMap(name -> verifyLink(name, mode)
-                .doOnError(error -> log.warn("Failed to verify link {}", name, error))
+                .doOnError(error -> log.warn("[plugin-links] Failed to verify link {}", name,
+                    error))
                 .onErrorResume(error -> Mono.empty())
                 .doFinally(signalType -> runningNames.remove(name)))
             .subscribe();
@@ -159,6 +165,9 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         result.setAcceptedNames(List.copyOf(acceptedNames));
         result.setSkippedNames(List.copyOf(skippedNames));
         result.setAlreadyRunningNames(List.copyOf(alreadyRunningNames));
+        log.info("[plugin-links] Link verification triggered: accepted={}, skipped={}, "
+                + "alreadyRunning={}, mode={}", acceptedNames.size(), skippedNames.size(),
+            alreadyRunningNames.size(), mode);
         return result;
     }
 
@@ -437,6 +446,18 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
 
     private static LinkVerificationMode normalizedMode(LinkVerificationMode mode) {
         return mode == null ? LinkVerificationMode.FULL : mode;
+    }
+
+    private static Link.AccessState accessState(Link link) {
+        Link.VerificationStatus verification = link.getStatus().getVerification();
+        Link.AccessStatus access = verification == null ? null : verification.getAccess();
+        return access == null ? null : access.getState();
+    }
+
+    private static Link.BacklinkState backlinkState(Link link) {
+        Link.VerificationStatus verification = link.getStatus().getVerification();
+        Link.BacklinkStatus backlink = verification == null ? null : verification.getBacklink();
+        return backlink == null ? null : backlink.getState();
     }
 
     private record ResolvedLink(String name, Link link) {
