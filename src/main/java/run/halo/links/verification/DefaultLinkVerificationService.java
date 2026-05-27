@@ -62,9 +62,15 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
 
     @Override
     public Mono<LinkVerificationTriggerResult> verify(LinkVerificationRequest request) {
+        return verify(request, LinkVerificationMode.FULL);
+    }
+
+    @Override
+    public Mono<LinkVerificationTriggerResult> verify(LinkVerificationRequest request,
+        LinkVerificationMode mode) {
         return resolveLinks(Optional.ofNullable(request).orElse(new LinkVerificationRequest()))
             .collectList()
-            .map(this::enqueue);
+            .map(resolvedLinks -> enqueue(resolvedLinks, normalizedMode(mode)));
     }
 
     @PreDestroy
@@ -73,22 +79,34 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
     }
 
     Mono<Link> verifyLink(String linkName) {
+        return verifyLink(linkName, LinkVerificationMode.FULL);
+    }
+
+    Mono<Link> verifyLink(String linkName, LinkVerificationMode mode) {
+        LinkVerificationMode normalizedMode = normalizedMode(mode);
         return client.fetch(Link.class, linkName)
             .flatMap(link -> {
-                link.getStatus().setVerification(checkingStatus(link));
+                Link.BacklinkStatus previousBacklink = currentBacklinkStatus(link);
+                link.getStatus().setVerification(checkingStatus(link, previousBacklink,
+                    normalizedMode));
                 return client.update(link);
             })
-            .flatMap(link -> Mono.fromCallable(() -> verifyBlocking(link))
-                .subscribeOn(scheduler)
-                .map(status -> {
-                    link.getStatus().setVerification(status);
-                    return link;
-                })
-                .flatMap(client::update)
-                .onErrorResume(error -> {
-                    link.getStatus().setVerification(unexpectedFailureStatus(link, error));
-                    return client.update(link);
-                }));
+            .flatMap(link -> {
+                Link.BacklinkStatus previousBacklink = currentBacklinkStatus(link);
+                return Mono.fromCallable(() -> verifyBlocking(link, previousBacklink,
+                        normalizedMode))
+                    .subscribeOn(scheduler)
+                    .map(status -> {
+                        link.getStatus().setVerification(status);
+                        return link;
+                    })
+                    .flatMap(client::update)
+                    .onErrorResume(error -> {
+                        link.getStatus().setVerification(unexpectedFailureStatus(link, error,
+                            previousBacklink, normalizedMode));
+                        return client.update(link);
+                    });
+            });
     }
 
     private Flux<ResolvedLink> resolveLinks(LinkVerificationRequest request) {
@@ -111,7 +129,8 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
             .map(link -> ResolvedLink.found(link.getMetadata().getName(), link));
     }
 
-    private LinkVerificationTriggerResult enqueue(List<ResolvedLink> resolvedLinks) {
+    private LinkVerificationTriggerResult enqueue(List<ResolvedLink> resolvedLinks,
+        LinkVerificationMode mode) {
         List<String> acceptedNames = new ArrayList<>();
         List<String> skippedNames = new ArrayList<>();
         List<String> alreadyRunningNames = new ArrayList<>();
@@ -130,7 +149,7 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         }
 
         Flux.fromIterable(acceptedNames)
-            .concatMap(name -> verifyLink(name)
+            .concatMap(name -> verifyLink(name, mode)
                 .doOnError(error -> log.warn("Failed to verify link {}", name, error))
                 .onErrorResume(error -> Mono.empty())
                 .doFinally(signalType -> runningNames.remove(name)))
@@ -143,13 +162,18 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         return result;
     }
 
-    private Link.VerificationStatus verifyBlocking(Link link) {
+    private Link.VerificationStatus verifyBlocking(Link link,
+        Link.BacklinkStatus previousBacklink, LinkVerificationMode mode) {
         Link.VerificationStatus status = new Link.VerificationStatus();
         Link.AccessStatus access = verifyAccess(link);
-        Link.BacklinkStatus backlink = verifyBacklink(link);
+        Link.BacklinkStatus backlink = mode.includeBacklink()
+            ? verifyBacklink(link)
+            : previousBacklink;
         status.setAccess(access);
         status.setBacklink(backlink);
-        status.setLastCheckedAt(maxCheckedAt(access.getCheckedAt(), backlink.getCheckedAt()));
+        status.setLastCheckedAt(mode.includeBacklink() && backlink != null
+            ? maxCheckedAt(access.getCheckedAt(), backlink.getCheckedAt())
+            : access.getCheckedAt());
         return status;
     }
 
@@ -317,7 +341,8 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         return List.copyOf(normalized);
     }
 
-    private static Link.VerificationStatus checkingStatus(Link link) {
+    private static Link.VerificationStatus checkingStatus(Link link,
+        Link.BacklinkStatus previousBacklink, LinkVerificationMode mode) {
         Instant checkedAt = Instant.now();
         Link.VerificationStatus status = new Link.VerificationStatus();
         status.setLastCheckedAt(checkedAt);
@@ -327,21 +352,26 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         access.setCheckedAt(checkedAt);
         status.setAccess(access);
 
-        Link.BacklinkStatus backlink = new Link.BacklinkStatus();
-        backlink.setCheckedAt(checkedAt);
-        String scanUrl = backlinkScanUrl(link);
-        if (StringUtils.hasText(scanUrl)) {
-            backlink.setState(Link.BacklinkState.CHECKING);
-            backlink.setScanUrl(scanUrl);
-        } else {
-            backlink.setState(Link.BacklinkState.NOT_CONFIGURED);
+        if (mode.includeBacklink()) {
+            Link.BacklinkStatus backlink = new Link.BacklinkStatus();
+            backlink.setCheckedAt(checkedAt);
+            String scanUrl = backlinkScanUrl(link);
+            if (StringUtils.hasText(scanUrl)) {
+                backlink.setState(Link.BacklinkState.CHECKING);
+                backlink.setScanUrl(scanUrl);
+            } else {
+                backlink.setState(Link.BacklinkState.NOT_CONFIGURED);
+            }
+            status.setBacklink(backlink);
+            return status;
         }
-        status.setBacklink(backlink);
 
+        status.setBacklink(previousBacklink);
         return status;
     }
 
-    private static Link.VerificationStatus unexpectedFailureStatus(Link link, Throwable error) {
+    private static Link.VerificationStatus unexpectedFailureStatus(Link link, Throwable error,
+        Link.BacklinkStatus previousBacklink, LinkVerificationMode mode) {
         Instant checkedAt = Instant.now();
         Link.VerificationStatus status = new Link.VerificationStatus();
         status.setLastCheckedAt(checkedAt);
@@ -352,18 +382,30 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         access.setError(errorMessage(error));
         status.setAccess(access);
 
-        Link.BacklinkStatus backlink = new Link.BacklinkStatus();
-        backlink.setCheckedAt(checkedAt);
-        String scanUrl = backlinkScanUrl(link);
-        backlink.setScanUrl(scanUrl);
-        backlink.setState(StringUtils.hasText(scanUrl)
-            ? Link.BacklinkState.FAILED
-            : Link.BacklinkState.NOT_CONFIGURED);
-        if (StringUtils.hasText(scanUrl)) {
-            backlink.setError(errorMessage(error));
+        if (mode.includeBacklink()) {
+            Link.BacklinkStatus backlink = new Link.BacklinkStatus();
+            backlink.setCheckedAt(checkedAt);
+            String scanUrl = backlinkScanUrl(link);
+            backlink.setScanUrl(scanUrl);
+            backlink.setState(StringUtils.hasText(scanUrl)
+                ? Link.BacklinkState.FAILED
+                : Link.BacklinkState.NOT_CONFIGURED);
+            if (StringUtils.hasText(scanUrl)) {
+                backlink.setError(errorMessage(error));
+            }
+            status.setBacklink(backlink);
+            return status;
         }
-        status.setBacklink(backlink);
+
+        status.setBacklink(previousBacklink);
         return status;
+    }
+
+    private static Link.BacklinkStatus currentBacklinkStatus(Link link) {
+        if (link.getStatus().getVerification() == null) {
+            return null;
+        }
+        return link.getStatus().getVerification().getBacklink();
     }
 
     private static String backlinkScanUrl(Link link) {
@@ -391,6 +433,10 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
     private static String errorMessage(Throwable error) {
         String message = error.getMessage();
         return StringUtils.hasText(message) ? message : error.getClass().getSimpleName();
+    }
+
+    private static LinkVerificationMode normalizedMode(LinkVerificationMode mode) {
+        return mode == null ? LinkVerificationMode.FULL : mode;
     }
 
     private record ResolvedLink(String name, Link link) {

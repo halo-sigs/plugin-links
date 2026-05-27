@@ -55,7 +55,8 @@ tasks.named('generatePluginComponentsIdx') {
 }
 
 halo {
-    version = '2.24.0'
+    version = '2.24'
+    port = 8091
     debug = true
 }
 

@@ -12,3 +12,28 @@ spec:
           name: title
           validation: required
           value: '链接'
+    - group: verification
+      label: 链接检测
+      formSchema:
+        - $formkit: checkbox
+          label: 启用自动定时检测
+          name: enabled
+          id: verification_enabled
+          value: false
+        - $formkit: number
+          if: "$get(verification_enabled).value === true"
+          label: 检测间隔（小时）
+          name: intervalHours
+          validation: required|number|min:1
+          value: 24
+        - $formkit: number
+          if: "$get(verification_enabled).value === true"
+          label: 每轮最多检测链接数
+          name: maxLinksPerRun
+          validation: required|number|min:1
+          value: 50
+        - $formkit: checkbox
+          if: "$get(verification_enabled).value === true"
+          label: 同时检测反链
+          name: checkBacklink
+          value: false

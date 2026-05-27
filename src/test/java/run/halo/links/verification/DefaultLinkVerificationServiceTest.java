@@ -8,11 +8,13 @@ import static org.mockito.Mockito.when;
 
 import java.net.URL;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -136,6 +138,67 @@ class DefaultLinkVerificationServiceTest {
         StepVerifier.create(service.verifyLink("link-a"))
             .assertNext(updated -> assertThat(updated.getStatus().getVerification()
                 .getBacklink().getState()).isEqualTo(Link.BacklinkState.NOT_CONFIGURED))
+            .verifyComplete();
+
+        verify(fetcher, never()).fetchBacklinkPage(any());
+    }
+
+    @Test
+    void shouldPreserveExistingBacklinkStatusInAccessOnlyMode() throws Exception {
+        service = immediateService();
+        Link.BacklinkStatus existingBacklink = backlinkStatus(Link.BacklinkState.FOUND);
+        Link link = link("link-a", "https://friend.example.com", "https://friend.example.com/links");
+        link.getStatus().setVerification(verificationWithBacklink(existingBacklink));
+        List<Link.VerificationStatus> updates = new ArrayList<>();
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation -> {
+            Link updated = invocation.getArgument(0);
+            updates.add(updated.getStatus().getVerification());
+            return Mono.just(updated);
+        });
+        when(fetcher.fetchReachability("https://friend.example.com"))
+            .thenReturn(fetchResult("https://friend.example.com", 200, ""));
+
+        StepVerifier.create(service.verifyLink("link-a", LinkVerificationMode.ACCESS_ONLY))
+            .assertNext(updated -> {
+                Link.VerificationStatus status = updated.getStatus().getVerification();
+                assertThat(status.getAccess().getState()).isEqualTo(Link.AccessState.ACCESSIBLE);
+                assertThat(status.getBacklink()).isSameAs(existingBacklink);
+            })
+            .verifyComplete();
+
+        assertThat(updates).hasSize(2);
+        assertThat(updates.get(0).getAccess().getState()).isEqualTo(Link.AccessState.CHECKING);
+        assertThat(updates.get(0).getBacklink()).isSameAs(existingBacklink);
+        assertThat(updates.get(1).getBacklink()).isSameAs(existingBacklink);
+        verify(fetcher, never()).fetchBacklinkPage(any());
+    }
+
+    @Test
+    void shouldPreserveExistingBacklinkStatusWhenAccessOnlyUpdateFails() throws Exception {
+        service = immediateService();
+        Link.BacklinkStatus existingBacklink = backlinkStatus(Link.BacklinkState.FOUND);
+        Link link = link("link-a", "https://friend.example.com", "https://friend.example.com/links");
+        link.getStatus().setVerification(verificationWithBacklink(existingBacklink));
+        AtomicInteger updateCount = new AtomicInteger();
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation -> {
+            Link updated = invocation.getArgument(0);
+            if (updateCount.incrementAndGet() == 2) {
+                return Mono.error(new IllegalStateException("store failed"));
+            }
+            return Mono.just(updated);
+        });
+        when(fetcher.fetchReachability("https://friend.example.com"))
+            .thenReturn(fetchResult("https://friend.example.com", 200, ""));
+
+        StepVerifier.create(service.verifyLink("link-a", LinkVerificationMode.ACCESS_ONLY))
+            .assertNext(updated -> {
+                Link.VerificationStatus status = updated.getStatus().getVerification();
+                assertThat(status.getAccess().getState()).isEqualTo(Link.AccessState.INACCESSIBLE);
+                assertThat(status.getAccess().getError()).contains("store failed");
+                assertThat(status.getBacklink()).isSameAs(existingBacklink);
+            })
             .verifyComplete();
 
         verify(fetcher, never()).fetchBacklinkPage(any());
@@ -395,6 +458,23 @@ class DefaultLinkVerificationServiceTest {
         link.setSpec(spec);
         link.setStatus(new Link.LinkStatus());
         return link;
+    }
+
+    private static Link.VerificationStatus verificationWithBacklink(
+        Link.BacklinkStatus backlink) {
+        Link.VerificationStatus status = new Link.VerificationStatus();
+        status.setLastCheckedAt(backlink.getCheckedAt());
+        status.setBacklink(backlink);
+        return status;
+    }
+
+    private static Link.BacklinkStatus backlinkStatus(Link.BacklinkState state) {
+        Link.BacklinkStatus status = new Link.BacklinkStatus();
+        status.setState(state);
+        status.setCheckedAt(Instant.parse("2026-05-26T00:00:00Z"));
+        status.setScanUrl("https://friend.example.com/links");
+        status.setTargetUrl("https://ryanc.cc");
+        return status;
     }
 
     private static SafeUrlFetcher.FetchResult fetchResult(String url, int statusCode, String body)
