@@ -2,6 +2,7 @@
 import type { Link, LinkFeedUnreadSummary } from "@/api/generated";
 import { linkTitle, rssFeedUrls } from "@/composables/link-feed-status";
 import { linkFeedUnreadCount } from "@/composables/use-link-feed-unread-summary";
+import { IconInformation } from "@halo-dev/components";
 import { computed } from "vue";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 
@@ -69,7 +70,10 @@ function itemCountText(count?: number) {
           <span class=":uno: subscription-item__title">全部动态</span>
           <span class=":uno: subscription-item__subtitle">所有订阅源</span>
         </span>
-        <span class=":uno: subscription-item__count" :class="{ ':uno: subscription-item__count--muted': !totalUnreadCount }">
+        <span
+          class=":uno: subscription-item__count"
+          :class="{ ':uno: subscription-item__count--muted': !totalUnreadCount }"
+        >
           {{ itemCountText(totalUnreadCount) }}
         </span>
       </button>
@@ -98,7 +102,13 @@ function itemCountText(count?: number) {
         </span>
       </button>
 
-      <div v-if="!links.length" class=":uno: subscription-empty">暂无已订阅链接</div>
+      <div v-if="!links.length" class=":uno: flex items-center justify-center">
+        <div class=":uno: subscription-empty">暂无已订阅链接</div>
+        <IconInformation
+          v-tooltip="`需要在具体的链接中启用 RSS 订阅并添加链接`"
+          class=":uno: size-4 text-gray-500 hover:text-gray-900"
+        />
+      </div>
     </div>
   </aside>
 </template>
