@@ -2,12 +2,16 @@ package run.halo.links.rss;
 
 import static run.halo.app.extension.index.query.Queries.equal;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Comparator;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
@@ -16,34 +20,96 @@ import run.halo.links.nitrite.LinksNitriteDatabase;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class LinkFeedScheduler {
 
+    private static final long SCHEDULER_DELAY_MS = 5 * 60 * 1000L;
     private static final int REFRESH_CONCURRENCY = 2;
 
     private final ReactiveExtensionClient client;
     private final LinkFeedService linkFeedService;
     private final LinkFeedRetentionService retentionService;
     private final LinksNitriteDatabase database;
+    private final LinkFeedRefreshSettingsFetcher settingsFetcher;
+    private final Clock clock;
+    private Instant lastAutomaticRefreshAt;
 
-    @Scheduled(fixedDelay = 60 * 60 * 1000L, initialDelay = 2 * 60 * 1000L)
+    @Autowired
+    public LinkFeedScheduler(ReactiveExtensionClient client,
+        LinkFeedService linkFeedService,
+        LinkFeedRetentionService retentionService,
+        LinksNitriteDatabase database,
+        LinkFeedRefreshSettingsFetcher settingsFetcher) {
+        this(client, linkFeedService, retentionService, database, settingsFetcher,
+            Clock.systemUTC());
+    }
+
+    LinkFeedScheduler(ReactiveExtensionClient client,
+        LinkFeedService linkFeedService,
+        LinkFeedRetentionService retentionService,
+        LinksNitriteDatabase database,
+        LinkFeedRefreshSettingsFetcher settingsFetcher,
+        Clock clock) {
+        this(client, linkFeedService, retentionService, database, settingsFetcher, clock,
+            Instant.now(clock));
+    }
+
+    LinkFeedScheduler(ReactiveExtensionClient client,
+        LinkFeedService linkFeedService,
+        LinkFeedRetentionService retentionService,
+        LinksNitriteDatabase database,
+        LinkFeedRefreshSettingsFetcher settingsFetcher,
+        Clock clock,
+        Instant lastAutomaticRefreshAt) {
+        this.client = client;
+        this.linkFeedService = linkFeedService;
+        this.retentionService = retentionService;
+        this.database = database;
+        this.settingsFetcher = settingsFetcher;
+        this.clock = clock;
+        this.lastAutomaticRefreshAt = lastAutomaticRefreshAt;
+    }
+
+    @Scheduled(fixedDelay = SCHEDULER_DELAY_MS, initialDelay = SCHEDULER_DELAY_MS)
     public void refreshEnabledFeeds() {
+        try {
+            refreshIfDue().block();
+        } catch (Throwable e) {
+            log.warn("Scheduled RSS refresh failed before work was accepted", e);
+        }
+    }
+
+    Mono<Void> refreshIfDue() {
+        return settingsFetcher.fetch()
+            .flatMap(settings -> {
+                if (!settings.automaticRefreshEnabled() || !isDue(settings)) {
+                    return Mono.empty();
+                }
+                Instant runAt = Instant.now(clock);
+                return selectLinkNames(settings.maxLinksPerRun())
+                    .collectList()
+                    .flatMap(names -> {
+                        lastAutomaticRefreshAt = runAt;
+                        return Flux.fromIterable(names)
+                            .flatMap(name -> linkFeedService.refresh(name)
+                                    .doOnError(error -> log.warn(
+                                        "Failed to refresh RSS feed for link {}", name, error))
+                                    .onErrorResume(error -> Mono.empty()),
+                                REFRESH_CONCURRENCY)
+                            .then();
+                    });
+            });
+    }
+
+    Flux<String> selectLinkNames(int maxLinksPerRun) {
         var options = ListOptions.builder()
             .andQuery(equal("spec.rss.enabled", Boolean.TRUE))
             .build();
-        try {
-            client.listAll(Link.class, options, Sort.unsorted())
-                .filter(LinkFeedScheduler::hasFeedUrls)
-                .map(link -> link.getMetadata().getName())
-                .flatMap(name -> linkFeedService.refresh(name)
-                        .doOnError(error -> log.warn("Failed to refresh RSS feed for link {}",
-                            name, error))
-                        .onErrorResume(error -> Mono.empty()),
-                    REFRESH_CONCURRENCY)
-                .blockLast();
-        } catch (Throwable e) {
-            log.warn("Scheduled RSS refresh failed before all enabled links were processed", e);
-        }
+        return client.listAll(Link.class, options, Sort.unsorted())
+            .filter(LinkFeedScheduler::isRssEnabled)
+            .filter(LinkFeedScheduler::hasFeedUrls)
+            .sort(linkComparator())
+            .take(maxLinksPerRun)
+            .map(LinkFeedScheduler::linkName);
     }
 
     @Scheduled(cron = "0 30 3 * * *")
@@ -54,6 +120,32 @@ public class LinkFeedScheduler {
         } catch (Throwable e) {
             log.warn("Scheduled RSS retention cleanup failed", e);
         }
+    }
+
+    private boolean isDue(LinkFeedRefreshSettings settings) {
+        return !Instant.now(clock).isBefore(lastAutomaticRefreshAt.plus(settings.interval()));
+    }
+
+    private static Comparator<Link> linkComparator() {
+        return Comparator.comparing(LinkFeedScheduler::lastFetchedAt,
+                Comparator.nullsFirst(Comparator.naturalOrder()))
+            .thenComparing(LinkFeedScheduler::linkName,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    private static Instant lastFetchedAt(Link link) {
+        Link.RssStatus rss = link.getStatus().getRss();
+        return rss == null ? null : rss.getLastFetchedAt();
+    }
+
+    private static String linkName(Link link) {
+        return link.getMetadata() == null ? null : link.getMetadata().getName();
+    }
+
+    private static boolean isRssEnabled(Link link) {
+        return link.getSpec() != null
+            && link.getSpec().getRss() != null
+            && Boolean.TRUE.equals(link.getSpec().getRss().getEnabled());
     }
 
     private static boolean hasFeedUrls(Link link) {

@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.links.rss.LinkFeedDiscoveryResult;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedService;
 
 class LinkFeedEndpointTest {
@@ -80,6 +81,24 @@ class LinkFeedEndpointTest {
                 .flatMap(handler -> handler.handle(request)))
             .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(400))
             .verifyComplete();
+    }
+
+    @Test
+    void shouldDelegateManualRefreshToFeedService() {
+        LinkFeedService feedService = mock(LinkFeedService.class);
+        LinkFeedRefreshResult result = new LinkFeedRefreshResult();
+        result.setLinkName("link-a");
+        when(feedService.refresh("link-a")).thenReturn(Mono.just(result));
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(feedService, null, null, null, null);
+        MockServerRequest request = requestWithPathVariable(HttpMethod.POST,
+            "/links/link-a/rss/refresh", "name", "link-a");
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
+            .verifyComplete();
+
+        verify(feedService).refresh("link-a");
     }
 
     @Test

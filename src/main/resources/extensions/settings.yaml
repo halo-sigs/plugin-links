@@ -11,7 +11,7 @@ spec:
           label: 页面标题
           name: title
           validation: required
-          value: '链接'
+          value: "链接"
     - group: verification
       label: 链接检测
       formSchema:
@@ -20,6 +20,7 @@ spec:
           name: enabled
           id: verification_enabled
           value: false
+          help: 启用后，系统会自动定时检测链接的可达性，并更新链接的可达性状态，如果关闭，可以在链接管理页面手动检测
         - $formkit: number
           if: "$get(verification_enabled).value === true"
           label: 检测间隔（小时）
@@ -37,3 +38,24 @@ spec:
           label: 同时检测反链
           name: checkBacklink
           value: false
+    - group: rss
+      label: RSS 订阅
+      formSchema:
+        - $formkit: checkbox
+          label: 启用自动获取
+          name: enabled
+          id: rss_refresh_enabled
+          value: true
+          help: 启用后，系统会自动定时获取链接的 RSS 订阅，并更新链接的 RSS 订阅状态，如果关闭，可以在链接订阅页面手动获取
+        - $formkit: number
+          if: "$get(rss_refresh_enabled).value === true"
+          label: 获取间隔（小时）
+          name: intervalHours
+          validation: required|number|min:1
+          value: 1
+        - $formkit: number
+          if: "$get(rss_refresh_enabled).value === true"
+          label: 每轮最多获取链接数
+          name: maxLinksPerRun
+          validation: required|number|min:1
+          value: 50
