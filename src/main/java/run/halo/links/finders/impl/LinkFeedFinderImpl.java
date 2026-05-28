@@ -52,13 +52,17 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
     @Override
     public Mono<LinkFeedItemPageVo> list(Map<String, Object> params) {
         String groupName = (String) params.get("groupName");
+        String linkName = (String) params.get("linkName");
         Instant beforePublishedAt = (Instant) params.get("beforePublishedAt");
         String beforeId = (String) params.get("beforeId");
         int limit = (int) params.get("limit");
 
         LinkFeedItemQuery query = new LinkFeedItemQuery();
         query.setLimit(limit);
-        if (beforePublishedAt==null) {
+        if (StringUtils.isNotEmpty(linkName)) {
+            query.setLinkName(linkName);
+        }
+        if (beforePublishedAt!=null) {
             query.setBeforePublishedAt(beforePublishedAt);
         }
         if (StringUtils.isNotEmpty(beforeId)) {
@@ -141,6 +145,9 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
                 List<LinkFeedItem> linkFeedItems = itemStore.listRecent(storeQuery);
                 for (LinkFeedItem linkFeedItem : linkFeedItems) {
                     LinkFeedItemVo linkFeedItemVo = LinkFeedItemVo.from(linkFeedItem);
+                    if (StringUtils.isEmpty(linkFeedItemVo.getAuthor())) {
+                        linkFeedItemVo.setAuthor(link.getSpec().getDisplayName());
+                    }
                     linkFeedItemVo.setAuthorLogo(link.getSpec().getLogo());
                     linkFeedItemVo.setAuthorUrl(link.getSpec().getUrl());
                     linkFeedItemVos.add(linkFeedItemVo);

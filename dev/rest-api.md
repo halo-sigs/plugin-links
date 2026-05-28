@@ -14,12 +14,13 @@ https://raw.githubusercontent.com/halo-sigs/plugin-links/refs/heads/main/api-doc
 
 ### 端点列表
 
-| 端点 | 方法 | 说明 |
-| ---- | ---- | ---- |
-| `/apis/api.link.halo.run/v1alpha1/links` | `GET` | 分页列出链接，支持 `keyword`、`group`、`labelSelector`、`fieldSelector`、`sort`、`page`、`size` 查询参数 |
-| `/apis/api.link.halo.run/v1alpha1/links/-/random` | `GET` | 随机返回一组链接；必填查询参数 `maxSize`，取值范围为 `1` 到 `100` |
-| `/apis/api.link.halo.run/v1alpha1/links/-/count` | `GET` | 返回链接总数 |
-| `/apis/api.link.halo.run/v1alpha1/linkgroups` | `GET` | 返回所有链接分组数组，按 `spec.priority`、创建时间、`metadata.name` 升序排列 |
+| 端点 | 方法 | 说明                                                                                       |
+| ---- | ---- |------------------------------------------------------------------------------------------|
+| `/apis/api.link.halo.run/v1alpha1/links` | `GET` | 分页列出链接，支持 `keyword`、`group`、`labelSelector`、`fieldSelector`、`sort`、`page`、`size` 查询参数    |
+| `/apis/api.link.halo.run/v1alpha1/links/-/random` | `GET` | 随机返回一组链接；必填查询参数 `maxSize`，取值范围为 `1` 到 `100`                                              |
+| `/apis/api.link.halo.run/v1alpha1/links/-/count` | `GET` | 返回链接总数                                                                                   |
+| `/apis/api.link.halo.run/v1alpha1/linkgroups` | `GET` | 返回所有链接分组数组，按 `spec.priority`、创建时间、`metadata.name` 升序排列                                   |
+| `/apis/api.link.halo.run/v1alpha1/linkfeeds` | `GET` | 查询列表链接RSS，支持 `linkName`、`groupName`、`beforePublishedAt`、`beforeId`、`limit` 查询参数 |
 
 ### 匿名访问说明
 

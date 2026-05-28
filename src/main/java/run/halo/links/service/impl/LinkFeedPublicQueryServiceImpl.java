@@ -87,6 +87,9 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
                         var link = links.get(name);
                         if (link != null) {
+                            if (StringUtils.isEmpty(vo.getAuthor())) {
+                                vo.setAuthor(link.getSpec().getDisplayName());
+                            }
                             vo.setAuthorLogo(link.getSpec().getLogo());
                             vo.setAuthorUrl(link.getSpec().getUrl());
                         }
@@ -132,6 +135,9 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
             List<LinkFeedItem> linkFeedItems = itemStore.listRecent(linkQuery);
             for (LinkFeedItem linkFeedItem : linkFeedItems) {
                 LinkFeedItemVo linkFeedItemVo = LinkFeedItemVo.from(linkFeedItem);
+                if (StringUtils.isEmpty(linkFeedItemVo.getAuthor())) {
+                    linkFeedItemVo.setAuthor(link.getSpec().getDisplayName());
+                }
                 linkFeedItemVo.setAuthorLogo(link.getSpec().getLogo());
                 linkFeedItemVo.setAuthorUrl(link.getSpec().getUrl());
                 linkFeedItemVos.add(linkFeedItemVo);
