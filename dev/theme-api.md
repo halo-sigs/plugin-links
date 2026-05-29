@@ -391,7 +391,7 @@ linkFeedFinder.list({
     "priority": 0,
     "links": ["string"]
   },
-  "links": "List<LinkVo>"
+  "links": []
 }
 ```
 
@@ -404,7 +404,7 @@ linkFeedFinder.list({
   "page": 0,
   "size": 0,
   "total": 0,
-  "items": "List<LinkVo>",
+  "items": [],
   "first": true,
   "last": true,
   "hasNext": true,
@@ -492,7 +492,7 @@ linkFeedFinder.list({
       }
     }
   },
-  "feeds": "List<LinkFeedItemVo>"
+  "feeds": []
 }
 ```
 
@@ -500,7 +500,7 @@ linkFeedFinder.list({
 
 ```json
 {
-  "items": "List<LinkFeedItemVo>",
+  "items": [],
   "nextBeforePublishedAt": "string",
   "nextBeforeId": "string",
   "hasNext": true
@@ -522,7 +522,7 @@ linkFeedFinder.list({
     "priority": 0,
     "links": ["string"]
   },
-  "links": "List<LinkFeedVo>"
+  "links": []
 }
 ```
 

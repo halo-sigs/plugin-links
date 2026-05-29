@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
 import run.halo.links.rss.LinkFeedItemQuery;
@@ -89,8 +90,11 @@ public class LinkFeedQueryEndpoint implements CustomEndpoint {
                 return badRequest("linkName and groupName cannot be used together.");
             }
 
-            return linkFeedPublicQueryService.listFeeds(groupName,query)
-                .flatMap(result -> ServerResponse.ok().bodyValue(result));
+            return Mono.defer(() -> linkFeedPublicQueryService.listFeeds(groupName, query))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(result -> ServerResponse.ok().bodyValue(result))
+                .onErrorResume(IllegalArgumentException.class,
+                    error -> badRequest(error.getMessage()));
         } catch (IllegalArgumentException e) {
             return badRequest(e.getMessage());
         }

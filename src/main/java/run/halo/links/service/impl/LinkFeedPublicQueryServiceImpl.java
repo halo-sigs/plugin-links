@@ -48,9 +48,6 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
     @Override
     public Mono<LinkFeedItemPageVo> listFeeds(String groupName, LinkFeedItemQuery query) {
-        if (StringUtils.hasText(groupName) && StringUtils.hasText(query.getLinkName())) {
-            return Mono.just(new LinkFeedItemPageVo(List.of(), null, null, false));
-        }
         return StringUtils.hasText(groupName)
             ? listByGroup(groupName, query)
             : listItems(query);
@@ -87,7 +84,7 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
                         var link = links.get(name);
                         if (link != null) {
-                            if (StringUtils.isEmpty(vo.getAuthor())) {
+                            if (!StringUtils.hasText(vo.getAuthor())) {
                                 vo.setAuthor(link.getSpec().getDisplayName());
                             }
                             vo.setAuthorLogo(link.getSpec().getLogo());
@@ -112,17 +109,17 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
             .build();
         return client.listAll(Link.class, options, Sort.unsorted())
             .collectList()
-            .flatMap(linkNames -> Mono.fromCallable(() -> listByLinkNames(linkNames, query))
+            .flatMap(links -> Mono.fromCallable(() -> queryFeedsByLinks(links, query))
                 .subscribeOn(Schedulers.boundedElastic()));
     }
 
-    private LinkFeedItemPageVo listByLinkNames(List<Link> linkNames, LinkFeedItemQuery query) {
-        if (linkNames.isEmpty()) {
+    private LinkFeedItemPageVo queryFeedsByLinks(List<Link> links, LinkFeedItemQuery query) {
+        if (links.isEmpty()) {
             return new LinkFeedItemPageVo(List.of(), null, null, false);
         }
         int limit = query.normalizedLimit();
         List<LinkFeedItemVo> items = new ArrayList<>();
-        for (Link link : linkNames) {
+        for (Link link : links) {
             LinkFeedItemQuery linkQuery = new LinkFeedItemQuery();
             linkQuery.setLinkName(link.getMetadata().getName());
             linkQuery.setBeforePublishedAt(query.getBeforePublishedAt());
@@ -135,7 +132,7 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
             List<LinkFeedItem> linkFeedItems = itemStore.listRecent(linkQuery);
             for (LinkFeedItem linkFeedItem : linkFeedItems) {
                 LinkFeedItemVo linkFeedItemVo = LinkFeedItemVo.from(linkFeedItem);
-                if (StringUtils.isEmpty(linkFeedItemVo.getAuthor())) {
+                if (!StringUtils.hasText(linkFeedItemVo.getAuthor())) {
                     linkFeedItemVo.setAuthor(link.getSpec().getDisplayName());
                 }
                 linkFeedItemVo.setAuthorLogo(link.getSpec().getLogo());

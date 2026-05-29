@@ -1,13 +1,21 @@
 package run.halo.links.finders.impl;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.router.selector.FieldSelector;
+import tools.jackson.databind.json.JsonMapper;
 import run.halo.app.theme.finders.Finder;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkGroup;
@@ -20,12 +28,6 @@ import run.halo.links.vo.LinkFeedGroupVo;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
 import run.halo.links.vo.LinkFeedVo;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.springframework.data.domain.Sort.Order.asc;
 import static run.halo.app.extension.index.query.Queries.isNull;
@@ -51,23 +53,12 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
 
     @Override
     public Mono<LinkFeedItemPageVo> list(Map<String, Object> params) {
-        String groupName = (String) params.get("groupName");
-        String linkName = (String) params.get("linkName");
-        Instant beforePublishedAt = (Instant) params.get("beforePublishedAt");
-        String beforeId = (String) params.get("beforeId");
-        int limit = (int) params.get("limit");
-
-        LinkFeedItemQuery query = new LinkFeedItemQuery();
-        query.setLimit(limit);
-        if (StringUtils.isNotEmpty(linkName)) {
-            query.setLinkName(linkName);
-        }
-        if (beforePublishedAt!=null) {
-            query.setBeforePublishedAt(beforePublishedAt);
-        }
-        if (StringUtils.isNotEmpty(beforeId)) {
-            query.setBeforeId(beforeId);
-        }
+        var query = Optional.ofNullable(params)
+            .map(map -> JsonMapper.shared().convertValue(map, LinkFeedItemQuery.class))
+            .orElseGet(LinkFeedItemQuery::new);
+        String groupName = Optional.ofNullable(params)
+            .map(map -> (String) map.get("groupName"))
+            .orElse(null);
         return linkFeedPublicQueryService.listFeeds(groupName, query);
     }
 
@@ -134,7 +125,7 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
 
     private Mono<List<LinkFeedVo>> listAllLinkFeeds(ListOptions options, Integer limit) {
         return client.listAll(Link.class, options, defaultLinkSort())
-            .map(link -> {
+            .concatMap(link -> Mono.fromCallable(() -> {
                 LinkFeedVo linkFeed = LinkFeedVo.from(link);
                 LinkFeedItemQuery storeQuery = new LinkFeedItemQuery();
                 storeQuery.setLinkName(link.getMetadata().getName());
@@ -154,7 +145,8 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
                 }
                 linkFeed.setFeeds(linkFeedItemVos);
                 return linkFeed;
-            }).collectList();
+            }).subscribeOn(Schedulers.boundedElastic()))
+            .collectList();
     }
 
     static Comparator<LinkGroup> groupComparator() {
