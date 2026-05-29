@@ -62,5 +62,5 @@ metadata:
     rbac.authorization.halo.run/aggregate-to-anonymous: "true"
 rules:
   - apiGroups: [ "api.link.halo.run" ]
-    resources: [ "links", "linkgroups", "links/random", "links/count" ]
+    resources: [ "links", "linkgroups", "links/random", "links/count", "linkfeeds" ]
     verbs: [ "get", "list" ]
