@@ -1,10 +1,13 @@
 <script lang="ts" setup>
-import { linksConsoleApiClient } from "@/api";
+import { linksConsoleApiClient, linkAiApiClient } from "@/api";
+import type { LinkCommentAnalysisResult, LinkCommentDTO } from "@/api";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
+import MdiCommentTextOutline from "~icons/mdi/comment-text-outline";
+import MdiRobot from "~icons/mdi/robot";
 
 const props = defineProps<{
   name?: string;
@@ -113,6 +116,63 @@ const handleDiscoverFeed = async () => {
 
 const annotationsForm = ref();
 
+// AI comment extraction
+const showAiExtract = shallowRef(false);
+const isLoadingComments = shallowRef(false);
+const isExtracting = shallowRef(false);
+const recentComments = ref<LinkCommentDTO[]>([]);
+const selectedCommentName = shallowRef("");
+const manualCommentText = shallowRef("");
+
+async function handleFetchComments() {
+  if (isLoadingComments.value) return;
+  isLoadingComments.value = true;
+  try {
+    const { data } = await linkAiApiClient.listRecentComments();
+    recentComments.value = data;
+    if (!data.length) {
+      Toast.info("暂无已审核的评论");
+    }
+  } catch {
+    // Halo's API interceptor shows request failure toasts.
+  } finally {
+    isLoadingComments.value = false;
+  }
+}
+
+function selectComment(comment: LinkCommentDTO) {
+  selectedCommentName.value = comment.name;
+  manualCommentText.value = comment.raw || comment.content || "";
+}
+
+async function handleAiExtract() {
+  const content = manualCommentText.value.trim();
+  if (!content) {
+    Toast.error("请选择一条评论或输入评论内容");
+    return;
+  }
+  if (isExtracting.value) return;
+  isExtracting.value = true;
+  try {
+    const { data: result } = await linkAiApiClient.extractFromComment(content);
+    applyExtractedResult(result);
+    Toast.success("AI 识别成功");
+    showAiExtract.value = false;
+  } catch (e: any) {
+    const msg = e?.response?.data?.error || "AI 识别失败，请检查后重试或手动填写";
+    Toast.error(msg);
+  } finally {
+    isExtracting.value = false;
+  }
+}
+
+function applyExtractedResult(result: LinkCommentAnalysisResult) {
+  if (result.url) data.value.url = result.url;
+  if (result.displayName) data.value.displayName = result.displayName;
+  if (result.logo) data.value.logo = result.logo;
+  if (result.description) data.value.description = result.description;
+}
+
 function normalizeFeedUrls(feedUrls: string[]) {
   return [...new Set(feedUrls.map((feedUrl) => feedUrl.trim()).filter(Boolean))];
 }
@@ -175,6 +235,95 @@ async function onSubmit() {
 <template>
   <FormKit id="link-form" name="link-form" type="form" :config="{ validationVisibility: 'submit' }" @submit="onSubmit">
     <div>
+      <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+        <div class=":uno: md:col-span-1">
+          <div class=":uno: sticky top-0">
+            <span class=":uno: text-base text-gray-900 font-medium"> AI 识别 </span>
+          </div>
+        </div>
+        <div class=":uno: mt-5 md:col-span-3 md:mt-0">
+          <div v-if="!showAiExtract" class=":uno: flex items-center gap-2">
+            <VButton size="sm" type="secondary" @click="showAiExtract = true">
+              <template #icon>
+                <MdiRobot class=":uno: size-4" />
+              </template>
+              从评论识别
+            </VButton>
+            <span class=":uno: text-xs text-gray-500">通过 AI 从访客评论中提取友链信息</span>
+          </div>
+          <div v-else class=":uno: space-y-3 rounded-lg bg-gray-50 p-4">
+            <div class=":uno: flex items-center justify-between">
+              <span class=":uno: text-sm font-medium text-gray-900">从评论中识别友链</span>
+              <button
+                type="button"
+                class=":uno: text-xs text-gray-500 hover:text-gray-700"
+                @click="showAiExtract = false"
+              >
+                收起
+              </button>
+            </div>
+
+            <div class=":uno: flex items-center gap-2">
+              <VButton size="sm" :loading="isLoadingComments" @click="handleFetchComments">
+                <template #icon>
+                  <MdiCommentTextOutline class=":uno: size-4" />
+                </template>
+                获取最新评论
+              </VButton>
+            </div>
+
+            <div
+              v-if="recentComments.length"
+              class=":uno: max-h-48 overflow-y-auto space-y-2 rounded border border-gray-200 bg-white p-2"
+            >
+              <div
+                v-for="comment in recentComments"
+                :key="comment.name"
+                class=":uno: cursor-pointer rounded px-2 py-1.5 text-sm transition-colors"
+                :class="selectedCommentName === comment.name ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'"
+                @click="selectComment(comment)"
+              >
+                <div class=":uno: flex items-center gap-2">
+                  <input
+                    type="radio"
+                    :checked="selectedCommentName === comment.name"
+                    class=":uno: cursor-pointer"
+                  />
+                  <span class=":uno: font-medium">{{ comment.ownerName || '匿名' }}</span>
+                  <span class=":uno: text-xs text-gray-400">{{ comment.creationTime ? new Date(comment.creationTime).toLocaleString() : '' }}</span>
+                </div>
+                <div class=":uno: mt-0.5 truncate text-xs text-gray-500">
+                  {{ comment.raw || comment.content }}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class=":uno: block text-xs font-medium text-gray-700 mb-1">评论内容（可手动粘贴或编辑）</label>
+              <textarea
+                v-model="manualCommentText"
+                rows="4"
+                class=":uno: w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="粘贴或编辑评论内容，AI 将从中提取友链信息..."
+              ></textarea>
+            </div>
+
+            <div class=":uno: flex justify-end">
+              <VButton size="sm" type="secondary" :loading="isExtracting" @click="handleAiExtract">
+                <template #icon>
+                  <MdiRobot class=":uno: size-4" />
+                </template>
+                AI 识别
+              </VButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class=":uno: py-5">
+        <div class=":uno: border-t border-gray-200"></div>
+      </div>
+
       <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
         <div class=":uno: md:col-span-1">
           <div class=":uno: sticky top-0">

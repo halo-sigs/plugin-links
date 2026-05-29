@@ -6,6 +6,8 @@ metadata:
     "store.halo.run/app-id": "app-hfbQg"
 spec:
   requires: ">=2.22.5"
+  pluginDependencies:
+    ai-foundation: "*"
   author:
     name: Halo
     website: https://github.com/halo-dev
