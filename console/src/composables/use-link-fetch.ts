@@ -19,9 +19,6 @@ export interface GroupWithLinks {
 }
 
 function groupLinks(groups: LinkGroup[], links: Link[]) {
-  if (!links.length) {
-    return [{ links: [] }];
-  }
 
   const groupNames = groups.map((group) => group.metadata.name);
 
