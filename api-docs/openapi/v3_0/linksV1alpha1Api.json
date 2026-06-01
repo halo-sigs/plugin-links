@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:64999",
+    "url" : "http://localhost:62059",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -13,6 +13,62 @@
     "bearerAuth" : [ ]
   } ],
   "paths" : {
+    "/apis/api.link.halo.run/v1alpha1/linkfeeds" : {
+      "get" : {
+        "description" : "List public RSS or Atom feed items with cursor pagination.",
+        "operationId" : "queryLinkFeedItems",
+        "parameters" : [ {
+          "description" : "Filter items by link metadata name.",
+          "in" : "query",
+          "name" : "linkName",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Filter items by current link group metadata name.",
+          "in" : "query",
+          "name" : "groupName",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Cursor published time boundary.",
+          "in" : "query",
+          "name" : "beforePublishedAt",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Cursor stable item id boundary.",
+          "in" : "query",
+          "name" : "beforeId",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of items to return.",
+          "in" : "query",
+          "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedItemPageVo"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
     "/apis/api.link.halo.run/v1alpha1/linkgroups" : {
       "get" : {
         "description" : "List public link groups for themes, sorted by group priority.",
@@ -155,6 +211,167 @@
           }
         },
         "tags" : [ "api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications" : {
+      "get" : {
+        "description" : "List link applications with optional status filter.",
+        "operationId" : "listLinkApplications",
+        "parameters" : [ {
+          "description" : "Filter by application status.",
+          "in" : "query",
+          "name" : "status",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationList"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}" : {
+      "delete" : {
+        "description" : "Delete a link application.",
+        "operationId" : "deleteLinkApplication",
+        "parameters" : [ {
+          "description" : "Metadata name of the link application to delete.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      },
+      "get" : {
+        "description" : "Get a link application by metadata name.",
+        "operationId" : "getLinkApplication",
+        "parameters" : [ {
+          "description" : "Metadata name of the link application.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplication"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/approve" : {
+      "post" : {
+        "description" : "Approve a link application, creating a Link.",
+        "operationId" : "approveLinkApplication",
+        "parameters" : [ {
+          "description" : "Metadata name of the link application to approve.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "description" : "Approval request with optional field overrides and group assignment."
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Link"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/reject" : {
+      "post" : {
+        "description" : "Reject a link application.",
+        "operationId" : "rejectLinkApplication",
+        "parameters" : [ {
+          "description" : "Metadata name of the link application to reject.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/verify" : {
+      "post" : {
+        "description" : "Manually verify the backlink for a link application.",
+        "operationId" : "verifyBacklink",
+        "parameters" : [ {
+          "description" : "Metadata name of the link application.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VerifyResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
       }
     },
     "/apis/console.api.link.halo.run/v1alpha1/linkgroups/-/sort" : {
@@ -1119,6 +1336,26 @@
           }
         }
       },
+      "ApproveRequest" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "groupName" : {
+            "type" : "string"
+          },
+          "logo" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        }
+      },
       "BacklinkStatus" : {
         "type" : "object",
         "properties" : {
@@ -1252,6 +1489,121 @@
         },
         "description" : "Link extension that represents one website entry displayed by the Links plugin."
       },
+      "LinkApplication" : {
+        "required" : [ "apiVersion", "kind", "metadata", "spec" ],
+        "type" : "object",
+        "properties" : {
+          "apiVersion" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/Metadata"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/LinkApplicationSpec"
+          }
+        },
+        "description" : "Link application extension that represents a pending link submission."
+      },
+      "LinkApplicationList" : {
+        "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "first" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page is the first page."
+          },
+          "hasNext" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page has previous page."
+          },
+          "hasPrevious" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page has previous page."
+          },
+          "items" : {
+            "type" : "array",
+            "description" : "A chunk of items.",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkApplication"
+            }
+          },
+          "last" : {
+            "type" : "boolean",
+            "description" : "Indicates whether current page is the last page."
+          },
+          "page" : {
+            "type" : "integer",
+            "description" : "Page number, starts from 1. If not set or equal to 0, it means no pagination.",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "description" : "Size of each page. If not set or equal to 0, it means no pagination.",
+            "format" : "int32"
+          },
+          "total" : {
+            "type" : "integer",
+            "description" : "Total elements.",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "description" : "Indicates total pages.",
+            "format" : "int64"
+          }
+        }
+      },
+      "LinkApplicationSpec" : {
+        "required" : [ "displayName", "status", "url" ],
+        "type" : "object",
+        "properties" : {
+          "backlink" : {
+            "pattern" : "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$",
+            "type" : "string",
+            "description" : "Absolute URL of the backlink page on the applicant's site.",
+            "format" : "uri"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Short text that introduces the linked website."
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Human-readable name displayed for the link."
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Contact email of the applicant."
+          },
+          "feedUrls" : {
+            "type" : "array",
+            "description" : "RSS or Atom feed URLs of the applicant's site.",
+            "items" : {
+              "pattern" : "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$",
+              "type" : "string",
+              "format" : "uri"
+            }
+          },
+          "logo" : {
+            "type" : "string",
+            "description" : "Logo or icon URL displayed with the link."
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Application status.",
+            "enum" : [ "PENDING", "APPROVED", "REJECTED" ]
+          },
+          "url" : {
+            "type" : "string",
+            "description" : "Absolute URL that the link points to."
+          }
+        },
+        "description" : "Configurable fields of a link application."
+      },
       "LinkDetailDTO" : {
         "type" : "object",
         "properties" : {
@@ -1370,6 +1722,71 @@
             "type" : "string"
           }
         }
+      },
+      "LinkFeedItemPageVo" : {
+        "type" : "object",
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkFeedItemVo"
+            }
+          },
+          "nextBeforeId" : {
+            "type" : "string"
+          },
+          "nextBeforePublishedAt" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkFeedItemVo" : {
+        "type" : "object",
+        "properties" : {
+          "author" : {
+            "type" : "string"
+          },
+          "authorLogo" : {
+            "type" : "string"
+          },
+          "authorUrl" : {
+            "type" : "string"
+          },
+          "feedUrl" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "linkName" : {
+            "type" : "string"
+          },
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "description" : "Public view of a link feed returned by theme-facing APIs and finder APIs."
       },
       "LinkFeedMarkReadResult" : {
         "type" : "object",
@@ -1714,6 +2131,9 @@
           },
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/LinkStatus"
           }
         },
         "description" : "Public view of a link returned by theme-facing APIs and finder APIs."
@@ -2056,6 +2476,17 @@
           }
         },
         "description" : "Observed link verification state."
+      },
+      "VerifyResult" : {
+        "type" : "object",
+        "properties" : {
+          "found" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        }
       }
     },
     "securitySchemes" : {

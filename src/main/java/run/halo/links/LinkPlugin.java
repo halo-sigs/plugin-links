@@ -10,6 +10,7 @@ import run.halo.app.extension.SchemeManager;
 import run.halo.app.plugin.BasePlugin;
 import run.halo.app.plugin.PluginContext;
 import run.halo.links.extension.Link;
+import run.halo.links.extension.LinkApplication;
 import run.halo.links.extension.LinkGroup;
 
 /**
@@ -60,11 +61,24 @@ public class LinkPlugin extends BasePlugin {
                 .indexFunc(group -> group.getSpec().getPriority())
             );
         });
+        schemeManager.register(LinkApplication.class, indexSpecs -> {
+            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.url", String.class)
+                .indexFunc(app -> app.getSpec().getUrl())
+            );
+            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.displayName", String.class)
+                .indexFunc(app -> app.getSpec().getDisplayName())
+            );
+            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.status", String.class)
+                .indexFunc(app -> app.getSpec().getStatus() != null
+                    ? app.getSpec().getStatus().name() : null)
+            );
+        });
     }
 
     @Override
     public void stop() {
         schemeManager.unregister(Scheme.buildFromType(Link.class));
         schemeManager.unregister(Scheme.buildFromType(LinkGroup.class));
+        schemeManager.unregister(Scheme.buildFromType(LinkApplication.class));
     }
 }

@@ -37,7 +37,7 @@ metadata:
       ["role-template-link-view"]
 rules:
   - apiGroups: [ "core.halo.run", "console.api.link.halo.run" ]
-    resources: [ "links", "linkgroups" ]
+    resources: [ "links", "linkgroups", "linkapplications" ]
     verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "links/sort", "linkgroups/sort" ]

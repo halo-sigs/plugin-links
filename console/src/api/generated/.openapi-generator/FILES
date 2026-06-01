@@ -3,8 +3,10 @@
 .openapi-generator-ignore
 api.ts
 api/api-link-halo-run-v1alpha1-link-api.ts
+api/api-link-halo-run-v1alpha1-link-feed-api.ts
 api/api-link-halo-run-v1alpha1-link-group-api.ts
 api/console-api-link-halo-run-v1alpha1-link-api.ts
+api/console-api-link-halo-run-v1alpha1-link-application-api.ts
 api/console-api-link-halo-run-v1alpha1-link-feed-api.ts
 api/console-api-link-halo-run-v1alpha1-link-group-api.ts
 api/link-group-v1alpha1-api.ts
@@ -16,15 +18,21 @@ git_push.sh
 index.ts
 models/access-status.ts
 models/add-operation.ts
+models/approve-request.ts
 models/backlink-status.ts
 models/copy-operation.ts
 models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
+models/link-application-list.ts
+models/link-application-spec.ts
+models/link-application.ts
 models/link-detail-dto.ts
 models/link-feed-cleanup-result.ts
 models/link-feed-discovery-result.ts
+models/link-feed-item-page-vo.ts
 models/link-feed-item-page.ts
+models/link-feed-item-vo.ts
 models/link-feed-item.ts
 models/link-feed-mark-read-result.ts
 models/link-feed-refresh-result.ts
@@ -52,3 +60,4 @@ models/sort-request.ts
 models/test-operation.ts
 models/verification-spec.ts
 models/verification-status.ts
+models/verify-result.ts
