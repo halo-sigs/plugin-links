@@ -356,6 +356,43 @@ class DefaultLinkFeedServiceTest {
     }
 
     @Test
+    void shouldLimitFetchedItemsPerFeed() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml");
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.upsertAll(anyList())).thenReturn(20);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(20L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXmlWithItemCount(25)));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> {
+                assertThat(result.getFetchedItemCount()).isEqualTo(20);
+                assertThat(result.getItemCount()).isEqualTo(20);
+            })
+            .verifyComplete();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<LinkFeedItem>> itemsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(itemStore).upsertAll(itemsCaptor.capture());
+        assertThat(itemsCaptor.getValue())
+            .hasSize(20)
+            .extracting(LinkFeedItem::getTitle)
+            .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 20)
+                .mapToObj(index -> "Post " + index)
+                .toList());
+    }
+
+    @Test
     void shouldUpdatePerFeedFailureStatusWhenRefreshFails() {
         ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
         LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
@@ -876,6 +913,31 @@ class DefaultLinkFeedServiceTest {
               </channel>
             </rss>
             """;
+    }
+
+    private static String feedXmlWithItemCount(int itemCount) {
+        StringBuilder items = new StringBuilder();
+        for (int i = 1; i <= itemCount; i++) {
+            items.append("""
+                <item>
+                  <guid>post-%d</guid>
+                  <title>Post %d</title>
+                  <link>https://example.com/post-%d</link>
+                  <description>Summary %d</description>
+                  <pubDate>Wed, 20 May 2026 10:00:00 GMT</pubDate>
+                </item>
+                """.formatted(i, i, i, i));
+        }
+        return """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0">
+              <channel>
+                <title>Example</title>
+                <link>https://example.com</link>
+            %s
+              </channel>
+            </rss>
+            """.formatted(items);
     }
 
     private static SafeUrlFetcher.FetchResult feedResult(String url, int statusCode, String body)

@@ -40,7 +40,7 @@ import run.halo.links.extension.Link;
 @Slf4j
 public class DefaultLinkFeedService implements LinkFeedService {
 
-    private static final int MAX_ITEMS_PER_FETCH = 100;
+    private static final int MAX_ITEMS_PER_FETCH = 20;
     private static final int MAX_SUMMARY_LENGTH = 500;
     private static final String INVALID_FEED_URL_MESSAGE =
         "RSS feed URL must be an absolute HTTP or HTTPS URL.";
