@@ -10,6 +10,7 @@ public class LinkFeedRefreshSettings {
     static final int DEFAULT_MAX_LINKS_PER_RUN = 50;
 
     private Boolean enabled;
+    private Boolean publicEnabled;
     private Integer intervalHours;
     private Integer maxLinksPerRun;
 
@@ -20,6 +21,7 @@ public class LinkFeedRefreshSettings {
     LinkFeedRefreshSettings normalized() {
         LinkFeedRefreshSettings settings = new LinkFeedRefreshSettings();
         settings.setEnabled(automaticRefreshEnabled());
+        settings.setPublicEnabled(publicFeedEnabled());
         settings.setIntervalHours(positiveOrDefault(intervalHours, DEFAULT_INTERVAL_HOURS));
         settings.setMaxLinksPerRun(positiveOrDefault(maxLinksPerRun, DEFAULT_MAX_LINKS_PER_RUN));
         return settings;
@@ -27,6 +29,10 @@ public class LinkFeedRefreshSettings {
 
     boolean automaticRefreshEnabled() {
         return enabled == null || Boolean.TRUE.equals(enabled);
+    }
+
+    boolean publicFeedEnabled() {
+        return Boolean.TRUE.equals(publicEnabled);
     }
 
     Duration interval() {

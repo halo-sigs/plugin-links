@@ -13,6 +13,62 @@
     "bearerAuth" : [ ]
   } ],
   "paths" : {
+    "/apis/api.link.halo.run/v1alpha1/linkfeeds" : {
+      "get" : {
+        "description" : "List public RSS or Atom feed items with cursor pagination. Requires public RSS feed queries to be enabled in plugin settings.",
+        "operationId" : "queryLinkFeedItems",
+        "parameters" : [ {
+          "description" : "Filter items by link metadata name.",
+          "in" : "query",
+          "name" : "linkName",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Filter items by current link group metadata name.",
+          "in" : "query",
+          "name" : "groupName",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Cursor published time boundary.",
+          "in" : "query",
+          "name" : "beforePublishedAt",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Cursor stable item id boundary.",
+          "in" : "query",
+          "name" : "beforeId",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of items to return.",
+          "in" : "query",
+          "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedItemPageVo"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
     "/apis/api.link.halo.run/v1alpha1/linkgroups" : {
       "get" : {
         "description" : "List public link groups for themes, sorted by group priority.",
@@ -1371,6 +1427,68 @@
           }
         }
       },
+      "LinkFeedItemPageVo" : {
+        "type" : "object",
+        "properties" : {
+          "hasNext" : {
+            "type" : "boolean"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkFeedItemVo"
+            }
+          },
+          "nextBeforeId" : {
+            "type" : "string"
+          },
+          "nextBeforePublishedAt" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkFeedItemVo" : {
+        "type" : "object",
+        "properties" : {
+          "author" : {
+            "type" : "string"
+          },
+          "authorLogo" : {
+            "type" : "string"
+          },
+          "authorUrl" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "linkName" : {
+            "type" : "string"
+          },
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "description" : "Public view of a link feed returned by theme-facing APIs and finder APIs."
+      },
       "LinkFeedMarkReadResult" : {
         "type" : "object",
         "properties" : {
@@ -1714,6 +1832,9 @@
           },
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/LinkStatus"
           }
         },
         "description" : "Public view of a link returned by theme-facing APIs and finder APIs."

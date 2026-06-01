@@ -183,6 +183,8 @@ Finder API 由两个独立对象提供，可在主题模板的任意位置使用
 
 `linkFeedFinder` 对应当前实现中的 `@Finder("linkFeedFinder")`，用于查询已抓取的链接 RSS 条目。它不返回普通的 `LinkVo` 分组，而是返回 RSS 条目分页或带 `feeds` 的 `LinkFeedVo` 分组。
 
+此 Finder 默认不公开数据。需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，`linkFeedFinder.list(params)` 才会返回条目，`linkFeedFinder.groupBy(limit)` 才会返回分组。关闭时，前者返回空分页，后者返回空列表。公开返回值不会包含 RSS 订阅地址。
+
 #### linkFeedFinder.list(params)
 
 获取 RSS 条目分页。
@@ -451,7 +453,6 @@ linkFeedFinder.list({
 {
   "id": "string",
   "linkName": "string",
-  "feedUrl": "string",
   "url": "string",
   "title": "string",
   "summary": "string",
@@ -480,7 +481,10 @@ linkFeedFinder.list({
     "logo": "string",
     "description": "string",
     "priority": 0,
-    "groupName": "string"
+    "groupName": "string",
+    "rss": {
+      "enabled": true
+    }
   },
   "status": {
     "rss": {
@@ -492,7 +496,6 @@ linkFeedFinder.list({
       "itemCount": 0,
       "feeds": [
         {
-          "url": "string",
           "lastFetchedAt": "2022-11-20T13:06:38.512Z",
           "lastSuccessAt": "2022-11-20T13:06:38.512Z",
           "lastError": "string",
@@ -527,6 +530,8 @@ linkFeedFinder.list({
   "feeds": []
 }
 ```
+
+> `LinkFeedVo` 会保留链接状态字段，但不会公开 RSS 订阅地址：`spec.rss.feedUrls` 和 `status.rss.feeds[].url` 会被清理。
 
 ### LinkFeedItemPageVo
 

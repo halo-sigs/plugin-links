@@ -37,7 +37,8 @@ public class LinkFeedQueryEndpoint implements CustomEndpoint {
         return route()
             .GET("linkfeeds", this::listFeedItems,
                 builder -> builder.operationId("queryLinkFeedItems")
-                    .description("List public RSS or Atom feed items with cursor pagination.")
+                    .description("List public RSS or Atom feed items with cursor pagination. "
+                        + "Requires public RSS feed queries to be enabled in plugin settings.")
                     .tag(tag)
                     .parameter(parameterBuilder()
                         .name("linkName")
@@ -81,6 +82,13 @@ public class LinkFeedQueryEndpoint implements CustomEndpoint {
 
 
     private Mono<ServerResponse> listFeedItems(ServerRequest request) {
+        return linkFeedPublicQueryService.isPublicEnabled()
+            .flatMap(enabled -> enabled
+                ? listFeedItemsWhenEnabled(request)
+                : ServerResponse.notFound().build());
+    }
+
+    private Mono<ServerResponse> listFeedItemsWhenEnabled(ServerRequest request) {
         String groupName = request.queryParam("groupName")
             .filter(StringUtils::hasText)
             .orElse(null);

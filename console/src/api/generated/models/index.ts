@@ -10,6 +10,8 @@ export * from './link-feed-cleanup-result';
 export * from './link-feed-discovery-result';
 export * from './link-feed-item';
 export * from './link-feed-item-page';
+export * from './link-feed-item-page-vo';
+export * from './link-feed-item-vo';
 export * from './link-feed-mark-read-result';
 export * from './link-feed-refresh-result';
 export * from './link-feed-unread-summary';

@@ -20,13 +20,15 @@ https://raw.githubusercontent.com/halo-sigs/plugin-links/refs/heads/main/api-doc
 | `/apis/api.link.halo.run/v1alpha1/links/-/random` | `GET` | 随机返回一组链接；必填查询参数 `maxSize`，取值范围为 `1` 到 `100`                                              |
 | `/apis/api.link.halo.run/v1alpha1/links/-/count` | `GET` | 返回链接总数                                                                                   |
 | `/apis/api.link.halo.run/v1alpha1/linkgroups` | `GET` | 返回所有链接分组数组，按 `spec.priority`、创建时间、`metadata.name` 升序排列                                   |
-| `/apis/api.link.halo.run/v1alpha1/linkfeeds` | `GET` | 查询列表链接RSS，支持 `linkName`、`groupName`、`beforePublishedAt`、`beforeId`、`limit` 查询参数 |
+| `/apis/api.link.halo.run/v1alpha1/linkfeeds` | `GET` | 查询链接 RSS 条目，支持 `linkName`、`groupName`、`beforePublishedAt`、`beforeId`、`limit` 查询参数；默认关闭，需要在插件设置中开启“公开 RSS 订阅动态” |
 
 ### 匿名访问说明
 
 插件内置了 `role-template-link-anonymous` 角色模板，会自动聚合到匿名角色（`rbac.authorization.halo.run/aggregate-to-anonymous: "true"`），因此上述端点无需登录即可访问。
 
 该角色**不会**授予 `console.api.link.halo.run` 或 `core.halo.run` 的访问权限，Console API 和标准 CRUD 端点仍需认证。
+
+`linkfeeds` 会公开已抓取的 RSS 条目内容，因此默认关闭。站点管理员需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，匿名访问者和主题才能读取该接口。公开返回值不会包含 RSS 订阅地址。
 
 ### 排序说明
 
