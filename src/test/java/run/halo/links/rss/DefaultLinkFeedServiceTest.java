@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,7 +21,9 @@ import java.util.List;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ServerErrorException;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.app.extension.Metadata;
@@ -390,6 +393,45 @@ class DefaultLinkFeedServiceTest {
             .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 20)
                 .mapToObj(index -> "Post " + index)
                 .toList());
+    }
+
+    @Test
+    void shouldRetryStatusUpdateWithLatestLinkWhenConflict() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link initialLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link firstUpdateLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link retryUpdateLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link.VerificationStatus verification = new Link.VerificationStatus();
+        verification.setLastCheckedAt(Instant.parse("2026-05-20T11:00:00Z"));
+        retryUpdateLink.getStatus().setVerification(verification);
+
+        when(client.fetch(Link.class, "link-a"))
+            .thenReturn(Mono.just(initialLink), Mono.just(firstUpdateLink),
+                Mono.just(retryUpdateLink));
+        when(client.update(any(Link.class)))
+            .thenReturn(Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "conflict")),
+                Mono.just(retryUpdateLink));
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXml()));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> assertThat(result.getFetchedItemCount()).isEqualTo(1))
+            .verifyComplete();
+
+        ArgumentCaptor<Link> linkCaptor = ArgumentCaptor.forClass(Link.class);
+        verify(client, times(2)).update(linkCaptor.capture());
+        assertThat(linkCaptor.getAllValues().getLast().getStatus().getVerification())
+            .isSameAs(verification);
+        assertThat(linkCaptor.getAllValues().getLast().getStatus().getRss())
+            .isNotNull();
     }
 
     @Test
