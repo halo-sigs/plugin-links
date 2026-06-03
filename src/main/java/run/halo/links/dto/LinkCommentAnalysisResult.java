@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param displayName the website name extracted from the comment
  * @param logo        the logo URL extracted from the comment, if any
  * @param description the website description extracted from the comment, if any
+ * @param rssUrl      the RSS feed URL extracted from the comment, if any
  */
 public record LinkCommentAnalysisResult(
     @Schema(description = "Website URL extracted from the comment")
@@ -21,6 +22,9 @@ public record LinkCommentAnalysisResult(
     String logo,
 
     @Schema(description = "Website description extracted from the comment, if any")
-    String description
+    String description,
+
+    @Schema(description = "RSS feed URL extracted from the comment, if any")
+    String rssUrl
 ) {
 }

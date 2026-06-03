@@ -2,7 +2,8 @@
 import { linksConsoleApiClient, linkAiApiClient } from "@/api";
 import type { LinkCommentAnalysisResult, LinkCommentDTO } from "@/api";
 import type { LinkFormState } from "@/types";
-import { Toast, VButton, VLoading } from "@halo-dev/components";
+import { IconCloseLine, Toast, VButton, VLoading } from "@halo-dev/components";
+import { utils } from "@halo-dev/ui-shared";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
@@ -171,6 +172,12 @@ function applyExtractedResult(result: LinkCommentAnalysisResult) {
   if (result.displayName) data.value.displayName = result.displayName;
   if (result.logo) data.value.logo = result.logo;
   if (result.description) data.value.description = result.description;
+  if (result.rssUrl) {
+    data.value.rss.enabled = true;
+    const merged = mergeFeedUrls(data.value.rss.feedUrls, [result.rssUrl]);
+    data.value.rss.feedUrls = merged;
+    rssFeedUrlsText.value = feedUrlsToText(merged);
+  }
 }
 
 function normalizeFeedUrls(feedUrls: string[]) {
@@ -251,60 +258,85 @@ async function onSubmit() {
             </VButton>
             <span class=":uno: text-xs text-gray-500">通过 AI 从访客评论中提取友链信息</span>
           </div>
-          <div v-else class=":uno: space-y-3 rounded-lg bg-gray-50 p-4">
+          <div v-else class=":uno: space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div class=":uno: flex items-center justify-between">
-              <span class=":uno: text-sm font-medium text-gray-900">从评论中识别友链</span>
+              <div class=":uno: flex items-center gap-2">
+                <MdiRobot class=":uno: size-5 text-blue-600" />
+                <span class=":uno: text-sm font-semibold text-gray-900">从评论识别友链</span>
+              </div>
               <button
                 type="button"
-                class=":uno: text-xs text-gray-500 hover:text-gray-700"
+                class=":uno: flex items-center justify-center rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                 @click="showAiExtract = false"
               >
-                收起
+                <IconCloseLine class=":uno: size-4" />
               </button>
             </div>
 
-            <div class=":uno: flex items-center gap-2">
-              <VButton size="sm" :loading="isLoadingComments" @click="handleFetchComments">
-                <template #icon>
-                  <MdiCommentTextOutline class=":uno: size-4" />
-                </template>
-                获取最新评论
-              </VButton>
+            <p class=":uno: text-xs text-gray-500">
+              从已审核的评论中提取网站地址、名称、Logo、描述和 RSS 订阅地址。
+            </p>
+
+            <VButton size="sm" :loading="isLoadingComments" @click="handleFetchComments">
+              <template #icon>
+                <MdiCommentTextOutline class=":uno: size-4" />
+              </template>
+              获取最新评论
+            </VButton>
+
+            <div v-if="isLoadingComments" class=":uno: flex justify-center py-6">
+              <VLoading class=":uno: size-5 text-gray-400" />
             </div>
 
             <div
-              v-if="recentComments.length"
-              class=":uno: max-h-48 overflow-y-auto space-y-2 rounded border border-gray-200 bg-white p-2"
+              v-else-if="recentComments.length"
+              class=":uno: max-h-52 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100"
             >
               <div
                 v-for="comment in recentComments"
                 :key="comment.name"
-                class=":uno: cursor-pointer rounded px-2 py-1.5 text-sm transition-colors"
-                :class="selectedCommentName === comment.name ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'"
+                class=":uno: cursor-pointer px-3 py-2.5 transition-colors"
+                :class="selectedCommentName === comment.name ? 'bg-blue-50/60' : 'hover:bg-gray-50'"
                 @click="selectComment(comment)"
               >
-                <div class=":uno: flex items-center gap-2">
-                  <input
-                    type="radio"
-                    :checked="selectedCommentName === comment.name"
-                    class=":uno: cursor-pointer"
-                  />
-                  <span class=":uno: font-medium">{{ comment.ownerName || '匿名' }}</span>
-                  <span class=":uno: text-xs text-gray-400">{{ comment.creationTime ? new Date(comment.creationTime).toLocaleString() : '' }}</span>
+                <div class=":uno: flex items-center justify-between gap-2">
+                  <div class=":uno: flex items-center gap-2 min-w-0">
+                    <span
+                      class=":uno: inline-block size-2 flex-none rounded-full"
+                      :class="selectedCommentName === comment.name ? 'bg-blue-500' : 'bg-gray-300'"
+                    ></span>
+                    <span class=":uno: text-sm font-medium text-gray-900 truncate">
+                      {{ comment.ownerName || '匿名' }}
+                    </span>
+                  </div>
+                  <span class=":uno: text-xs text-gray-400 flex-none">
+                    {{ utils.date.timeAgo(comment.creationTime) }}
+                  </span>
                 </div>
-                <div class=":uno: mt-0.5 truncate text-xs text-gray-500">
+                <p class=":uno: mt-1 text-xs text-gray-500 line-clamp-2 pl-4">
                   {{ comment.raw || comment.content }}
-                </div>
+                </p>
               </div>
             </div>
 
+            <div
+              v-else
+              class=":uno: rounded-lg border border-dashed border-gray-200 py-5 text-center"
+            >
+              <p class=":uno: text-sm text-gray-400">暂无已审核的评论</p>
+              <p class=":uno: mt-1 text-xs text-gray-400">可手动在下方粘贴评论内容</p>
+            </div>
+
             <div>
-              <label class=":uno: block text-xs font-medium text-gray-700 mb-1">评论内容（可手动粘贴或编辑）</label>
+              <label class=":uno: block text-xs font-medium text-gray-700 mb-1.5">
+                评论内容
+                <span class=":uno: font-normal text-gray-400">（可手动粘贴或编辑）</span>
+              </label>
               <textarea
                 v-model="manualCommentText"
-                rows="4"
-                class=":uno: w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="粘贴或编辑评论内容，AI 将从中提取友链信息..."
+                rows="3"
+                class=":uno: w-full rounded-lg border border-gray-200 px-3 py-2 text-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                placeholder="选择上方评论或手动粘贴内容，AI 将从中提取友链信息..."
               ></textarea>
             </div>
 
