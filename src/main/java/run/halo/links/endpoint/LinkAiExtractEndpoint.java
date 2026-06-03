@@ -6,6 +6,7 @@ import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -30,6 +31,7 @@ import run.halo.links.dto.LinkCommentAnalysisResult;
  */
 @Component
 @RequiredArgsConstructor
+@Conditional(AiFoundationAvailableCondition.class)
 public class LinkAiExtractEndpoint implements CustomEndpoint {
 
     private final ExtensionGetter extensionGetter;

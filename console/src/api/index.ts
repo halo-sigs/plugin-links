@@ -38,6 +38,7 @@ export interface LinkCommentAnalysisResult {
   displayName: string;
   logo?: string;
   description?: string;
+  rssUrl?: string;
 }
 
 const linkAiApiClient = {
