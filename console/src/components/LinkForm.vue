@@ -1,8 +1,9 @@
 <script lang="ts" setup>
+import type { LinkCommentAnalysisResult } from "@/api";
 import { linksConsoleApiClient, linkAiApiClient } from "@/api";
-import type { LinkCommentAnalysisResult, LinkCommentDTO } from "@/api";
+import type { LinkCommentDTO } from "@/api/generated";
 import type { LinkFormState } from "@/types";
-import { IconCloseLine, Toast, VButton, VLoading } from "@halo-dev/components";
+import { IconClose, Toast, VButton, VLoading } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
@@ -122,14 +123,14 @@ const showAiExtract = shallowRef(false);
 const isLoadingComments = shallowRef(false);
 const isExtracting = shallowRef(false);
 const recentComments = ref<LinkCommentDTO[]>([]);
-const selectedCommentName = shallowRef("");
+const selectedCommentName = shallowRef<string | undefined>(undefined);
 const manualCommentText = shallowRef("");
 
 async function handleFetchComments() {
   if (isLoadingComments.value) return;
   isLoadingComments.value = true;
   try {
-    const { data } = await linkAiApiClient.listRecentComments();
+    const { data } = await linkAiApiClient.ai.listRecentComments();
     recentComments.value = data;
     if (!data.length) {
       Toast.info("暂无已审核的评论");
@@ -269,7 +270,7 @@ async function onSubmit() {
                 class=":uno: flex items-center justify-center rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                 @click="showAiExtract = false"
               >
-                <IconCloseLine class=":uno: size-4" />
+                <IconClose class=":uno: size-4" />
               </button>
             </div>
 

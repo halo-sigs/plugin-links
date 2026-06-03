@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:64999",
+    "url" : "http://localhost:51338",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -320,6 +320,28 @@
           }
         },
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/recent-comments" : {
+      "get" : {
+        "description" : "List the 10 most recent approved comments for friend-link extraction.",
+        "operationId" : "listRecentComments",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkCommentDTO"
+                  }
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkAi" ]
       }
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/sort" : {
@@ -1252,6 +1274,36 @@
         },
         "description" : "Link extension that represents one website entry displayed by the Links plugin."
       },
+      "LinkCommentDTO" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string",
+            "description" : "Rendered HTML content"
+          },
+          "creationTime" : {
+            "type" : "string",
+            "description" : "Comment creation time",
+            "format" : "date-time"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Metadata name of the comment"
+          },
+          "ownerEmail" : {
+            "type" : "string",
+            "description" : "Comment owner email"
+          },
+          "ownerName" : {
+            "type" : "string",
+            "description" : "Comment owner display name"
+          },
+          "raw" : {
+            "type" : "string",
+            "description" : "Raw comment content submitted by the owner"
+          }
+        }
+      },
       "LinkDetailDTO" : {
         "type" : "object",
         "properties" : {
@@ -1714,6 +1766,9 @@
           },
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/LinkStatus"
           }
         },
         "description" : "Public view of a link returned by theme-facing APIs and finder APIs."
