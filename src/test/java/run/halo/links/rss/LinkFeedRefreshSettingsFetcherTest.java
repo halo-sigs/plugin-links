@@ -27,6 +27,7 @@ class LinkFeedRefreshSettingsFetcherTest {
         StepVerifier.create(fetcher.fetch())
             .assertNext(settings -> {
                 assertThat(settings.automaticRefreshEnabled()).isTrue();
+                assertThat(settings.publicFeedEnabled()).isFalse();
                 assertThat(settings.interval().toHours()).isEqualTo(1);
                 assertThat(settings.maxLinksPerRun()).isEqualTo(50);
             })

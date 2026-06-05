@@ -59,3 +59,8 @@ spec:
           name: maxLinksPerRun
           validation: required|number|min:1
           value: 50
+        - $formkit: checkbox
+          label: 公开 RSS 订阅动态
+          name: publicEnabled
+          value: false
+          help: 部分主题可能需要显示 RSS 订阅信息，开启后匿名访问者和主题可以读取已抓取的 RSS 条目，请确认风险之后再决定是否开启
