@@ -1,5 +1,4 @@
 import { axiosInstance } from "@halo-dev/api-client";
-import type { AxiosResponse } from "axios";
 import {
   ApiLinkHaloRunV1alpha1LinkGroupApi,
   ConsoleApiLinkHaloRunV1alpha1LinkAiApi,
@@ -27,20 +26,6 @@ const linksConsoleApiClient = {
 
 const linkAiApiClient = {
   ai: new ConsoleApiLinkHaloRunV1alpha1LinkAiApi(undefined, "", axiosInstance),
-  extractFromComment(content: string): Promise<AxiosResponse<LinkCommentAnalysisResult>> {
-    return axiosInstance.post(
-      "/apis/console.api.link.halo.run/v1alpha1/links/-/ai-extract",
-      { content }
-    );
-  },
 };
 
-export interface LinkCommentAnalysisResult {
-  url: string;
-  displayName: string;
-  logo?: string;
-  description?: string;
-  rssUrl?: string;
-}
-
-export { linksConsoleApiClient, linksCoreApiClient, linksPublicApiClient, linkAiApiClient };
+export { linkAiApiClient, linksConsoleApiClient, linksCoreApiClient, linksPublicApiClient };

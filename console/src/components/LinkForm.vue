@@ -1,15 +1,14 @@
 <script lang="ts" setup>
-import type { LinkCommentAnalysisResult } from "@/api";
-import { linksConsoleApiClient, linkAiApiClient } from "@/api";
-import type { LinkCommentDTO } from "@/api/generated";
+import { linkAiApiClient, linksConsoleApiClient } from "@/api";
+import type { LinkCommentAnalysisResult, LinkCommentDTO } from "@/api/generated";
 import type { LinkFormState } from "@/types";
 import { IconClose, Toast, VButton, VLoading } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
 import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
-import MdiWebRefresh from "~icons/mdi/web-refresh";
-import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import MdiCommentTextOutline from "~icons/mdi/comment-text-outline";
 import MdiRobot from "~icons/mdi/robot";
+import MdiWebRefresh from "~icons/mdi/web-refresh";
+import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 
 const props = defineProps<{
   name?: string;
@@ -156,13 +155,12 @@ async function handleAiExtract() {
   if (isExtracting.value) return;
   isExtracting.value = true;
   try {
-    const { data: result } = await linkAiApiClient.extractFromComment(content);
+    const { data: result } = await linkAiApiClient.ai.extractLinkFromComment({
+      body: content,
+    });
     applyExtractedResult(result);
     Toast.success("AI 识别成功");
     showAiExtract.value = false;
-  } catch (e: any) {
-    const msg = e?.response?.data?.error || "AI 识别失败，请检查后重试或手动填写";
-    Toast.error(msg);
   } finally {
     isExtracting.value = false;
   }
@@ -274,9 +272,7 @@ async function onSubmit() {
               </button>
             </div>
 
-            <p class=":uno: text-xs text-gray-500">
-              从已审核的评论中提取网站地址、名称、Logo、描述和 RSS 订阅地址。
-            </p>
+            <p class=":uno: text-xs text-gray-500">从已审核的评论中提取网站地址、名称、Logo、描述和 RSS 订阅地址。</p>
 
             <VButton size="sm" :loading="isLoadingComments" @click="handleFetchComments">
               <template #icon>
@@ -307,7 +303,7 @@ async function onSubmit() {
                       :class="selectedCommentName === comment.name ? 'bg-blue-500' : 'bg-gray-300'"
                     ></span>
                     <span class=":uno: text-sm font-medium text-gray-900 truncate">
-                      {{ comment.ownerName || '匿名' }}
+                      {{ comment.ownerName || "匿名" }}
                     </span>
                   </div>
                   <span class=":uno: text-xs text-gray-400 flex-none">
@@ -320,10 +316,7 @@ async function onSubmit() {
               </div>
             </div>
 
-            <div
-              v-else
-              class=":uno: rounded-lg border border-dashed border-gray-200 py-5 text-center"
-            >
+            <div v-else class=":uno: rounded-lg border border-dashed border-gray-200 py-5 text-center">
               <p class=":uno: text-sm text-gray-400">暂无已审核的评论</p>
               <p class=":uno: mt-1 text-xs text-gray-400">可手动在下方粘贴评论内容</p>
             </div>
