@@ -4,7 +4,10 @@ import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder
 import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuilder;
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
-import java.util.Map;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
@@ -21,6 +24,9 @@ import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
 import run.halo.app.plugin.extensionpoint.ExtensionGetter;
 import run.halo.links.dto.LinkCommentAnalysisResult;
+import run.halo.links.dto.LinkCommentExtractRequest;
+
+import java.util.Map;
 
 /**
  * Console endpoint for AI-powered comment analysis.
@@ -47,7 +53,7 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
                     .tag(tag)
                     .requestBody(requestBodyBuilder()
                         .description("Comment content to analyze")
-                        .implementation(Map.class))
+                        .implementation(LinkCommentExtractRequest.class))
                     .response(responseBuilder()
                         .implementation(LinkCommentAnalysisResult.class))
             )
@@ -59,10 +65,15 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
         return GroupVersion.parseAPIVersion("console.api.link.halo.run/v1alpha1");
     }
 
+    @Operation(
+        requestBody = @RequestBody(
+            content = @Content(schema = @Schema(implementation = LinkCommentExtractRequest.class))
+        )
+    )
     Mono<ServerResponse> extractFromComment(ServerRequest request) {
-        return request.bodyToMono(Map.class)
-            .flatMap(body -> {
-                String content = (String) body.get("content");
+        return request.bodyToMono(LinkCommentExtractRequest.class)
+            .flatMap(req -> {
+                String content = req.getContent();
                 if (content == null || content.isBlank()) {
                     return badRequest("Comment content is required.");
                 }

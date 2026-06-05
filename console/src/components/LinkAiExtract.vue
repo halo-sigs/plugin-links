@@ -49,7 +49,7 @@ async function handleAiExtract() {
   isExtracting.value = true;
   try {
     const { data: result } = await linkAiApiClient.ai.extractLinkFromComment({
-      body: content,
+      linkCommentExtractRequest: { content },
     });
     emit("extract", result);
     Toast.success("AI 识别成功");
