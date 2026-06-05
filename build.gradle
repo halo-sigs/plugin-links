@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id "io.freefair.lombok" version "9.2.0"
-    id "run.halo.plugin.devtools" version "0.7.0"
+    id "run.halo.plugin.devtools" version "0.8.0"
 }
 
 group 'run.halo.links'
@@ -72,6 +72,7 @@ halo {
 
 haloPlugin {
     openApi {
+        useExistingServer = true
         outputDir = file("$rootDir/api-docs/openapi/v3_0")
         groupingRules {
             linksV1alpha1Api {

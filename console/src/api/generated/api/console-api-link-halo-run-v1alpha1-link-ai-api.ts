@@ -22,6 +22,8 @@ import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObj
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError, operationServerMap } from '../base';
 // @ts-ignore
+import type { LinkCommentAnalysisResult } from '../models';
+// @ts-ignore
 import type { LinkCommentDTO } from '../models';
 /**
  * ConsoleApiLinkHaloRunV1alpha1LinkAiApi - axios parameter creator
@@ -29,6 +31,47 @@ import type { LinkCommentDTO } from '../models';
  */
 export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
+        /**
+         * Extract friend-link information from comment content using AI.
+         * @param {string} [body] Comment content to analyze
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        extractLinkFromComment: async (body?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/links/-/ai-extract`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(body, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
         /**
          * List the 10 most recent approved comments for friend-link extraction.
          * @param {*} [options] Override http request option.
@@ -77,6 +120,18 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp = function(configuration?:
     const localVarAxiosParamCreator = ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator(configuration)
     return {
         /**
+         * Extract friend-link information from comment content using AI.
+         * @param {string} [body] Comment content to analyze
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async extractLinkFromComment(body?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkCommentAnalysisResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.extractLinkFromComment(body, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.extractLinkFromComment']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * List the 10 most recent approved comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -98,6 +153,15 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
     const localVarFp = ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(configuration)
     return {
         /**
+         * Extract friend-link information from comment content using AI.
+         * @param {ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        extractLinkFromComment(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkCommentAnalysisResult> {
+            return localVarFp.extractLinkFromComment(requestParameters.body, options).then((request) => request(axios, basePath));
+        },
+        /**
          * List the 10 most recent approved comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -109,12 +173,37 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
 };
 
 /**
+ * Request parameters for extractLinkFromComment operation in ConsoleApiLinkHaloRunV1alpha1LinkAiApi.
+ * @export
+ * @interface ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest
+ */
+export interface ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest {
+    /**
+     * Comment content to analyze
+     * @type {string}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromComment
+     */
+    readonly body?: string
+}
+
+/**
  * ConsoleApiLinkHaloRunV1alpha1LinkAiApi - object-oriented interface
  * @export
  * @class ConsoleApiLinkHaloRunV1alpha1LinkAiApi
  * @extends {BaseAPI}
  */
 export class ConsoleApiLinkHaloRunV1alpha1LinkAiApi extends BaseAPI {
+    /**
+     * Extract friend-link information from comment content using AI.
+     * @param {ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApi
+     */
+    public extractLinkFromComment(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest = {}, options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).extractLinkFromComment(requestParameters.body, options).then((request) => request(this.axios, this.basePath));
+    }
+
     /**
      * List the 10 most recent approved comments for friend-link extraction.
      * @param {*} [options] Override http request option.

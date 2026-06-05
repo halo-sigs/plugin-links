@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:51338",
+    "url" : "http://localhost:8091",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -292,6 +292,35 @@
           }
         },
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/ai-extract" : {
+      "post" : {
+        "description" : "Extract friend-link information from comment content using AI.",
+        "operationId" : "extractLinkFromComment",
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "description" : "Comment content to analyze"
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkCommentAnalysisResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkAi" ]
       }
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/detail" : {
@@ -1274,6 +1303,31 @@
         },
         "description" : "Link extension that represents one website entry displayed by the Links plugin."
       },
+      "LinkCommentAnalysisResult" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "description" : "Website description extracted from the comment, if any"
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Website name extracted from the comment"
+          },
+          "logo" : {
+            "type" : "string",
+            "description" : "Logo URL extracted from the comment, if any"
+          },
+          "rssUrl" : {
+            "type" : "string",
+            "description" : "RSS feed URL extracted from the comment, if any"
+          },
+          "url" : {
+            "type" : "string",
+            "description" : "Website URL extracted from the comment"
+          }
+        }
+      },
       "LinkCommentDTO" : {
         "type" : "object",
         "properties" : {
@@ -1305,6 +1359,7 @@
         }
       },
       "LinkDetailDTO" : {
+        "required" : [ "title" ],
         "type" : "object",
         "properties" : {
           "description" : {

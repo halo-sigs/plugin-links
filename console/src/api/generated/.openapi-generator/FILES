@@ -22,6 +22,7 @@ models/copy-operation.ts
 models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
+models/link-comment-analysis-result.ts
 models/link-comment-dto.ts
 models/link-detail-dto.ts
 models/link-feed-cleanup-result.ts
