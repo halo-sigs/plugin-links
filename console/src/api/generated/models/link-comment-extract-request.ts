@@ -15,7 +15,7 @@
 
 
 /**
- * 
+ * Request body for extracting friend-link information from a comment using AI.
  * @export
  * @interface LinkCommentExtractRequest
  */
