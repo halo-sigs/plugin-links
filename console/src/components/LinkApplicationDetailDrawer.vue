@@ -20,7 +20,7 @@ import {
   VTag,
 } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { ref, watch } from "vue";
+import { computed } from "vue";
 
 const props = defineProps<{
   application: LinkApplication;
@@ -39,38 +39,32 @@ const { mutate: rejectApplication, isPending: isRejecting } = useRejectLinkAppli
 const { mutate: deleteApplication } = useDeleteLinkApplication();
 const { mutate: verifyApplication, data: verifyResult } = useVerifyBacklink();
 
-const form = ref({
-  url: props.application.spec.url,
-  displayName: props.application.spec.displayName,
-  logo: props.application.spec.logo || "",
-  description: props.application.spec.description || "",
-  groupName: "",
-});
+const groupOptions = computed(() => [
+  { value: "", label: "不分配" },
+  ...(groups.value || []).map((group) => ({
+    value: group.metadata.name,
+    label: group.spec?.displayName || group.metadata.name,
+  })),
+]);
 
-watch(
-  () => props.application,
-  (app) => {
-    form.value = {
-      url: app.spec.url,
-      displayName: app.spec.displayName,
-      logo: app.spec.logo || "",
-      description: app.spec.description || "",
-      groupName: "",
-    };
-  },
-  { immediate: true }
-);
-
-function handleApprove() {
+function handleApprove(data: ApproveRequest) {
+  if (!data.displayName?.trim()) {
+    Toast.error("网站名称不能为空");
+    return;
+  }
+  if (!data.url?.trim()) {
+    Toast.error("链接地址不能为空");
+    return;
+  }
   approveApplication(
     {
       name: props.application.metadata.name,
       request: {
-        url: form.value.url,
-        displayName: form.value.displayName,
-        logo: form.value.logo || undefined,
-        description: form.value.description || undefined,
-        groupName: form.value.groupName || undefined,
+        url: data.url.trim(),
+        displayName: data.displayName.trim(),
+        logo: data.logo || undefined,
+        description: data.description || undefined,
+        groupName: data.groupName || undefined,
       },
     },
     {
@@ -171,95 +165,85 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
         </VTag>
       </div>
 
-      <!-- Form -->
-      <div class=":uno: space-y-3">
-        <div>
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">网站名称 *</label>
-          <input
-            v-model="form.displayName"
+      <!-- FormKit Form -->
+      <FormKit
+        id="link-application-form"
+        name="link-application-form"
+        type="form"
+        :config="{ validationVisibility: 'submit' }"
+        :value="{
+          url: application.spec.url,
+          displayName: application.spec.displayName,
+          logo: application.spec.logo || '',
+          description: application.spec.description || '',
+          groupName: '',
+        }"
+        @submit="handleApprove"
+      >
+        <div class=":uno: space-y-3">
+          <FormKit
             type="text"
-            class=":uno: w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            name="displayName"
+            validation="required"
+            label="网站名称"
           />
-        </div>
-        <div>
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">链接地址 *</label>
-          <input
-            v-model="form.url"
+          <FormKit
             type="url"
-            class=":uno: w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            name="url"
+            validation="required"
+            label="链接地址"
+          />
+          <FormKit type="url" name="logo" label="Logo" />
+          <FormKit
+            type="textarea"
+            name="description"
+            label="简介"
+            auto-height
+          />
+          <FormKit
+            type="select"
+            name="groupName"
+            label="分配分组"
+            :options="groupOptions"
           />
         </div>
-        <div>
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">Logo</label>
-          <input
-            v-model="form.logo"
-            type="url"
-            class=":uno: w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-          />
-        </div>
-        <div>
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">简介</label>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            class=":uno: w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-          />
-        </div>
+      </FormKit>
 
-        <!-- Email (read-only display) -->
-        <div v-if="application.spec.email">
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">联系邮箱</label>
-          <div class=":uno: text-sm text-gray-600">{{ application.spec.email }}</div>
-        </div>
+      <!-- Email (read-only display) -->
+      <div v-if="application.spec.email">
+        <label class=":uno: block text-sm font-medium text-gray-700 mb-1">联系邮箱</label>
+        <div class=":uno: text-sm text-gray-600">{{ application.spec.email }}</div>
+      </div>
 
-        <!-- Group Selection -->
-        <div>
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">分配分组</label>
-          <select
-            v-model="form.groupName"
-            class=":uno: w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+      <!-- Backlink -->
+      <div v-if="application.spec.backlink">
+        <label class=":uno: block text-sm font-medium text-gray-700 mb-1">反链地址</label>
+        <div class=":uno: flex items-center gap-2">
+          <a
+            :href="application.spec.backlink"
+            target="_blank"
+            class=":uno: text-sm text-blue-600 hover:underline truncate flex-1"
           >
-            <option value="">不分配</option>
-            <option
-              v-for="group in groups"
-              :key="group.metadata.name"
-              :value="group.metadata.name"
-            >
-              {{ group.spec?.displayName || group.metadata.name }}
-            </option>
-          </select>
+            {{ application.spec.backlink }}
+          </a>
+          <VButton size="xs" type="secondary" @click="handleVerify">
+            验证反链
+          </VButton>
         </div>
-
-        <!-- Backlink -->
-        <div v-if="application.spec.backlink">
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">反链地址</label>
-          <div class=":uno: flex items-center gap-2">
-            <a
-              :href="application.spec.backlink"
-              target="_blank"
-              class=":uno: text-sm text-blue-600 hover:underline truncate flex-1"
-            >
-              {{ application.spec.backlink }}
-            </a>
-            <VButton size="xs" type="secondary" @click="handleVerify">
-              验证反链
-            </VButton>
-          </div>
-          <div v-if="verifyResult" class=":uno: mt-1 text-xs" :class="verifyResult.found ? 'text-green-600' : 'text-red-600'">
-            {{ verifyResult.message }}
-          </div>
+        <div v-if="verifyResult" class=":uno: mt-1 text-xs" :class="verifyResult.found ? 'text-green-600' : 'text-red-600'">
+          {{ verifyResult.message }}
         </div>
+      </div>
 
-        <!-- Feed URLs -->
-        <div v-if="application.spec.feedUrls?.length">
-          <label class=":uno: block text-sm font-medium text-gray-700 mb-1">RSS 地址</label>
-          <div
-            v-for="(feedUrl, index) in application.spec.feedUrls"
-            :key="index"
-            class=":uno: text-sm text-gray-600"
-          >
-            {{ feedUrl }}
-          </div>
+      <!-- Feed URLs -->
+      <div v-if="application.spec.feedUrls?.length">
+        <label class=":uno: block text-sm font-medium text-gray-700 mb-1">RSS 地址</label>
+        <div
+          v-for="(feedUrl, index) in application.spec.feedUrls"
+          :key="index"
+          class=":uno: text-sm text-gray-600"
+        >
+          {{ feedUrl }}
         </div>
       </div>
     </div>
@@ -270,7 +254,7 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
           v-if="application.spec.status === 'PENDING'"
           :loading="isApproving"
           type="primary"
-          @click="handleApprove"
+          @click="$formkit.submit('link-application-form')"
         >
           通过
         </VButton>
