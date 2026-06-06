@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:62059",
+    "url" : "http://localhost:35237",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -15,7 +15,7 @@
   "paths" : {
     "/apis/api.link.halo.run/v1alpha1/linkfeeds" : {
       "get" : {
-        "description" : "List public RSS or Atom feed items with cursor pagination.",
+        "description" : "List public RSS or Atom feed items with cursor pagination. Requires public RSS feed queries to be enabled in plugin settings.",
         "operationId" : "queryLinkFeedItems",
         "parameters" : [ {
           "description" : "Filter items by link metadata name.",
@@ -1753,9 +1753,6 @@
             "type" : "string"
           },
           "authorUrl" : {
-            "type" : "string"
-          },
-          "feedUrl" : {
             "type" : "string"
           },
           "fetchedAt" : {

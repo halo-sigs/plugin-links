@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,7 +21,9 @@ import java.util.List;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ServerErrorException;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.app.extension.Metadata;
@@ -353,6 +356,82 @@ class DefaultLinkFeedServiceTest {
                 assertThat(feedStatus.getItemCount()).isEqualTo(1);
             });
         verify(retentionService).enforceForLink(eq("link-a"), any(LinkFeedRetentionPolicy.class));
+    }
+
+    @Test
+    void shouldLimitFetchedItemsPerFeed() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link link = rssLink("link-a", "https://example.com/feed.xml");
+
+        when(client.fetch(Link.class, "link-a")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.upsertAll(anyList())).thenReturn(20);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(20L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXmlWithItemCount(25)));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> {
+                assertThat(result.getFetchedItemCount()).isEqualTo(20);
+                assertThat(result.getItemCount()).isEqualTo(20);
+            })
+            .verifyComplete();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<LinkFeedItem>> itemsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(itemStore).upsertAll(itemsCaptor.capture());
+        assertThat(itemsCaptor.getValue())
+            .hasSize(20)
+            .extracting(LinkFeedItem::getTitle)
+            .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 20)
+                .mapToObj(index -> "Post " + index)
+                .toList());
+    }
+
+    @Test
+    void shouldRetryStatusUpdateWithLatestLinkWhenConflict() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link initialLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link firstUpdateLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link retryUpdateLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link.VerificationStatus verification = new Link.VerificationStatus();
+        verification.setLastCheckedAt(Instant.parse("2026-05-20T11:00:00Z"));
+        retryUpdateLink.getStatus().setVerification(verification);
+
+        when(client.fetch(Link.class, "link-a"))
+            .thenReturn(Mono.just(initialLink), Mono.just(firstUpdateLink),
+                Mono.just(retryUpdateLink));
+        when(client.update(any(Link.class)))
+            .thenReturn(Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "conflict")),
+                Mono.just(retryUpdateLink));
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXml()));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> assertThat(result.getFetchedItemCount()).isEqualTo(1))
+            .verifyComplete();
+
+        ArgumentCaptor<Link> linkCaptor = ArgumentCaptor.forClass(Link.class);
+        verify(client, times(2)).update(linkCaptor.capture());
+        assertThat(linkCaptor.getAllValues().getLast().getStatus().getVerification())
+            .isSameAs(verification);
+        assertThat(linkCaptor.getAllValues().getLast().getStatus().getRss())
+            .isNotNull();
     }
 
     @Test
@@ -876,6 +955,31 @@ class DefaultLinkFeedServiceTest {
               </channel>
             </rss>
             """;
+    }
+
+    private static String feedXmlWithItemCount(int itemCount) {
+        StringBuilder items = new StringBuilder();
+        for (int i = 1; i <= itemCount; i++) {
+            items.append("""
+                <item>
+                  <guid>post-%d</guid>
+                  <title>Post %d</title>
+                  <link>https://example.com/post-%d</link>
+                  <description>Summary %d</description>
+                  <pubDate>Wed, 20 May 2026 10:00:00 GMT</pubDate>
+                </item>
+                """.formatted(i, i, i, i));
+        }
+        return """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0">
+              <channel>
+                <title>Example</title>
+                <link>https://example.com</link>
+            %s
+              </channel>
+            </rss>
+            """.formatted(items);
     }
 
     private static SafeUrlFetcher.FetchResult feedResult(String url, int statusCode, String body)

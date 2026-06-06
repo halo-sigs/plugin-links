@@ -14,6 +14,7 @@ import run.halo.links.extension.Link;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedPublicSettingsFetcher;
 import run.halo.links.service.LinkFeedPublicQueryService;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
@@ -39,12 +40,20 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
     private final LinkFeedItemStore itemStore;
 
+    private final LinkFeedPublicSettingsFetcher publicSettingsFetcher;
+
     public LinkFeedPublicQueryServiceImpl(ReactiveExtensionClient client,
-        LinkFeedItemStore itemStore) {
+        LinkFeedItemStore itemStore, LinkFeedPublicSettingsFetcher publicSettingsFetcher) {
         this.client = client;
         this.itemStore = itemStore;
+        this.publicSettingsFetcher = publicSettingsFetcher;
     }
 
+
+    @Override
+    public Mono<Boolean> isPublicEnabled() {
+        return publicSettingsFetcher.isPublicEnabled();
+    }
 
     @Override
     public Mono<LinkFeedItemPageVo> listFeeds(String groupName, LinkFeedItemQuery query) {

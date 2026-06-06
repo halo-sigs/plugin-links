@@ -15,7 +15,6 @@ public class LinkFeedItemVo {
 
     String id;
     String linkName;
-    String feedUrl;
     String url;
     String title;
     String summary;
@@ -30,7 +29,6 @@ public class LinkFeedItemVo {
         return LinkFeedItemVo.builder()
             .id(linkFeedItem.getId())
             .linkName(linkFeedItem.getLinkName())
-            .feedUrl(linkFeedItem.getFeedUrl())
             .url(linkFeedItem.getUrl())
             .title(linkFeedItem.getTitle())
             .summary(linkFeedItem.getSummary())

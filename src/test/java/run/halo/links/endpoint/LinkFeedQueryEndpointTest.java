@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
@@ -34,6 +36,7 @@ class LinkFeedQueryEndpointTest {
                 threadName.set(Thread.currentThread().getName());
                 return Mono.just(new LinkFeedItemPageVo(List.of(), null, null, false));
             });
+        when(service.isPublicEnabled()).thenReturn(Mono.just(true));
         LinkFeedQueryEndpoint endpoint = new LinkFeedQueryEndpoint(service);
         MockServerRequest request = request(HttpMethod.GET, "/linkfeeds");
 
@@ -47,6 +50,21 @@ class LinkFeedQueryEndpointTest {
 
         assertThat(invoked).isTrue();
         assertThat(threadName.get()).contains("boundedElastic");
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenPublicFeedQueriesAreDisabled() {
+        LinkFeedPublicQueryService service = mock(LinkFeedPublicQueryService.class);
+        when(service.isPublicEnabled()).thenReturn(Mono.just(false));
+        LinkFeedQueryEndpoint endpoint = new LinkFeedQueryEndpoint(service);
+        MockServerRequest request = request(HttpMethod.GET, "/linkfeeds");
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(result -> assertThat(result.statusCode().value()).isEqualTo(404))
+            .verifyComplete();
+
+        verify(service, never()).listFeeds(nullable(String.class), any(LinkFeedItemQuery.class));
     }
 
     private static MockServerRequest request(HttpMethod method, String path) {

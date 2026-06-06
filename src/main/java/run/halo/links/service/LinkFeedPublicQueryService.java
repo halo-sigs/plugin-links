@@ -6,5 +6,7 @@ import run.halo.links.vo.LinkFeedItemPageVo;
 
 public interface LinkFeedPublicQueryService {
 
+    Mono<Boolean> isPublicEnabled();
+
     Mono<LinkFeedItemPageVo> listFeeds(String groupName, LinkFeedItemQuery query);
 }

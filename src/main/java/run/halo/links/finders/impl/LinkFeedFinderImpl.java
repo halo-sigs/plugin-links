@@ -53,6 +53,19 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
 
     @Override
     public Mono<LinkFeedItemPageVo> list(Map<String, Object> params) {
+        return linkFeedPublicQueryService.isPublicEnabled()
+            .flatMap(enabled -> enabled
+                ? listWhenPublicEnabled(params)
+                : Mono.just(new LinkFeedItemPageVo(List.of(), null, null, false)));
+    }
+
+    @Override
+    public Flux<LinkFeedGroupVo> groupBy(Integer limit) {
+        return linkFeedPublicQueryService.isPublicEnabled()
+            .flatMapMany(enabled -> enabled ? groupByWhenPublicEnabled(limit) : Flux.empty());
+    }
+
+    private Mono<LinkFeedItemPageVo> listWhenPublicEnabled(Map<String, Object> params) {
         var query = Optional.ofNullable(params)
             .map(map -> JsonMapper.shared().convertValue(map, LinkFeedItemQuery.class))
             .orElseGet(LinkFeedItemQuery::new);
@@ -62,8 +75,7 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
         return linkFeedPublicQueryService.listFeeds(groupName, query);
     }
 
-    @Override
-    public Flux<LinkFeedGroupVo> groupBy(Integer limit) {
+    private Flux<LinkFeedGroupVo> groupByWhenPublicEnabled(Integer limit) {
         var linkOptions = new ListOptions();
         linkOptions.setFieldSelector(
             FieldSelector.of(isNull("metadata.deletionTimestamp")));

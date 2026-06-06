@@ -40,7 +40,8 @@ import run.halo.links.extension.Link;
 @Slf4j
 public class DefaultLinkFeedService implements LinkFeedService {
 
-    private static final int MAX_ITEMS_PER_FETCH = 100;
+    private static final int MAX_ITEMS_PER_FETCH = 20;
+    private static final int MAX_STATUS_UPDATE_ATTEMPTS = 3;
     private static final int MAX_SUMMARY_LENGTH = 500;
     private static final String INVALID_FEED_URL_MESSAGE =
         "RSS feed URL must be an absolute HTTP or HTTPS URL.";
@@ -71,9 +72,12 @@ public class DefaultLinkFeedService implements LinkFeedService {
                 }
                 return Mono.fromCallable(() -> refreshBlocking(link))
                     .subscribeOn(Schedulers.boundedElastic())
-                    .flatMap(result -> updateStatus(link, result).thenReturn(result))
-                    .onErrorResume(error -> updateFailureStatus(link, error)
-                        .then(Mono.error(error)));
+                    .onErrorResume(error -> updateFailureStatus(linkName, error)
+                        .doOnError(statusError -> log.warn("[plugin-links] Failed to update RSS "
+                            + "failure status for link {}", linkName, statusError))
+                        .onErrorResume(statusError -> Mono.empty())
+                        .then(Mono.error(error)))
+                    .flatMap(result -> updateStatus(linkName, result).thenReturn(result));
             });
     }
 
@@ -337,7 +341,29 @@ public class DefaultLinkFeedService implements LinkFeedService {
         return result;
     }
 
-    private Mono<Link> updateStatus(Link link, LinkFeedRefreshResult result) {
+    private Mono<Link> updateStatus(String linkName, LinkFeedRefreshResult result) {
+        return updateStatus(linkName, result, MAX_STATUS_UPDATE_ATTEMPTS);
+    }
+
+    private Mono<Link> updateStatus(String linkName, LinkFeedRefreshResult result,
+        int attemptsRemaining) {
+        return fetchLatestLink(linkName)
+            .flatMap(link -> {
+                applyStatus(link, result);
+                return client.update(link);
+            })
+            .onErrorResume(error -> shouldRetryStatusUpdate(error, attemptsRemaining)
+                ? updateStatus(linkName, result, attemptsRemaining - 1)
+                : Mono.error(error));
+    }
+
+    private Mono<Link> fetchLatestLink(String linkName) {
+        return client.fetch(Link.class, linkName)
+            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Link not found: " + linkName)));
+    }
+
+    private void applyStatus(Link link, LinkFeedRefreshResult result) {
         Link.RssStatus previousStatus = Optional.ofNullable(link.getStatus().getRss())
             .orElseGet(Link.RssStatus::new);
         Map<String, Link.RssFeedStatus> previousFeedStatuses = feedStatusByUrl(previousStatus);
@@ -362,17 +388,37 @@ public class DefaultLinkFeedService implements LinkFeedService {
                 previousFeedStatuses.get(feedResult.getUrl())))
             .toList());
         link.getStatus().setRss(status);
-        return client.update(link);
     }
 
-    private Mono<Link> updateFailureStatus(Link link, Throwable error) {
-        Link.RssStatus status = Optional.ofNullable(link.getStatus().getRss())
-            .orElseGet(Link.RssStatus::new);
-        status.setLastFetchedAt(Instant.now());
-        status.setLastError(error.getMessage());
-        status.setFailureCount(Optional.ofNullable(status.getFailureCount()).orElse(0) + 1);
-        link.getStatus().setRss(status);
-        return client.update(link);
+    private Mono<Link> updateFailureStatus(String linkName, Throwable error) {
+        return updateFailureStatus(linkName, error, MAX_STATUS_UPDATE_ATTEMPTS);
+    }
+
+    private Mono<Link> updateFailureStatus(String linkName, Throwable error,
+        int attemptsRemaining) {
+        return fetchLatestLink(linkName)
+            .flatMap(link -> {
+                Link.RssStatus status = Optional.ofNullable(link.getStatus().getRss())
+                    .orElseGet(Link.RssStatus::new);
+                status.setLastFetchedAt(Instant.now());
+                status.setLastError(error.getMessage());
+                status.setFailureCount(Optional.ofNullable(status.getFailureCount()).orElse(0)
+                    + 1);
+                link.getStatus().setRss(status);
+                return client.update(link);
+            })
+            .onErrorResume(statusError -> shouldRetryStatusUpdate(statusError, attemptsRemaining)
+                ? updateFailureStatus(linkName, error, attemptsRemaining - 1)
+                : Mono.error(statusError));
+    }
+
+    private static boolean shouldRetryStatusUpdate(Throwable error, int attemptsRemaining) {
+        return attemptsRemaining > 1 && isConflict(error);
+    }
+
+    private static boolean isConflict(Throwable error) {
+        return error instanceof ResponseStatusException responseStatusException
+            && responseStatusException.getStatusCode().isSameCodeAs(HttpStatus.CONFLICT);
     }
 
     private static LinkFeedItem toItem(String linkName, String feedUrl, SyndEntry entry,
