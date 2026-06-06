@@ -156,7 +156,7 @@ public class LinkRouter {
     }
 
     private static Mono<ServerResponse> redirectSuccess() {
-        return ServerResponse.temporaryRedirect(
+        return ServerResponse.seeOther(
             UriComponentsBuilder.fromPath("/links")
                 .queryParam("applied", "success")
                 .build().toUri()
@@ -172,11 +172,11 @@ public class LinkRouter {
         if (StringUtils.isNotBlank(value)) {
             builder.queryParam("value", value);
         }
-        return ServerResponse.temporaryRedirect(builder.build().toUri()).build();
+        return ServerResponse.seeOther(builder.build().toUri()).build();
     }
 
     private static Mono<ServerResponse> redirectWithError(String message) {
-        return ServerResponse.temporaryRedirect(
+        return ServerResponse.seeOther(
             UriComponentsBuilder.fromPath("/links")
                 .queryParam("applied", "error")
                 .queryParam("message", message)
