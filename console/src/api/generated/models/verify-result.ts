@@ -17,20 +17,20 @@
 /**
  * 
  * @export
- * @interface LinkFeedUnreadSummary
+ * @interface VerifyResult
  */
-export interface LinkFeedUnreadSummary {
+export interface VerifyResult {
     /**
      * 
-     * @type {number}
-     * @memberof LinkFeedUnreadSummary
+     * @type {boolean}
+     * @memberof VerifyResult
      */
-    'totalUnreadCount'?: number;
+    'found'?: boolean;
     /**
      * 
-     * @type {{ [key: string]: number; }}
-     * @memberof LinkFeedUnreadSummary
+     * @type {string}
+     * @memberof VerifyResult
      */
-    'unreadCountsByLinkName'?: { [key: string]: number; };
+    'message'?: string;
 }
 

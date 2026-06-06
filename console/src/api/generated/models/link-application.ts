@@ -15,37 +15,40 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { LinkSpec } from './link-spec';
-// May contain unused imports in some cases
-// @ts-ignore
-import type { LinkStatus } from './link-status';
+import type { LinkApplicationSpec } from './link-application-spec';
 // May contain unused imports in some cases
 // @ts-ignore
 import type { Metadata } from './metadata';
 
 /**
- * Public view of a link returned by theme-facing APIs and finder APIs.
+ * Link application extension that represents a pending link submission.
  * @export
- * @interface LinkVo
+ * @interface LinkApplication
  */
-export interface LinkVo {
+export interface LinkApplication {
+    /**
+     * 
+     * @type {string}
+     * @memberof LinkApplication
+     */
+    'apiVersion': string;
+    /**
+     * 
+     * @type {string}
+     * @memberof LinkApplication
+     */
+    'kind': string;
     /**
      * 
      * @type {Metadata}
-     * @memberof LinkVo
+     * @memberof LinkApplication
      */
     'metadata': Metadata;
     /**
      * 
-     * @type {LinkSpec}
-     * @memberof LinkVo
+     * @type {LinkApplicationSpec}
+     * @memberof LinkApplication
      */
-    'spec'?: LinkSpec;
-    /**
-     * 
-     * @type {LinkStatus}
-     * @memberof LinkVo
-     */
-    'status'?: LinkStatus;
+    'spec': LinkApplicationSpec;
 }
 

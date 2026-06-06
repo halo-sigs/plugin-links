@@ -5,11 +5,14 @@ import {
   matchesLinkVerificationStatusFilter,
   type LinkVerificationStatusFilter,
 } from "@/composables/link-verification-status";
+import { useLinkApplications } from "@/composables/use-link-application";
 import { useLinksFetch, type GroupWithLinks } from "@/composables/use-link-fetch";
+import type { LinkApplication } from "@/api/generated";
 import {
   Dialog,
   IconExternalLinkLine,
   IconRefreshLine,
+  VAlert,
   VButton,
   VLoading,
   VPageHeader,
@@ -29,8 +32,15 @@ const GroupSortModal = defineAsyncComponent(
 const LinkImportModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-import-modal" */ "@/components/LinkImportModal.vue"),
 );
+const LinkApplicationListModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-application-list-modal" */ "@/components/LinkApplicationListModal.vue"),
+);
+const LinkApplicationDetailDrawer = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-application-detail-drawer" */ "@/components/LinkApplicationDetailDrawer.vue"),
+);
 
 const { data, isLoading, isFetching, refetch } = useLinksFetch();
+const { data: applications } = useLinkApplications("PENDING");
 const queryClient = useQueryClient();
 
 const handleRouteToFront = () => {
@@ -40,8 +50,13 @@ const handleRouteToFront = () => {
 const groupCreationModalVisible = ref(false);
 const groupSortModalVisible = ref(false);
 const linkImportModalVisible = ref(false);
+const linkApplicationListModalVisible = ref(false);
+const linkApplicationDetailVisible = ref(false);
+const selectedApplication = ref<LinkApplication | undefined>(undefined);
 const isVerifyingAllLinks = shallowRef(false);
 const selectedStatusFilter = shallowRef<LinkVerificationStatusFilter>("all");
+
+const pendingCount = computed(() => applications.value?.length || 0);
 
 const statusFilterOptions: Array<{ label: string; value: LinkVerificationStatusFilter }> = [
   { label: "全部", value: "all" },
@@ -108,6 +123,21 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
     </template>
   </VPageHeader>
   <div class=":uno: p-4">
+    <VAlert
+      v-if="pendingCount > 0"
+      :title="`有 ${pendingCount} 条待审核的友链申请`"
+      type="warning"
+      :closable="false"
+      class=":uno: mb-4"
+      @click="linkApplicationListModalVisible = true"
+    >
+      <template #description>
+        <span class=":uno: cursor-pointer hover:underline"
+          >点击此处查看并处理申请</span
+        >
+      </template>
+    </VAlert>
+
     <div
       class=":uno: mb-4 flex flex-col gap-3 border border-gray-200 rounded-lg bg-white/90 p-3 shadow-sm md:flex-row md:items-center md:justify-between"
     >
@@ -161,4 +191,17 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
   <GroupCreationModal v-if="groupCreationModalVisible" @close="groupCreationModalVisible = false" />
   <GroupSortModal v-if="groupSortModalVisible" @close="groupSortModalVisible = false" />
   <LinkImportModal v-if="linkImportModalVisible" @close="linkImportModalVisible = false" />
+  <LinkApplicationListModal
+    v-if="linkApplicationListModalVisible"
+    @close="linkApplicationListModalVisible = false"
+    @view-detail="(app: LinkApplication) => {
+      selectedApplication = app;
+      linkApplicationDetailVisible = true;
+    }"
+  />
+  <LinkApplicationDetailDrawer
+    v-if="linkApplicationDetailVisible && selectedApplication"
+    :application="selectedApplication"
+    @close="linkApplicationDetailVisible = false"
+  />
 </template>
