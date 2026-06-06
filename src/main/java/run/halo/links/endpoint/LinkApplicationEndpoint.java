@@ -17,11 +17,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.jsoup.nodes.Document;
 import org.springdoc.core.fn.builders.content.Builder;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
@@ -181,6 +183,7 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
             .flatMap(approveReq -> client.fetch(LinkApplication.class, name)
                 .flatMap(application -> {
                     var appSpec = application.getSpec();
+                    ensurePending(appSpec, "approved");
 
                     // Create Link
                     Link link = new Link();
@@ -228,7 +231,9 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
         String name = request.pathVariable("name");
         return client.fetch(LinkApplication.class, name)
             .flatMap(application -> {
-                application.getSpec().setStatus(LinkApplication.Status.REJECTED);
+                var appSpec = application.getSpec();
+                ensurePending(appSpec, "rejected");
+                appSpec.setStatus(LinkApplication.Status.REJECTED);
                 return client.update(application);
             })
             .flatMap(app -> ServerResponse.ok().build())
@@ -367,6 +372,13 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
 
     private static String getOrDefault(String override, String original) {
         return StringUtils.isNotBlank(override) ? override.trim() : original;
+    }
+
+    private static void ensurePending(LinkApplication.LinkApplicationSpec spec, String operation) {
+        if (spec.getStatus() != LinkApplication.Status.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Only pending link applications can be " + operation + ".");
+        }
     }
 
     @Data
