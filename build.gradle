@@ -7,13 +7,19 @@ plugins {
 group 'run.halo.links'
 
 repositories {
+    maven {
+        url = uri('https://central.sonatype.com/repository/maven-snapshots/')
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
     mavenCentral()
 }
 
 dependencies {
     implementation platform('run.halo.tools.platform:plugin:2.24.0')
     compileOnly 'run.halo.app:api'
-    compileOnly files("${rootDir}/api-0.0.0-7e636df07435.jar")
+    compileOnly 'run.halo.aifoundation:api:1.0.0-SNAPSHOT'
     implementation('com.rometools:rome:2.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
@@ -28,7 +34,7 @@ dependencies {
     }
 
     testImplementation 'run.halo.app:api'
-    testImplementation files("${rootDir}/api-0.0.0-7e636df07435.jar")
+    testImplementation 'run.halo.aifoundation:api:1.0.0-SNAPSHOT'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
