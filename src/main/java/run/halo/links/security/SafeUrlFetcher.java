@@ -1,32 +1,35 @@
 package run.halo.links.security;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import io.netty.channel.ChannelOption;
 import java.net.MalformedURLException;
-import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.time.Duration;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
 import lombok.Getter;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferLimitException;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.reactive.function.BodyExtractors;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.ExchangeFunction;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.server.ServerErrorException;
+import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import run.halo.app.infra.utils.HttpSecurityUtils;
 
 /**
- * Fetches remote HTTP(S) resources after validating URL targets against SSRF rules.
+ * Fetches remote HTTP(S) resources using Halo's SSRF-safe HTTP client.
  */
 public final class SafeUrlFetcher {
 
@@ -35,9 +38,8 @@ public final class SafeUrlFetcher {
             + "Chrome/58.0.3029.110 Safari/537.3";
     public static final int DEFAULT_TIMEOUT_MS = 10_000;
     public static final int DEFAULT_MAX_BODY_SIZE = 1024 * 1024 * 20;
-    private static final int MAX_HEADER_LINE_SIZE = 8192;
-    private static PinnedHttpsConnector pinnedHttpsConnector =
-        SafeUrlFetcher::connectPinnedHttpsSocket;
+    private static final int MAX_REDIRECTS = 3;
+    private static volatile ExchangeFunction exchangeFunctionForTesting;
 
     private SafeUrlFetcher() {
     }
@@ -51,19 +53,21 @@ public final class SafeUrlFetcher {
         }
         try {
             return fetch(url, options == null ? FetchOptions.html(urlString) : options);
-        } catch (IOException e) {
+        } catch (ServerErrorException e) {
+            throw e;
+        } catch (Exception e) {
             throw new ServerErrorException("Failed to fetch URL", e);
         }
     }
 
-    private static FetchResult fetch(URL url, FetchOptions options) throws IOException {
+    private static FetchResult fetch(URL url, FetchOptions options) {
         FetchResponse current = execute(url, options);
-        int hopsRemaining = LinkSecurityUtils.getMaxRedirects();
+        int hopsRemaining = MAX_REDIRECTS;
         while (isRedirect(current.statusCode())) {
             if (hopsRemaining <= 0) {
                 throw new ServerErrorException("Too many redirects",
                     new IllegalStateException("Exceeded maximum redirect limit of "
-                        + LinkSecurityUtils.getMaxRedirects()));
+                        + MAX_REDIRECTS));
             }
             hopsRemaining--;
 
@@ -89,221 +93,87 @@ public final class SafeUrlFetcher {
             current.etag(), current.lastModified());
     }
 
-    private static FetchResponse execute(URL url, FetchOptions options)
-        throws IOException {
-        InetAddress validatedAddress;
-        try {
-            validatedAddress = LinkSecurityUtils.validateUrl(url);
-        } catch (IllegalArgumentException e) {
-            throw new ServerErrorException("URL blocked for security reasons", e);
+    private static FetchResponse execute(URL url, FetchOptions options) {
+        validateHttpUrl(url);
+        URI uri = toUri(url);
+        FetchResponse response = webClient(options).get()
+            .uri(uri)
+            .headers(headers -> requestHeaders(url, options).forEach(headers::set))
+            .exchangeToMono(clientResponse -> toFetchResponse(url, options, clientResponse))
+            .block();
+        if (response == null) {
+            throw new ServerErrorException("Failed to fetch URL",
+                new IllegalStateException("Empty response"));
         }
-
-        if ("https".equalsIgnoreCase(url.getProtocol())) {
-            return executePinnedHttps(url, validatedAddress, options);
-        }
-        return executeHttp(url, validatedAddress, options);
+        return response;
     }
 
-    private static FetchResponse executeHttp(URL url, InetAddress validatedAddress,
-        FetchOptions options) throws IOException {
-        String connectUrl = "http".equalsIgnoreCase(url.getProtocol())
-            ? LinkSecurityUtils.toConnectUrl(url, validatedAddress)
-            : url.toExternalForm();
-
-        Map<String, String> headers = requestHeaders(url, options);
-
-        Connection.Response response = Jsoup.connect(connectUrl)
-            .followRedirects(false)
-            .ignoreHttpErrors(true)
-            .ignoreContentType(options.ignoreContentType)
-            .maxBodySize(options.maxBodySize + 1)
-            .timeout(options.timeout)
-            .headers(headers)
-            .execute();
-        String body = bodyWithinLimit(response, options);
-        return new FetchResponse(url, response.statusCode(), body,
-            response.header("ETag"), response.header("Last-Modified"),
-            response.header("Location"));
+    private static WebClient webClient(FetchOptions options) {
+        WebClient.Builder builder = WebClient.builder()
+            .filter(HttpSecurityUtils.maxResponseSizeFilter(options.maxBodySize));
+        ExchangeFunction exchangeFunction = exchangeFunctionForTesting;
+        if (exchangeFunction != null) {
+            return builder.exchangeFunction(exchangeFunction).build();
+        }
+        HttpClient httpClient = HttpSecurityUtils.secureHttpClient()
+            .responseTimeout(Duration.ofMillis(options.timeout))
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, options.timeout);
+        return builder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
     }
 
-    private static FetchResponse executePinnedHttps(URL url, InetAddress validatedAddress,
-        FetchOptions options) throws IOException {
-        try (Socket socket = pinnedHttpsConnector.connect(url, validatedAddress, options.timeout)) {
-            writeRequest(socket.getOutputStream(), url, options);
-            return readResponse(socket.getInputStream(), url, options);
-        }
+    private static Mono<FetchResponse> toFetchResponse(URL url, FetchOptions options,
+        ClientResponse response) {
+        HttpHeaders headers = response.headers().asHttpHeaders();
+        return bodyBytes(response, options)
+            .map(body -> new FetchResponse(url, response.statusCode().value(),
+                decodeBody(body, headers.getFirst(HttpHeaders.CONTENT_TYPE)),
+                headers.getFirst(HttpHeaders.ETAG), headers.getFirst(HttpHeaders.LAST_MODIFIED),
+                headers.getFirst(HttpHeaders.LOCATION)));
     }
 
-    private static Socket connectPinnedHttpsSocket(URL url, InetAddress address, int timeout)
-        throws IOException {
-        int port = effectivePort(url);
-        Socket rawSocket = new Socket();
-        try {
-            rawSocket.connect(new InetSocketAddress(address, port), timeout);
-            rawSocket.setSoTimeout(timeout);
-            SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-            SSLSocket sslSocket = (SSLSocket) sslSocketFactory
-                .createSocket(rawSocket, url.getHost(), port, true);
-            try {
-                SSLParameters parameters = sslSocket.getSSLParameters();
-                parameters.setEndpointIdentificationAlgorithm("HTTPS");
-                sslSocket.setSSLParameters(parameters);
-                sslSocket.startHandshake();
-                return sslSocket;
-            } catch (IOException e) {
-                sslSocket.close();
-                throw e;
-            }
-        } catch (IOException e) {
-            rawSocket.close();
-            throw e;
-        }
-    }
-
-    private static void writeRequest(OutputStream outputStream, URL url, FetchOptions options)
-        throws IOException {
-        String target = url.getFile();
-        if (target == null || target.isBlank()) {
-            target = "/";
-        }
-        StringBuilder request = new StringBuilder();
-        request.append("GET ").append(target).append(" HTTP/1.1\r\n");
-        requestHeaders(url, options).forEach((name, value) ->
-            request.append(name).append(": ").append(value).append("\r\n"));
-        request.append("Connection: close\r\n\r\n");
-        outputStream.write(request.toString().getBytes(StandardCharsets.ISO_8859_1));
-        outputStream.flush();
-    }
-
-    private static FetchResponse readResponse(InputStream inputStream, URL url, FetchOptions options)
-        throws IOException {
-        String statusLine = readAsciiLine(inputStream);
-        if (statusLine == null || !statusLine.startsWith("HTTP/")) {
-            throw new IOException("Invalid HTTP response status line");
-        }
-        String[] statusParts = statusLine.split(" ", 3);
-        if (statusParts.length < 2) {
-            throw new IOException("Invalid HTTP response status line");
-        }
-        int statusCode = Integer.parseInt(statusParts[1]);
-        Map<String, List<String>> headers = readHeaders(inputStream);
-        byte[] body;
-        try {
-            body = readBody(inputStream, headers, options.maxBodySize);
-        } catch (ServerErrorException e) {
-            if (!options.allowOversizedBody || !isResponseTooLarge(e)) {
-                throw e;
-            }
-            body = new byte[0];
-        }
-        String contentType = header(headers, "content-type");
-        return new FetchResponse(url, statusCode, decodeBody(body, contentType),
-            header(headers, "etag"), header(headers, "last-modified"),
-            header(headers, "location"));
-    }
-
-    private static Map<String, List<String>> readHeaders(InputStream inputStream)
-        throws IOException {
-        Map<String, List<String>> headers = new LinkedHashMap<>();
-        String line;
-        while ((line = readAsciiLine(inputStream)) != null && !line.isEmpty()) {
-            int separator = line.indexOf(':');
-            if (separator <= 0) {
-                continue;
-            }
-            String name = line.substring(0, separator).trim().toLowerCase(Locale.ROOT);
-            String value = line.substring(separator + 1).trim();
-            headers.computeIfAbsent(name, ignored -> new ArrayList<>()).add(value);
-        }
-        return headers;
-    }
-
-    private static byte[] readBody(InputStream inputStream, Map<String, List<String>> headers,
-        int maxBodySize) throws IOException {
-        String transferEncoding = header(headers, "transfer-encoding");
-        if (transferEncoding != null
-            && transferEncoding.toLowerCase(Locale.ROOT).contains("chunked")) {
-            return readChunkedBody(inputStream, maxBodySize);
-        }
-        String contentLength = header(headers, "content-length");
-        if (contentLength != null && !contentLength.isBlank()) {
-            try {
-                long length = Long.parseLong(contentLength);
-                if (length > maxBodySize) {
-                    throw responseTooLarge("Content-Length exceeds " + maxBodySize);
+    private static Mono<byte[]> bodyBytes(ClientResponse response, FetchOptions options) {
+        return DataBufferUtils.join(response.body(BodyExtractors.toDataBuffers()))
+            .map(SafeUrlFetcher::readAndRelease)
+            .defaultIfEmpty(new byte[0])
+            .onErrorResume(error -> {
+                if (!isResponseTooLarge(error)) {
+                    return Mono.error(error);
                 }
-                return inputStream.readNBytes((int) length);
-            } catch (NumberFormatException ignored) {
-                // Ignore malformed Content-Length and fall back to reading until EOF.
-            }
-        }
-        return readUntilEof(inputStream, maxBodySize);
-    }
-
-    private static byte[] readChunkedBody(InputStream inputStream, int maxBodySize)
-        throws IOException {
-        var body = new java.io.ByteArrayOutputStream();
-        while (true) {
-            String chunkHeader = readAsciiLine(inputStream);
-            if (chunkHeader == null) {
-                throw new IOException("Unexpected EOF in chunked body");
-            }
-            int separator = chunkHeader.indexOf(';');
-            String sizeText = separator >= 0 ? chunkHeader.substring(0, separator) : chunkHeader;
-            int size = Integer.parseInt(sizeText.trim(), 16);
-            if (size == 0) {
-                while (true) {
-                    String trailer = readAsciiLine(inputStream);
-                    if (trailer == null || trailer.isEmpty()) {
-                        return body.toByteArray();
-                    }
+                if (options.allowOversizedBody) {
+                    return Mono.just(new byte[0]);
                 }
-            }
-            appendWithinLimit(body, inputStream.readNBytes(size), maxBodySize);
-            readAsciiLine(inputStream);
+                return Mono.error(responseTooLarge(error.getMessage()));
+            });
+    }
+
+    private static byte[] readAndRelease(DataBuffer dataBuffer) {
+        try {
+            byte[] bytes = new byte[dataBuffer.readableByteCount()];
+            dataBuffer.read(bytes);
+            return bytes;
+        } finally {
+            DataBufferUtils.release(dataBuffer);
         }
     }
 
-    private static byte[] readUntilEof(InputStream inputStream, int maxBodySize)
-        throws IOException {
-        var body = new java.io.ByteArrayOutputStream();
-        byte[] buffer = new byte[8192];
-        int read;
-        while ((read = inputStream.read(buffer)) != -1) {
-            if (body.size() + read > maxBodySize) {
-                throw responseTooLarge("Body exceeds " + maxBodySize);
-            }
-            body.write(buffer, 0, read);
+    private static void validateHttpUrl(URL url) {
+        String protocol = url.getProtocol().toLowerCase(Locale.ROOT);
+        if (!"http".equals(protocol) && !"https".equals(protocol)) {
+            throw new ServerErrorException("URL blocked for security reasons",
+                new IllegalArgumentException("Only HTTP and HTTPS protocols are allowed: " + url));
         }
-        return body.toByteArray();
+        if (url.getHost() == null || url.getHost().isBlank()) {
+            throw new ServerErrorException("Invalid URL",
+                new IllegalArgumentException("URL must have a host: " + url));
+        }
     }
 
-    private static void appendWithinLimit(java.io.ByteArrayOutputStream output, byte[] bytes,
-        int maxBodySize) {
-        if (output.size() + bytes.length > maxBodySize) {
-            throw responseTooLarge("Body exceeds " + maxBodySize);
+    private static URI toUri(URL url) {
+        try {
+            return url.toURI();
+        } catch (URISyntaxException e) {
+            throw new ServerErrorException("Invalid URL", e);
         }
-        output.writeBytes(bytes);
-    }
-
-    private static String readAsciiLine(InputStream inputStream) throws IOException {
-        var line = new java.io.ByteArrayOutputStream();
-        int value;
-        while ((value = inputStream.read()) != -1) {
-            if (value == '\n') {
-                break;
-            }
-            if (value != '\r') {
-                line.write(value);
-                if (line.size() > MAX_HEADER_LINE_SIZE) {
-                    throw new IOException("HTTP header line is too large");
-                }
-            }
-        }
-        if (value == -1 && line.size() == 0) {
-            return null;
-        }
-        return line.toString(StandardCharsets.ISO_8859_1);
     }
 
     private static String decodeBody(byte[] body, String contentType) {
@@ -326,24 +196,19 @@ public final class SafeUrlFetcher {
         return new String(body, charset);
     }
 
-    private static String header(Map<String, List<String>> headers, String name) {
-        List<String> values = headers.get(name.toLowerCase(Locale.ROOT));
-        return values == null || values.isEmpty() ? null : values.get(0);
-    }
-
     private static Map<String, String> requestHeaders(URL url, FetchOptions options) {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Host", hostHeader(url));
-        headers.put("User-Agent", USER_AGENT);
-        headers.put("Accept", options.accept);
+        headers.put(HttpHeaders.HOST, hostHeader(url));
+        headers.put(HttpHeaders.USER_AGENT, USER_AGENT);
+        headers.put(HttpHeaders.ACCEPT, options.accept);
         if (options.referer != null && !options.referer.isBlank()) {
-            headers.put("Referer", options.referer);
+            headers.put(HttpHeaders.REFERER, options.referer);
         }
         if (options.etag != null && !options.etag.isBlank()) {
-            headers.put("If-None-Match", options.etag);
+            headers.put(HttpHeaders.IF_NONE_MATCH, options.etag);
         }
         if (options.lastModified != null && !options.lastModified.isBlank()) {
-            headers.put("If-Modified-Since", options.lastModified);
+            headers.put(HttpHeaders.IF_MODIFIED_SINCE, options.lastModified);
         }
         return headers;
     }
@@ -356,46 +221,29 @@ public final class SafeUrlFetcher {
         return url.getHost() + ":" + port;
     }
 
-    private static int effectivePort(URL url) {
-        return url.getPort() == -1 ? url.getDefaultPort() : url.getPort();
-    }
-
     private static ServerErrorException responseTooLarge(String message) {
         return new ServerErrorException("Response exceeds maximum size",
             new IllegalStateException(message));
     }
 
-    private static boolean isResponseTooLarge(ServerErrorException e) {
-        return "Response exceeds maximum size".equals(e.getReason());
+    private static boolean isResponseTooLarge(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof DataBufferLimitException) {
+                return true;
+            }
+            if (current instanceof ServerErrorException serverErrorException
+                && "Response exceeds maximum size".equals(serverErrorException.getReason())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private static boolean isRedirect(int statusCode) {
         return statusCode == 301 || statusCode == 302
             || statusCode == 303 || statusCode == 307 || statusCode == 308;
-    }
-
-    private static String bodyWithinLimit(Connection.Response response, FetchOptions options) {
-        String contentLength = response.header("Content-Length");
-        if (contentLength != null && !contentLength.isBlank()) {
-            try {
-                if (Long.parseLong(contentLength) > options.maxBodySize) {
-                    if (options.allowOversizedBody) {
-                        return "";
-                    }
-                    throw responseTooLarge("Content-Length exceeds " + options.maxBodySize);
-                }
-            } catch (NumberFormatException ignored) {
-                // Ignore malformed Content-Length and fall back to body length.
-            }
-        }
-        String body = response.body();
-        if (body != null && body.getBytes(StandardCharsets.UTF_8).length > options.maxBodySize) {
-            if (options.allowOversizedBody) {
-                return "";
-            }
-            throw responseTooLarge("Body exceeds " + options.maxBodySize);
-        }
-        return body;
     }
 
     public record FetchResult(URL url, int statusCode, String body, Document document,
@@ -406,15 +254,8 @@ public final class SafeUrlFetcher {
                          String location) {
     }
 
-    @FunctionalInterface
-    interface PinnedHttpsConnector {
-        Socket connect(URL url, InetAddress address, int timeout) throws IOException;
-    }
-
-    static void setPinnedHttpsConnectorForTesting(PinnedHttpsConnector connector) {
-        pinnedHttpsConnector = connector == null
-            ? SafeUrlFetcher::connectPinnedHttpsSocket
-            : connector;
+    static void setExchangeFunctionForTesting(ExchangeFunction exchangeFunction) {
+        exchangeFunctionForTesting = exchangeFunction;
     }
 
     @Getter
@@ -450,9 +291,9 @@ public final class SafeUrlFetcher {
         }
 
         public static FetchOptions feed(String referer, String etag, String lastModified) {
-            return new FetchOptions("application/rss+xml,application/atom+xml,application/xml,text/xml",
-                referer, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BODY_SIZE, true, false, etag,
-                lastModified, false);
+            return new FetchOptions("application/rss+xml,application/atom+xml,application/xml,"
+                + "text/xml", referer, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BODY_SIZE, true, false,
+                etag, lastModified, false);
         }
 
         public static FetchOptions verification(String referer, int maxBodySize) {
