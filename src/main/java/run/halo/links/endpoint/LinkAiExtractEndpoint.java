@@ -41,6 +41,7 @@ import java.util.Map;
 public class LinkAiExtractEndpoint implements CustomEndpoint {
 
     private final ExtensionGetter extensionGetter;
+    private final LinkAiSettingsFetcher settingsFetcher;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
@@ -72,12 +73,15 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
     )
     Mono<ServerResponse> extractFromComment(ServerRequest request) {
         return request.bodyToMono(LinkCommentExtractRequest.class)
-            .flatMap(req -> {
+            .flatMap(req -> settingsFetcher.fetch().flatMap(settings -> {
+                if (!settings.commentExtractionEnabled()) {
+                    return ServerResponse.notFound().build();
+                }
                 String content = req.getContent();
                 if (content == null || content.isBlank()) {
                     return badRequest("Comment content is required.");
                 }
-                return doExtract(content)
+                return doExtract(content, settings.commentExtractionModelName())
                     .flatMap(result -> ServerResponse.ok().bodyValue(result))
                     .onErrorResume(StructuredOutputValidationException.class, e ->
                         ServerResponse.badRequest()
@@ -88,16 +92,18 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
                     .onErrorResume(Exception.class, e ->
                         ServerResponse.status(HttpStatus.BAD_GATEWAY)
                             .bodyValue(Map.of("error", e.getMessage())));
-            });
+            }));
     }
 
-    private Mono<LinkCommentAnalysisResult> doExtract(String content) {
+    private Mono<LinkCommentAnalysisResult> doExtract(String content, String modelName) {
         return extensionGetter.getEnabledExtension(AiModelService.class)
             .switchIfEmpty(Mono.error(new IllegalStateException(
                 "AI foundation plugin is not installed or enabled.")))
-            .flatMap(AiModelService::languageModel)
+            .flatMap(service -> service.languageModel(modelName))
             .switchIfEmpty(Mono.error(new IllegalStateException(
-                "No default language model is configured in AI foundation plugin.")))
+                modelName == null
+                    ? "No default language model is configured in AI foundation plugin."
+                    : "Selected language model is not configured in AI foundation plugin.")))
             .flatMap(model -> {
                 String prompt = buildExtractionPrompt(content);
                 return model.generateText(GenerateTextRequest.builder()

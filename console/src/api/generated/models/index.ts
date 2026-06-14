@@ -5,6 +5,7 @@ export * from './copy-operation';
 export * from './feed-result';
 export * from './json-patch-inner';
 export * from './link';
+export * from './link-ai-feature-status';
 export * from './link-comment-analysis-result';
 export * from './link-comment-dto';
 export * from './link-comment-extract-request';

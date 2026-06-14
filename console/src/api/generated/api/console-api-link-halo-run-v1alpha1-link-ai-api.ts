@@ -22,6 +22,8 @@ import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObj
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError, operationServerMap } from '../base';
 // @ts-ignore
+import type { LinkAiFeatureStatus } from '../models';
+// @ts-ignore
 import type { LinkCommentAnalysisResult } from '../models';
 // @ts-ignore
 import type { LinkCommentDTO } from '../models';
@@ -61,13 +63,50 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator = function 
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
-    
+
             localVarHeaderParameter['Content-Type'] = 'application/json';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
             localVarRequestOptions.data = serializeDataIfNeeded(linkCommentExtractRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get runtime status for AI-assisted link features.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAiStatus: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/links/-/ai-status`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -134,6 +173,17 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp = function(configuration?:
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Get runtime status for AI-assisted link features.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getAiStatus(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkAiFeatureStatus>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAiStatus(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.getAiStatus']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * List the 10 most recent approved comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -162,6 +212,14 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
          */
         extractLinkFromComment(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkCommentAnalysisResult> {
             return localVarFp.extractLinkFromComment(requestParameters.linkCommentExtractRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get runtime status for AI-assisted link features.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAiStatus(options?: RawAxiosRequestConfig): AxiosPromise<LinkAiFeatureStatus> {
+            return localVarFp.getAiStatus(options).then((request) => request(axios, basePath));
         },
         /**
          * List the 10 most recent approved comments for friend-link extraction.
@@ -207,6 +265,16 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkAiApi extends BaseAPI {
     }
 
     /**
+     * Get runtime status for AI-assisted link features.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApi
+     */
+    public getAiStatus(options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).getAiStatus(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * List the 10 most recent approved comments for friend-link extraction.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -216,4 +284,3 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkAiApi extends BaseAPI {
         return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).listRecentComments(options).then((request) => request(this.axios, this.basePath));
     }
 }
-

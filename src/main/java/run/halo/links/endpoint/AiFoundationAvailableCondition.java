@@ -13,6 +13,10 @@ public class AiFoundationAvailableCondition implements Condition {
 
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return isAiFoundationAvailable();
+    }
+
+    static boolean isAiFoundationAvailable() {
         try {
             Class.forName(AI_MODEL_SERVICE_CLASS);
             return true;

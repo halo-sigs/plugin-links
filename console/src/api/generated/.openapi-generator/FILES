@@ -23,6 +23,7 @@ models/copy-operation.ts
 models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
+models/link-ai-feature-status.ts
 models/link-comment-analysis-result.ts
 models/link-comment-dto.ts
 models/link-comment-extract-request.ts

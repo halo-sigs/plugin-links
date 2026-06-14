@@ -17,6 +17,7 @@ import run.halo.app.extension.GroupVersion;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.links.dto.LinkAiFeatureStatus;
 import run.halo.links.dto.LinkCommentDTO;
 
 /**
@@ -27,11 +28,20 @@ import run.halo.links.dto.LinkCommentDTO;
 public class LinkAiEndpoint implements CustomEndpoint {
 
     private final ReactiveExtensionClient client;
+    private final LinkAiSettingsFetcher settingsFetcher;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
         final var tag = "console.api.link.halo.run/v1alpha1/LinkAi";
         return route()
+            .GET("links/-/ai-status", this::getAiStatus,
+                builder -> builder
+                    .operationId("getAiStatus")
+                    .description("Get runtime status for AI-assisted link features.")
+                    .tag(tag)
+                    .response(responseBuilder()
+                        .implementation(LinkAiFeatureStatus.class))
+            )
             .GET("links/-/recent-comments", this::listRecentComments,
                 builder -> builder
                     .operationId("listRecentComments")
@@ -48,7 +58,29 @@ public class LinkAiEndpoint implements CustomEndpoint {
         return GroupVersion.parseAPIVersion("console.api.link.halo.run/v1alpha1");
     }
 
+    Mono<ServerResponse> getAiStatus(ServerRequest request) {
+        return settingsFetcher.fetch()
+            .map(settings -> new LinkAiFeatureStatus(
+                settings.aiEnabled(),
+                AiFoundationAvailableCondition.isAiFoundationAvailable(),
+                settings.commentExtractionEnabled(),
+                settings.commentExtractionModelName()
+            ))
+            .flatMap(status -> ServerResponse.ok().bodyValue(status));
+    }
+
     Mono<ServerResponse> listRecentComments(ServerRequest request) {
+        return settingsFetcher.fetch()
+            .flatMap(settings -> {
+                if (!settings.commentExtractionEnabled()
+                    || !AiFoundationAvailableCondition.isAiFoundationAvailable()) {
+                    return ServerResponse.notFound().build();
+                }
+                return doListRecentComments();
+            });
+    }
+
+    private Mono<ServerResponse> doListRecentComments() {
         var listOptions = ListOptions.builder()
             .andQuery(equal("spec.approved", "true"))
             .build();

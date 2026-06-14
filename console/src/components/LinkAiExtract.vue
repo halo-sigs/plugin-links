@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { linkAiApiClient } from "@/api";
 import type { LinkCommentAnalysisResult, LinkCommentDTO } from "@/api/generated";
+import { commentPlainText } from "@/utils/comment-content";
 import { IconClose, Toast, VButton, VLoading } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
-import { ref, shallowRef } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import MdiCommentTextOutline from "~icons/mdi/comment-text-outline";
 import MdiRobot from "~icons/mdi/robot";
 
@@ -17,6 +18,13 @@ const isExtracting = shallowRef(false);
 const recentComments = ref<LinkCommentDTO[]>([]);
 const selectedCommentName = shallowRef<string | undefined>(undefined);
 const manualCommentText = shallowRef("");
+
+const displayComments = computed(() =>
+  recentComments.value.map((comment) => ({
+    ...comment,
+    plainContent: commentPlainText(comment),
+  })),
+);
 
 async function handleFetchComments() {
   if (isLoadingComments.value) return;
@@ -36,7 +44,7 @@ async function handleFetchComments() {
 
 function selectComment(comment: LinkCommentDTO) {
   selectedCommentName.value = comment.name;
-  manualCommentText.value = comment.raw || comment.content || "";
+  manualCommentText.value = commentPlainText(comment);
 }
 
 async function handleAiExtract() {
@@ -115,7 +123,7 @@ function open() {
         class=":uno: max-h-52 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100"
       >
         <div
-          v-for="comment in recentComments"
+          v-for="comment in displayComments"
           :key="comment.name"
           class=":uno: cursor-pointer px-3 py-2.5 transition-colors"
           :class="selectedCommentName === comment.name ? ':uno: bg-blue-50/60' : ':uno: hover:bg-gray-50'"
@@ -136,7 +144,7 @@ function open() {
             </span>
           </div>
           <p class=":uno: line-clamp-2 mt-1 pl-4 text-xs text-gray-500">
-            {{ comment.raw || comment.content }}
+            {{ comment.plainContent }}
           </p>
         </div>
       </div>
@@ -146,18 +154,15 @@ function open() {
         <p class=":uno: mt-1 text-xs text-gray-400">可手动在下方粘贴评论内容</p>
       </div>
 
-      <div>
-        <label class=":uno: mb-1.5 block text-xs text-gray-700 font-medium">
-          评论内容
-          <span class=":uno: text-gray-400 font-normal">（可手动粘贴或编辑）</span>
-        </label>
-        <textarea
-          v-model="manualCommentText"
-          rows="3"
-          class=":uno: w-full border border-gray-200 rounded-lg px-3 py-2 text-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          placeholder="选择上方评论或手动粘贴内容，AI 将从中提取友链信息..."
-        ></textarea>
-      </div>
+      <FormKit
+        v-model="manualCommentText"
+        type="textarea"
+        name="commentContent"
+        label="评论内容"
+        help="可手动粘贴或编辑"
+        auto-height
+        placeholder="选择上方评论或手动粘贴内容，AI 将从中提取友链信息..."
+      ></FormKit>
 
       <div class=":uno: flex justify-end">
         <VButton size="sm" type="secondary" :loading="isExtracting" @click="handleAiExtract">
