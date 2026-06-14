@@ -5,7 +5,7 @@
     "version" : "2.24.0"
   },
   "servers" : [ {
-    "url" : "http://localhost:64999",
+    "url" : "http://localhost:8091",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -350,6 +350,54 @@
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
       }
     },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/ai-extract" : {
+      "post" : {
+        "description" : "Extract friend-link information from comment content using AI.",
+        "operationId" : "extractLinkFromComment",
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkCommentExtractRequest"
+              }
+            }
+          },
+          "description" : "Comment content to analyze"
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkCommentAnalysisResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkAi" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/ai-status" : {
+      "get" : {
+        "description" : "Get runtime status for AI-assisted link features.",
+        "operationId" : "getAiStatus",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkAiFeatureStatus"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkAi" ]
+      }
+    },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/detail" : {
       "get" : {
         "description" : "Fetch title, description, favicon, and preview image metadata from a website URL.",
@@ -376,6 +424,28 @@
           }
         },
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/recent-comments" : {
+      "get" : {
+        "description" : "List the 10 most recent approved comments for friend-link extraction.",
+        "operationId" : "listRecentComments",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkCommentDTO"
+                  }
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkAi" ]
       }
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/sort" : {
@@ -1307,6 +1377,93 @@
           }
         },
         "description" : "Link extension that represents one website entry displayed by the Links plugin."
+      },
+      "LinkAiFeatureStatus" : {
+        "type" : "object",
+        "properties" : {
+          "available" : {
+            "type" : "boolean",
+            "description" : "Whether the AI Foundation API is available at runtime"
+          },
+          "commentExtractionEnabled" : {
+            "type" : "boolean",
+            "description" : "Whether link extraction from recent comments is enabled"
+          },
+          "commentExtractionModelName" : {
+            "type" : "string",
+            "description" : "Selected language model name, or null for default model"
+          },
+          "enabled" : {
+            "type" : "boolean",
+            "description" : "Whether the plugin AI feature is enabled"
+          }
+        }
+      },
+      "LinkCommentAnalysisResult" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "description" : "Website description extracted from the comment, if any"
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Website name extracted from the comment"
+          },
+          "logo" : {
+            "type" : "string",
+            "description" : "Logo URL extracted from the comment, if any"
+          },
+          "rssUrl" : {
+            "type" : "string",
+            "description" : "RSS feed URL extracted from the comment, if any"
+          },
+          "url" : {
+            "type" : "string",
+            "description" : "Website URL extracted from the comment"
+          }
+        }
+      },
+      "LinkCommentDTO" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string",
+            "description" : "Rendered HTML content"
+          },
+          "creationTime" : {
+            "type" : "string",
+            "description" : "Comment creation time",
+            "format" : "date-time"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Metadata name of the comment"
+          },
+          "ownerEmail" : {
+            "type" : "string",
+            "description" : "Comment owner email"
+          },
+          "ownerName" : {
+            "type" : "string",
+            "description" : "Comment owner display name"
+          },
+          "raw" : {
+            "type" : "string",
+            "description" : "Raw comment content submitted by the owner"
+          }
+        }
+      },
+      "LinkCommentExtractRequest" : {
+        "required" : [ "content" ],
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string",
+            "description" : "Comment content to analyze"
+          }
+        },
+        "description" : "Request body for extracting friend-link information from a comment using AI."
       },
       "LinkDetailDTO" : {
         "type" : "object",

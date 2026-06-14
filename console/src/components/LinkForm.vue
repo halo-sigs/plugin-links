@@ -1,8 +1,10 @@
 <script lang="ts" setup>
-import { linksConsoleApiClient } from "@/api";
+import { linkAiApiClient, linksConsoleApiClient } from "@/api";
+import type { LinkAiFeatureStatus, LinkCommentAnalysisResult } from "@/api/generated";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
-import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
+import { computed, nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
+import LinkAiExtract from "./LinkAiExtract.vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 
@@ -37,6 +39,7 @@ const data = ref<LinkFormData>({
   },
 });
 const rssFeedUrlsText = shallowRef("");
+const aiStatus = ref<LinkAiFeatureStatus>();
 
 onMounted(() => {
   if (props.formState) {
@@ -54,6 +57,7 @@ onMounted(() => {
     };
     rssFeedUrlsText.value = feedUrlsToText(feedUrls);
   }
+  fetchAiStatus();
 });
 
 const isFetchingLinkDetail = shallowRef(false);
@@ -112,6 +116,42 @@ const handleDiscoverFeed = async () => {
 };
 
 const annotationsForm = ref();
+
+const isNew = computed(() => !props.formState);
+const isAiCommentExtractionAvailable = computed(() => {
+  const status = aiStatus.value;
+  return (
+    isNew.value &&
+    status?.enabled === true &&
+    status?.available === true &&
+    status?.commentExtractionEnabled === true
+  );
+});
+
+async function fetchAiStatus() {
+  if (!isNew.value) {
+    return;
+  }
+  try {
+    const { data: status } = await linkAiApiClient.ai.getAiStatus();
+    aiStatus.value = status;
+  } catch {
+    // Keep the optional AI section hidden when the status endpoint is unavailable.
+  }
+}
+
+function applyAiExtractedResult(result: LinkCommentAnalysisResult) {
+  if (result.url) data.value.url = result.url;
+  if (result.displayName) data.value.displayName = result.displayName;
+  if (result.logo) data.value.logo = result.logo;
+  if (result.description) data.value.description = result.description;
+  if (result.rssUrl) {
+    data.value.rss.enabled = true;
+    const merged = mergeFeedUrls(data.value.rss.feedUrls, [result.rssUrl]);
+    data.value.rss.feedUrls = merged;
+    rssFeedUrlsText.value = feedUrlsToText(merged);
+  }
+}
 
 function normalizeFeedUrls(feedUrls: string[]) {
   return [...new Set(feedUrls.map((feedUrl) => feedUrl.trim()).filter(Boolean))];
@@ -175,6 +215,23 @@ async function onSubmit() {
 <template>
   <FormKit id="link-form" name="link-form" type="form" :config="{ validationVisibility: 'submit' }" @submit="onSubmit">
     <div>
+      <template v-if="isAiCommentExtractionAvailable">
+        <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+          <div class=":uno: md:col-span-1">
+            <div class=":uno: sticky top-0">
+              <span class=":uno: text-base text-gray-900 font-medium"> AI 识别 </span>
+            </div>
+          </div>
+          <div class=":uno: mt-5 md:col-span-3 md:mt-0">
+            <LinkAiExtract @extract="applyAiExtractedResult" />
+          </div>
+        </div>
+
+        <div class=":uno: py-5">
+          <div class=":uno: border-t border-gray-200"></div>
+        </div>
+      </template>
+
       <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
         <div class=":uno: md:col-span-1">
           <div class=":uno: sticky top-0">

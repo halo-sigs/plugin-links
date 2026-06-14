@@ -64,3 +64,30 @@ spec:
           name: publicEnabled
           value: false
           help: 部分主题可能需要显示 RSS 订阅信息，开启后匿名访问者和主题可以读取已抓取的 RSS 条目，请确认风险之后再决定是否开启
+    - group: ai
+      label: AI
+      formSchema:
+        - $formkit: checkbox
+          label: 开启 AI 功能
+          name: enabled
+          id: ai_enabled
+          value: false
+          help: 开启后，可以在支持的场景中使用 AI Foundation 提供的模型能力
+        - $formkit: group
+          if: "$get(ai_enabled).value === true"
+          name: commentExtraction
+          label: 添加链接时从最新评论中解析
+          children:
+            - $formkit: checkbox
+              label: 开启
+              name: enabled
+              id: ai_comment_extraction_enabled
+              value: true
+            - $cmp: AiModelSelector
+              if: "$get(ai_comment_extraction_enabled).value === true"
+              props:
+                name: modelName
+                label: 选择模型
+                clearable: true
+                placeholder: 请选择语言模型
+                help: 可选，不设置时会使用 AI Foundation 的默认语言模型
