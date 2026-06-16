@@ -83,11 +83,11 @@ spec:
               name: enabled
               id: ai_comment_extraction_enabled
               value: true
-            - $cmp: AiModelSelector
+            - $formkit: aiModelSelector
               if: "$get(ai_comment_extraction_enabled).value === true"
-              props:
-                name: modelName
-                label: 选择模型
-                clearable: true
-                placeholder: 请选择语言模型
-                help: 可选，不设置时会使用 AI Foundation 的默认语言模型
+              modelType: language
+              clearable: true
+              name: modelName
+              key: modelName
+              placeholder: 请选择语言模型
+              help: 可选，不设置时会使用 AI Foundation 的默认语言模型
