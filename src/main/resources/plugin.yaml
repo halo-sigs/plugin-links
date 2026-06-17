@@ -4,6 +4,8 @@ metadata:
   name: PluginLinks
   annotations:
     "store.halo.run/app-id": "app-hfbQg"
+     # AI Foundation https://www.halo.run/store/apps/app-acslk9nu
+    "store.halo.run/recommended-apps": '["app-acslk9nu"]'
 spec:
   requires: ">=2.22.5"
   pluginDependencies:
