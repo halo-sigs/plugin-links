@@ -22,8 +22,8 @@ import run.halo.aifoundation.chat.GenerateTextResult;
 import run.halo.aifoundation.chat.LanguageModel;
 import run.halo.app.plugin.extensionpoint.ExtensionGetter;
 import run.halo.links.dto.LinkAiSettings;
-import run.halo.links.dto.LinkCommentAnalysisResult;
-import run.halo.links.dto.LinkCommentExtractRequest;
+import run.halo.links.dto.LinkCommentExtractionResult;
+import run.halo.links.dto.LinkCommentExtractionRequest;
 
 @ExtendWith(MockitoExtension.class)
 class LinkAiExtractEndpointTest {
@@ -50,9 +50,9 @@ class LinkAiExtractEndpointTest {
             generateTextResult()));
 
         var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
-        var body = new LinkCommentExtractRequest();
+        var body = new LinkCommentExtractionRequest();
         body.setContent("站点：https://halo.run");
-        var request = postRequest("/links/-/ai-extract", body);
+        var request = postRequest("/links/-/extract-from-comment", body);
 
         StepVerifier.create(endpoint.endpoint().route(request)
                 .flatMap(handler -> handler.handle(request)))
@@ -60,6 +60,82 @@ class LinkAiExtractEndpointTest {
             .verifyComplete();
 
         verify(aiModelService).languageModel("model-a");
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenCommentExtractionDisabled() {
+        when(settingsFetcher.fetch()).thenReturn(Mono.just(disabledSettings()));
+
+        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var body = new LinkCommentExtractionRequest();
+        body.setContent("站点：https://halo.run");
+        var request = postRequest("/links/-/extract-from-comment", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(404))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenContentIsBlank() {
+        when(settingsFetcher.fetch()).thenReturn(Mono.just(settings(null)));
+
+        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var body = new LinkCommentExtractionRequest();
+        body.setContent("   ");
+        var request = postRequest("/links/-/extract-from-comment", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(400))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldUseDefaultLanguageModelWhenModelNameIsNull() {
+        when(settingsFetcher.fetch()).thenReturn(Mono.just(settings(null)));
+        when(extensionGetter.getEnabledExtension(AiModelService.class))
+            .thenReturn(Mono.just(aiModelService));
+        when(aiModelService.languageModel(null)).thenReturn(Mono.just(languageModel));
+        when(languageModel.generateText(any(GenerateTextRequest.class))).thenReturn(Mono.just(
+            generateTextResult()));
+
+        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var body = new LinkCommentExtractionRequest();
+        body.setContent("站点：https://halo.run");
+        var request = postRequest("/links/-/extract-from-comment", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
+            .verifyComplete();
+
+        verify(aiModelService).languageModel(null);
+    }
+
+    @Test
+    void shouldReturnBadGatewayWhenAiServiceFails() {
+        when(settingsFetcher.fetch()).thenReturn(Mono.just(settings(null)));
+        when(extensionGetter.getEnabledExtension(AiModelService.class))
+            .thenReturn(Mono.error(new IllegalStateException("AI service down")));
+
+        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var body = new LinkCommentExtractionRequest();
+        body.setContent("站点：https://halo.run");
+        var request = postRequest("/links/-/extract-from-comment", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(502))
+            .verifyComplete();
+    }
+
+    private static LinkAiSettings disabledSettings() {
+        var settings = new LinkAiSettings();
+        settings.setEnabled(false);
+        settings.setCommentExtraction(null);
+        return settings.normalized();
     }
 
     private static LinkAiSettings settings(String modelName) {
@@ -74,7 +150,7 @@ class LinkAiExtractEndpointTest {
 
     private static GenerateTextResult generateTextResult() {
         var result = new GenerateTextResult();
-        result.setOutput(new LinkCommentAnalysisResult(
+        result.setOutput(new LinkCommentExtractionResult(
             "https://halo.run",
             "Halo",
             null,

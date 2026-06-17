@@ -17,37 +17,37 @@
 /**
  * 
  * @export
- * @interface LinkCommentAnalysisResult
+ * @interface LinkCommentExtractionResult
  */
-export interface LinkCommentAnalysisResult {
+export interface LinkCommentExtractionResult {
     /**
      * Website description extracted from the comment, if any
      * @type {string}
-     * @memberof LinkCommentAnalysisResult
+     * @memberof LinkCommentExtractionResult
      */
     'description'?: string;
     /**
      * Website name extracted from the comment
      * @type {string}
-     * @memberof LinkCommentAnalysisResult
+     * @memberof LinkCommentExtractionResult
      */
     'displayName'?: string;
     /**
      * Logo URL extracted from the comment, if any
      * @type {string}
-     * @memberof LinkCommentAnalysisResult
+     * @memberof LinkCommentExtractionResult
      */
     'logo'?: string;
     /**
      * RSS feed URL extracted from the comment, if any
      * @type {string}
-     * @memberof LinkCommentAnalysisResult
+     * @memberof LinkCommentExtractionResult
      */
     'rssUrl'?: string;
     /**
      * Website URL extracted from the comment
      * @type {string}
-     * @memberof LinkCommentAnalysisResult
+     * @memberof LinkCommentExtractionResult
      */
     'url'?: string;
 }

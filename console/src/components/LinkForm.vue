@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linkAiApiClient, linksConsoleApiClient } from "@/api";
-import type { LinkAiFeatureStatus, LinkCommentAnalysisResult } from "@/api/generated";
+import type { LinkAiFeatureStatus, LinkCommentExtractionResult } from "@/api/generated";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
 import { computed, nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
@@ -133,23 +133,43 @@ async function fetchAiStatus() {
     return;
   }
   try {
-    const { data: status } = await linkAiApiClient.ai.getAiStatus();
+    const { data: status } = await linkAiApiClient.ai.getLinkAiFeatureStatus();
     aiStatus.value = status;
   } catch {
     // Keep the optional AI section hidden when the status endpoint is unavailable.
   }
 }
 
-function applyAiExtractedResult(result: LinkCommentAnalysisResult) {
-  if (result.url) data.value.url = result.url;
+function isValidUrl(value: string | undefined | null): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function applyAiExtractedResult(result: LinkCommentExtractionResult) {
+  if (isValidUrl(result.url)) {
+    data.value.url = result.url;
+  } else if (result.url) {
+    Toast.warning("AI 提取的网站地址格式不正确，已忽略");
+  }
   if (result.displayName) data.value.displayName = result.displayName;
-  if (result.logo) data.value.logo = result.logo;
+  if (isValidUrl(result.logo)) {
+    data.value.logo = result.logo;
+  } else if (result.logo) {
+    Toast.warning("AI 提取的 Logo 地址格式不正确，已忽略");
+  }
   if (result.description) data.value.description = result.description;
-  if (result.rssUrl) {
+  if (isValidUrl(result.rssUrl)) {
     data.value.rss.enabled = true;
     const merged = mergeFeedUrls(data.value.rss.feedUrls, [result.rssUrl]);
     data.value.rss.feedUrls = merged;
     rssFeedUrlsText.value = feedUrlsToText(merged);
+  } else if (result.rssUrl) {
+    Toast.warning("AI 提取的 RSS 地址格式不正确，已忽略");
   }
 }
 

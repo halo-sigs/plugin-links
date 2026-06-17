@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param description the website description extracted from the comment, if any
  * @param rssUrl      the RSS feed URL extracted from the comment, if any
  */
-public record LinkCommentAnalysisResult(
+public record LinkCommentExtractionResult(
     @Schema(description = "Website URL extracted from the comment")
     String url,
 

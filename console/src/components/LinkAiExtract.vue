@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { linkAiApiClient } from "@/api";
-import type { LinkCommentAnalysisResult, LinkCommentDTO } from "@/api/generated";
+import type { LinkCommentExtractionResult, LinkCommentSummaryDTO } from "@/api/generated";
 import { commentPlainText } from "@/utils/comment-content";
 import { IconClose, Toast, VButton, VLoading } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
@@ -9,13 +9,13 @@ import MdiCommentTextOutline from "~icons/mdi/comment-text-outline";
 import MdiRobot from "~icons/mdi/robot";
 
 const emit = defineEmits<{
-  (event: "extract", result: LinkCommentAnalysisResult): void;
+  (event: "extract", result: LinkCommentExtractionResult): void;
 }>();
 
 const showPanel = shallowRef(false);
 const isLoadingComments = shallowRef(false);
 const isExtracting = shallowRef(false);
-const recentComments = ref<LinkCommentDTO[]>([]);
+const recentComments = ref<LinkCommentSummaryDTO[]>([]);
 const selectedCommentName = shallowRef<string | undefined>(undefined);
 const manualCommentText = shallowRef("");
 
@@ -30,7 +30,7 @@ async function handleFetchComments() {
   if (isLoadingComments.value) return;
   isLoadingComments.value = true;
   try {
-    const { data } = await linkAiApiClient.ai.listRecentComments();
+    const { data } = await linkAiApiClient.ai.listRecentLinkComments();
     recentComments.value = data;
     if (!data.length) {
       Toast.info("暂无已审核的评论");
@@ -42,7 +42,7 @@ async function handleFetchComments() {
   }
 }
 
-function selectComment(comment: LinkCommentDTO) {
+function selectComment(comment: LinkCommentSummaryDTO) {
   selectedCommentName.value = comment.name;
   manualCommentText.value = commentPlainText(comment);
 }

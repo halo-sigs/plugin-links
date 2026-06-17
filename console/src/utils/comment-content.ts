@@ -1,6 +1,6 @@
-import type { LinkCommentDTO } from "@/api/generated";
+import type { LinkCommentSummaryDTO } from "@/api/generated";
 
-export function commentPlainText(comment: Pick<LinkCommentDTO, "content" | "raw">) {
+export function commentPlainText(comment: Pick<LinkCommentSummaryDTO, "content" | "raw">) {
   return htmlToPlainText(comment.raw || comment.content || "");
 }
 

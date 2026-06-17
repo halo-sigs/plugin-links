@@ -17,13 +17,13 @@
 /**
  * Request body for extracting friend-link information from a comment using AI.
  * @export
- * @interface LinkCommentExtractRequest
+ * @interface LinkCommentExtractionRequest
  */
-export interface LinkCommentExtractRequest {
+export interface LinkCommentExtractionRequest {
     /**
      * Comment content to analyze
      * @type {string}
-     * @memberof LinkCommentExtractRequest
+     * @memberof LinkCommentExtractionRequest
      */
     'content': string;
 }

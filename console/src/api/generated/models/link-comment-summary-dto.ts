@@ -17,43 +17,43 @@
 /**
  * 
  * @export
- * @interface LinkCommentDTO
+ * @interface LinkCommentSummaryDTO
  */
-export interface LinkCommentDTO {
+export interface LinkCommentSummaryDTO {
     /**
      * Rendered HTML content
      * @type {string}
-     * @memberof LinkCommentDTO
+     * @memberof LinkCommentSummaryDTO
      */
     'content'?: string;
     /**
      * Comment creation time
      * @type {string}
-     * @memberof LinkCommentDTO
+     * @memberof LinkCommentSummaryDTO
      */
     'creationTime'?: string;
     /**
      * Metadata name of the comment
      * @type {string}
-     * @memberof LinkCommentDTO
+     * @memberof LinkCommentSummaryDTO
      */
     'name'?: string;
     /**
      * Comment owner email
      * @type {string}
-     * @memberof LinkCommentDTO
+     * @memberof LinkCommentSummaryDTO
      */
     'ownerEmail'?: string;
     /**
      * Comment owner display name
      * @type {string}
-     * @memberof LinkCommentDTO
+     * @memberof LinkCommentSummaryDTO
      */
     'ownerName'?: string;
     /**
      * Raw comment content submitted by the owner
      * @type {string}
-     * @memberof LinkCommentDTO
+     * @memberof LinkCommentSummaryDTO
      */
     'raw'?: string;
 }

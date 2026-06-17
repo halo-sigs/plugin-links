@@ -24,9 +24,9 @@ models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
 models/link-ai-feature-status.ts
-models/link-comment-analysis-result.ts
-models/link-comment-dto.ts
-models/link-comment-extract-request.ts
+models/link-comment-extraction-result.ts
+models/link-comment-extraction-request.ts
+models/link-comment-summary-dto.ts
 models/link-detail-dto.ts
 models/link-feed-cleanup-result.ts
 models/link-feed-discovery-result.ts

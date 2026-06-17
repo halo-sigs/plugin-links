@@ -18,14 +18,14 @@ import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.dto.LinkAiFeatureStatus;
-import run.halo.links.dto.LinkCommentDTO;
+import run.halo.links.dto.LinkCommentSummaryDTO;
 
 /**
- * Console endpoint for listing recent comments.
+ * Console endpoint for AI-assisted link feature status and recent comments.
  */
 @Component
 @RequiredArgsConstructor
-public class LinkAiEndpoint implements CustomEndpoint {
+public class LinkAiStatusEndpoint implements CustomEndpoint {
 
     private final ReactiveExtensionClient client;
     private final LinkAiSettingsFetcher settingsFetcher;
@@ -36,7 +36,7 @@ public class LinkAiEndpoint implements CustomEndpoint {
         return route()
             .GET("links/-/ai-status", this::getAiStatus,
                 builder -> builder
-                    .operationId("getAiStatus")
+                    .operationId("getLinkAiFeatureStatus")
                     .description("Get runtime status for AI-assisted link features.")
                     .tag(tag)
                     .response(responseBuilder()
@@ -44,11 +44,11 @@ public class LinkAiEndpoint implements CustomEndpoint {
             )
             .GET("links/-/recent-comments", this::listRecentComments,
                 builder -> builder
-                    .operationId("listRecentComments")
+                    .operationId("listRecentLinkComments")
                     .description("List the 10 most recent approved comments for friend-link extraction.")
                     .tag(tag)
                     .response(responseBuilder()
-                        .implementationArray(LinkCommentDTO.class))
+                        .implementationArray(LinkCommentSummaryDTO.class))
             )
             .build();
     }
@@ -62,7 +62,7 @@ public class LinkAiEndpoint implements CustomEndpoint {
         return settingsFetcher.fetch()
             .map(settings -> new LinkAiFeatureStatus(
                 settings.aiEnabled(),
-                AiFoundationAvailableCondition.isAiFoundationAvailable(),
+                AiFoundationAvailability.isAvailable(),
                 settings.commentExtractionEnabled(),
                 settings.commentExtractionModelName()
             ))
@@ -73,7 +73,7 @@ public class LinkAiEndpoint implements CustomEndpoint {
         return settingsFetcher.fetch()
             .flatMap(settings -> {
                 if (!settings.commentExtractionEnabled()
-                    || !AiFoundationAvailableCondition.isAiFoundationAvailable()) {
+                    || !AiFoundationAvailability.isAvailable()) {
                     return ServerResponse.notFound().build();
                 }
                 return doListRecentComments();
@@ -94,10 +94,10 @@ public class LinkAiEndpoint implements CustomEndpoint {
             .flatMap(dtos -> ServerResponse.ok().bodyValue(dtos));
     }
 
-    private LinkCommentDTO toCommentDto(Comment comment) {
+    private LinkCommentSummaryDTO toCommentDto(Comment comment) {
         var spec = comment.getSpec();
         var owner = spec.getOwner();
-        return new LinkCommentDTO(
+        return new LinkCommentSummaryDTO(
             comment.getMetadata().getName(),
             spec.getRaw(),
             spec.getContent(),

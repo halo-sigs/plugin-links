@@ -350,7 +350,7 @@
         "tags" : [ "console.api.link.halo.run/v1alpha1/Link" ]
       }
     },
-    "/apis/console.api.link.halo.run/v1alpha1/links/-/ai-extract" : {
+    "/apis/console.api.link.halo.run/v1alpha1/links/-/extract-from-comment" : {
       "post" : {
         "description" : "Extract friend-link information from comment content using AI.",
         "operationId" : "extractLinkFromComment",
@@ -358,7 +358,7 @@
           "content" : {
             "*/*" : {
               "schema" : {
-                "$ref" : "#/components/schemas/LinkCommentExtractRequest"
+                "$ref" : "#/components/schemas/LinkCommentExtractionRequest"
               }
             }
           },
@@ -369,7 +369,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/LinkCommentAnalysisResult"
+                  "$ref" : "#/components/schemas/LinkCommentExtractionResult"
                 }
               }
             },
@@ -382,7 +382,7 @@
     "/apis/console.api.link.halo.run/v1alpha1/links/-/ai-status" : {
       "get" : {
         "description" : "Get runtime status for AI-assisted link features.",
-        "operationId" : "getAiStatus",
+        "operationId" : "getLinkAiFeatureStatus",
         "responses" : {
           "default" : {
             "content" : {
@@ -429,7 +429,7 @@
     "/apis/console.api.link.halo.run/v1alpha1/links/-/recent-comments" : {
       "get" : {
         "description" : "List the 10 most recent approved comments for friend-link extraction.",
-        "operationId" : "listRecentComments",
+        "operationId" : "listRecentLinkComments",
         "responses" : {
           "default" : {
             "content" : {
@@ -437,7 +437,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/LinkCommentDTO"
+                    "$ref" : "#/components/schemas/LinkCommentSummaryDTO"
                   }
                 }
               }
@@ -1399,7 +1399,7 @@
           }
         }
       },
-      "LinkCommentAnalysisResult" : {
+      "LinkCommentExtractionResult" : {
         "type" : "object",
         "properties" : {
           "description" : {
@@ -1424,7 +1424,7 @@
           }
         }
       },
-      "LinkCommentDTO" : {
+      "LinkCommentSummaryDTO" : {
         "type" : "object",
         "properties" : {
           "content" : {
@@ -1454,7 +1454,7 @@
           }
         }
       },
-      "LinkCommentExtractRequest" : {
+      "LinkCommentExtractionRequest" : {
         "required" : [ "content" ],
         "type" : "object",
         "properties" : {

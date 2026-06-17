@@ -24,11 +24,11 @@ import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError
 // @ts-ignore
 import type { LinkAiFeatureStatus } from '../models';
 // @ts-ignore
-import type { LinkCommentAnalysisResult } from '../models';
+import type { LinkCommentExtractionResult } from '../models';
 // @ts-ignore
-import type { LinkCommentDTO } from '../models';
+import type { LinkCommentSummaryDTO } from '../models';
 // @ts-ignore
-import type { LinkCommentExtractRequest } from '../models';
+import type { LinkCommentExtractionRequest } from '../models';
 /**
  * ConsoleApiLinkHaloRunV1alpha1LinkAiApi - axios parameter creator
  * @export
@@ -37,12 +37,12 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator = function 
     return {
         /**
          * Extract friend-link information from comment content using AI.
-         * @param {LinkCommentExtractRequest} [linkCommentExtractRequest] Comment content to analyze
+         * @param {LinkCommentExtractionRequest} [linkCommentExtractRequest] Comment content to analyze
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        extractLinkFromComment: async (linkCommentExtractRequest?: LinkCommentExtractRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/links/-/ai-extract`;
+        extractLinkFromComment: async (linkCommentExtractRequest?: LinkCommentExtractionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/links/-/extract-from-comment`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -81,7 +81,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator = function 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAiStatus: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getLinkAiFeatureStatus: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/links/-/ai-status`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -118,7 +118,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator = function 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listRecentComments: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        listRecentLinkComments: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/links/-/recent-comments`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -162,11 +162,11 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp = function(configuration?:
     return {
         /**
          * Extract friend-link information from comment content using AI.
-         * @param {LinkCommentExtractRequest} [linkCommentExtractRequest] Comment content to analyze
+         * @param {LinkCommentExtractionRequest} [linkCommentExtractRequest] Comment content to analyze
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async extractLinkFromComment(linkCommentExtractRequest?: LinkCommentExtractRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkCommentAnalysisResult>> {
+        async extractLinkFromComment(linkCommentExtractRequest?: LinkCommentExtractionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkCommentExtractionResult>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.extractLinkFromComment(linkCommentExtractRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.extractLinkFromComment']?.[localVarOperationServerIndex]?.url;
@@ -177,10 +177,10 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp = function(configuration?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getAiStatus(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkAiFeatureStatus>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getAiStatus(options);
+        async getLinkAiFeatureStatus(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkAiFeatureStatus>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getLinkAiFeatureStatus(options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.getAiStatus']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.getLinkAiFeatureStatus']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -188,10 +188,10 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp = function(configuration?:
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listRecentComments(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<LinkCommentDTO>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listRecentComments(options);
+        async listRecentLinkComments(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<LinkCommentSummaryDTO>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listRecentLinkComments(options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.listRecentComments']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkAiApi.listRecentLinkComments']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -210,7 +210,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        extractLinkFromComment(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkCommentAnalysisResult> {
+        extractLinkFromComment(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkCommentExtractionResult> {
             return localVarFp.extractLinkFromComment(requestParameters.linkCommentExtractRequest, options).then((request) => request(axios, basePath));
         },
         /**
@@ -218,16 +218,16 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAiStatus(options?: RawAxiosRequestConfig): AxiosPromise<LinkAiFeatureStatus> {
-            return localVarFp.getAiStatus(options).then((request) => request(axios, basePath));
+        getLinkAiFeatureStatus(options?: RawAxiosRequestConfig): AxiosPromise<LinkAiFeatureStatus> {
+            return localVarFp.getLinkAiFeatureStatus(options).then((request) => request(axios, basePath));
         },
         /**
          * List the 10 most recent approved comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listRecentComments(options?: RawAxiosRequestConfig): AxiosPromise<Array<LinkCommentDTO>> {
-            return localVarFp.listRecentComments(options).then((request) => request(axios, basePath));
+        listRecentLinkComments(options?: RawAxiosRequestConfig): AxiosPromise<Array<LinkCommentSummaryDTO>> {
+            return localVarFp.listRecentLinkComments(options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -240,10 +240,10 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
 export interface ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromCommentRequest {
     /**
      * Comment content to analyze
-     * @type {LinkCommentExtractRequest}
+     * @type {LinkCommentExtractionRequest}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApiExtractLinkFromComment
      */
-    readonly linkCommentExtractRequest?: LinkCommentExtractRequest
+    readonly linkCommentExtractRequest?: LinkCommentExtractionRequest
 }
 
 /**
@@ -270,8 +270,8 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkAiApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApi
      */
-    public getAiStatus(options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).getAiStatus(options).then((request) => request(this.axios, this.basePath));
+    public getLinkAiFeatureStatus(options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).getLinkAiFeatureStatus(options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -280,7 +280,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkAiApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApi
      */
-    public listRecentComments(options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).listRecentComments(options).then((request) => request(this.axios, this.basePath));
+    public listRecentLinkComments(options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp(this.configuration).listRecentLinkComments(options).then((request) => request(this.axios, this.basePath));
     }
 }

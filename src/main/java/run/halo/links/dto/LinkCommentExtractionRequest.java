@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "Request body for extracting friend-link information from a comment using AI.")
-public class LinkCommentExtractRequest {
+public class LinkCommentExtractionRequest {
 
     @Schema(description = "Comment content to analyze", requiredMode = Schema.RequiredMode.REQUIRED)
     private String content;

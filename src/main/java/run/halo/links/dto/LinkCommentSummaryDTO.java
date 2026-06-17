@@ -13,7 +13,7 @@ import java.time.Instant;
  * @param ownerEmail  comment owner email
  * @param creationTime comment creation time
  */
-public record LinkCommentDTO(
+public record LinkCommentSummaryDTO(
     @Schema(description = "Metadata name of the comment")
     String name,
 

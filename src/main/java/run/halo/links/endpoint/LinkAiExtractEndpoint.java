@@ -4,11 +4,8 @@ import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder
 import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuilder;
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -23,8 +20,8 @@ import run.halo.aifoundation.schema.OutputSpec;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
 import run.halo.app.plugin.extensionpoint.ExtensionGetter;
-import run.halo.links.dto.LinkCommentAnalysisResult;
-import run.halo.links.dto.LinkCommentExtractRequest;
+import run.halo.links.dto.LinkCommentExtractionResult;
+import run.halo.links.dto.LinkCommentExtractionRequest;
 
 import java.util.Map;
 
@@ -32,9 +29,10 @@ import java.util.Map;
  * Console endpoint for AI-powered comment analysis.
  * This class imports ai-foundation classes and will only load when the
  * ai-foundation plugin is present. If ai-foundation is missing, this bean
- * is skipped and the recent-comments endpoint in {@link LinkAiEndpoint}
+ * is skipped and the recent-comments endpoint in {@link LinkAiStatusEndpoint}
  * remains functional.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @Conditional(AiFoundationAvailableCondition.class)
@@ -47,16 +45,16 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
     public RouterFunction<ServerResponse> endpoint() {
         final var tag = "console.api.link.halo.run/v1alpha1/LinkAi";
         return route()
-            .POST("links/-/ai-extract", this::extractFromComment,
+            .POST("links/-/extract-from-comment", this::extractLinkFromComment,
                 builder -> builder
                     .operationId("extractLinkFromComment")
                     .description("Extract friend-link information from comment content using AI.")
                     .tag(tag)
                     .requestBody(requestBodyBuilder()
                         .description("Comment content to analyze")
-                        .implementation(LinkCommentExtractRequest.class))
+                        .implementation(LinkCommentExtractionRequest.class))
                     .response(responseBuilder()
-                        .implementation(LinkCommentAnalysisResult.class))
+                        .implementation(LinkCommentExtractionResult.class))
             )
             .build();
     }
@@ -66,13 +64,8 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
         return GroupVersion.parseAPIVersion("console.api.link.halo.run/v1alpha1");
     }
 
-    @Operation(
-        requestBody = @RequestBody(
-            content = @Content(schema = @Schema(implementation = LinkCommentExtractRequest.class))
-        )
-    )
-    Mono<ServerResponse> extractFromComment(ServerRequest request) {
-        return request.bodyToMono(LinkCommentExtractRequest.class)
+    Mono<ServerResponse> extractLinkFromComment(ServerRequest request) {
+        return request.bodyToMono(LinkCommentExtractionRequest.class)
             .flatMap(req -> settingsFetcher.fetch().flatMap(settings -> {
                 if (!settings.commentExtractionEnabled()) {
                     return ServerResponse.notFound().build();
@@ -89,13 +82,15 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
                                 "error", "AI failed to parse the comment into structured data. Please try again or fill in manually.",
                                 "detail", e.getMessage()
                             )))
-                    .onErrorResume(Exception.class, e ->
-                        ServerResponse.status(HttpStatus.BAD_GATEWAY)
-                            .bodyValue(Map.of("error", e.getMessage())));
+                    .onErrorResume(Exception.class, e -> {
+                        log.warn("[plugin-links] Failed to extract friend-link information from comment", e);
+                        return ServerResponse.status(HttpStatus.BAD_GATEWAY)
+                            .bodyValue(Map.of("error", "AI service is unavailable. Please try again later."));
+                    });
             }));
     }
 
-    private Mono<LinkCommentAnalysisResult> doExtract(String content, String modelName) {
+    private Mono<LinkCommentExtractionResult> doExtract(String content, String modelName) {
         return extensionGetter.getEnabledExtension(AiModelService.class)
             .switchIfEmpty(Mono.error(new IllegalStateException(
                 "AI foundation plugin is not installed or enabled.")))
@@ -109,11 +104,11 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
                 return model.generateText(GenerateTextRequest.builder()
                     .system("You are a helpful assistant that extracts friend-link (友链) application information from Chinese or English blog comments. Extract the website URL, name, logo URL, description, and RSS feed URL if present.")
                     .prompt(prompt)
-                    .output(OutputSpec.object(LinkCommentAnalysisResult.class))
+                    .output(OutputSpec.object(LinkCommentExtractionResult.class))
                     .maxOutputTokens(500)
                     .build());
             })
-            .map(result -> toAnalysisResult(result.getOutput()));
+            .map(result -> toExtractionResult(result.getOutput()));
     }
 
     private String buildExtractionPrompt(String content) {
@@ -127,13 +122,18 @@ public class LinkAiExtractEndpoint implements CustomEndpoint {
             """.formatted(content);
     }
 
+    /**
+     * Converts the AI model output into {@link LinkCommentExtractionResult}.
+     * The structured output spec usually returns the target type directly, but some
+     * model implementations may return the result as a generic map; handle both.
+     */
     @SuppressWarnings("unchecked")
-    private static LinkCommentAnalysisResult toAnalysisResult(Object output) {
-        if (output instanceof LinkCommentAnalysisResult result) {
+    private static LinkCommentExtractionResult toExtractionResult(Object output) {
+        if (output instanceof LinkCommentExtractionResult result) {
             return result;
         }
         if (output instanceof Map<?, ?> map) {
-            return new LinkCommentAnalysisResult(
+            return new LinkCommentExtractionResult(
                 toStringValue(map.get("url")),
                 toStringValue(map.get("displayName")),
                 toStringValue(map.get("logo")),
