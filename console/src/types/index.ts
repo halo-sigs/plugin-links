@@ -5,6 +5,7 @@ export interface LinkFormState {
   displayName: string;
   logo?: string;
   description?: string;
+  groupName?: string;
   rss?: RssSpec;
   verification?: VerificationSpec;
   annotations?: Record<string, string>;

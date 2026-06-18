@@ -51,6 +51,19 @@ const { mutate, isPending } = useMutation({
       },
     ];
 
+    if (data.groupName) {
+      jsonPatchInner.push({
+        op: "add",
+        path: "/spec/groupName",
+        value: data.groupName,
+      });
+    } else if (props.link.spec?.groupName) {
+      jsonPatchInner.push({
+        op: "remove",
+        path: "/spec/groupName",
+      });
+    }
+
     const rss = linkRssSpec(data);
     if (rss) {
       jsonPatchInner.push({
@@ -163,6 +176,7 @@ function handleDelete() {
           displayName: link.spec.displayName,
           logo: link.spec.logo,
           description: link.spec.description,
+          groupName: link.spec.groupName,
           rss: link.spec.rss,
           verification: link.spec.verification,
           annotations: link.metadata.annotations,

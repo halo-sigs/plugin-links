@@ -33,6 +33,7 @@ import run.halo.links.vo.LinkVo;
 public class LinkRouter {
 
     private static final Duration BLOCKING_TIMEOUT = Duration.ofSeconds(10);
+    static final String BASE_SETTING_GROUP = "base";
     private static final String TEMPLATE_ID = "_templateId";
 
     private final LinkFinder linkFinder;
@@ -106,9 +107,10 @@ public class LinkRouter {
     }
 
     Mono<String> getLinkTitle() {
-        return this.settingFetcher.getSettingValue("base")
-            .map(setting -> setting.get("title").asText())
-            .defaultIfEmpty("链接");
+        return this.settingFetcher.fetch(BASE_SETTING_GROUP, LinkBaseSettings.class)
+            .defaultIfEmpty(LinkBaseSettings.defaults())
+            .map(LinkBaseSettings::normalizedTitle)
+            .onErrorReturn(LinkBaseSettings.DEFAULT_TITLE);
     }
 
     static Sort defaultLinkSort() {
