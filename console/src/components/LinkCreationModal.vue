@@ -41,7 +41,7 @@ const { mutate, isPending } = useMutation({
           displayName: data.displayName,
           logo: data.logo,
           description: data.description,
-          groupName: props.group?.metadata.name,
+          groupName: data.groupName,
           priority: maxPriority + 1,
           rss:
             data.rss?.enabled || data.rss?.feedUrls?.length
@@ -87,7 +87,14 @@ const title = computed(() => {
 </script>
 <template>
   <VModal :centered="false" :title="title" ref="modal" :mount-to-body="true" :width="650" @close="emit('close')">
-    <LinkForm @submit="onSubmit" />
+    <LinkForm
+      :form-state="{
+        url: '',
+        displayName: '',
+        groupName: props.group?.metadata.name,
+      }"
+      @submit="onSubmit"
+    />
 
     <template #footer>
       <VSpace>

@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import { linksConsoleApiClient } from "@/api";
+import type { LinkGroup } from "@/api/generated";
+import { useLinkGroupFetch } from "@/composables/use-group-fetch";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
-import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
+import { computed, nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
+import RiAddLine from "~icons/ri/add-line";
+import GroupCreationModal from "./GroupCreationModal.vue";
 
 const props = defineProps<{
   name?: string;
@@ -37,6 +41,25 @@ const data = ref<LinkFormData>({
   },
 });
 const rssFeedUrlsText = shallowRef("");
+const groupCreationModalVisible = shallowRef(false);
+const createdGroupOption = shallowRef<{ label: string; value: string }>();
+const { data: groups } = useLinkGroupFetch();
+
+const groupOptions = computed(() => {
+  const options = [
+    { label: "无分组", value: "" },
+    ...(groups.value || []).map((group) => {
+      return {
+        label: group.spec?.displayName || group.metadata.name,
+        value: group.metadata.name,
+      };
+    }),
+  ];
+  if (createdGroupOption.value && !options.some((option) => option.value === createdGroupOption.value?.value)) {
+    options.push(createdGroupOption.value);
+  }
+  return options;
+});
 
 onMounted(() => {
   if (props.formState) {
@@ -160,6 +183,7 @@ async function onSubmit() {
     displayName: data.value.displayName,
     logo: data.value.logo,
     description: data.value.description,
+    groupName: data.value.groupName || undefined,
     rss: {
       enabled: data.value.rss.enabled,
       feedUrls,
@@ -170,6 +194,14 @@ async function onSubmit() {
       ...customAnnotations,
     },
   });
+}
+
+function handleGroupCreated(group: LinkGroup) {
+  createdGroupOption.value = {
+    label: group.spec.displayName,
+    value: group.metadata.name,
+  };
+  data.value.groupName = group.metadata.name;
 }
 </script>
 <template>
@@ -206,6 +238,27 @@ async function onSubmit() {
             label="网站名称"
           ></FormKit>
           <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
+          <FormKit
+            type="select"
+            name="groupName"
+            v-model="data.groupName"
+            :options="groupOptions"
+            label="分组"
+          >
+            <template #suffix>
+              <button
+                type="button"
+                aria-label="新建分组"
+                v-tooltip="{
+                  content: '新建分组',
+                }"
+                class=":uno: group h-full flex cursor-pointer items-center border-0 bg-transparent px-3 transition-all"
+                @click="groupCreationModalVisible = true"
+              >
+                <RiAddLine class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
+              </button>
+            </template>
+          </FormKit>
           <FormKit type="textarea" name="description" v-model="data.description" label="描述" auto-height></FormKit>
         </div>
       </div>
@@ -289,4 +342,10 @@ async function onSubmit() {
       />
     </div>
   </div>
+
+  <GroupCreationModal
+    v-if="groupCreationModalVisible"
+    @created="handleGroupCreated"
+    @close="groupCreationModalVisible = false"
+  />
 </template>
