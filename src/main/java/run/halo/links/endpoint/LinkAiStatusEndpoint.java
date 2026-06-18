@@ -2,7 +2,6 @@ package run.halo.links.endpoint;
 
 import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
-import static run.halo.app.extension.index.query.Queries.equal;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -45,7 +44,7 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
             .GET("links/-/recent-comments", this::listRecentComments,
                 builder -> builder
                     .operationId("listRecentLinkComments")
-                    .description("List the 10 most recent approved comments for friend-link extraction.")
+                    .description("List the 10 most recent comments for friend-link extraction.")
                     .tag(tag)
                     .response(responseBuilder()
                         .implementationArray(LinkCommentSummaryDTO.class))
@@ -81,9 +80,7 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
     }
 
     private Mono<ServerResponse> doListRecentComments() {
-        var listOptions = ListOptions.builder()
-            .andQuery(equal("spec.approved", "true"))
-            .build();
+        var listOptions = ListOptions.builder().build();
         var pageRequest = PageRequestImpl.of(1, 10,
             Sort.by(Sort.Direction.DESC, "metadata.creationTimestamp"));
 

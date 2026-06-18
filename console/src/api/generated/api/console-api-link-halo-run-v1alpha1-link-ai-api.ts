@@ -114,7 +114,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiAxiosParamCreator = function 
             };
         },
         /**
-         * List the 10 most recent approved comments for friend-link extraction.
+         * List the 10 most recent comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -184,7 +184,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFp = function(configuration?:
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * List the 10 most recent approved comments for friend-link extraction.
+         * List the 10 most recent comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -222,7 +222,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkAiApiFactory = function (configura
             return localVarFp.getLinkAiFeatureStatus(options).then((request) => request(axios, basePath));
         },
         /**
-         * List the 10 most recent approved comments for friend-link extraction.
+         * List the 10 most recent comments for friend-link extraction.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -275,7 +275,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkAiApi extends BaseAPI {
     }
 
     /**
-     * List the 10 most recent approved comments for friend-link extraction.
+     * List the 10 most recent comments for friend-link extraction.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkAiApi

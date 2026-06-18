@@ -428,7 +428,7 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/links/-/recent-comments" : {
       "get" : {
-        "description" : "List the 10 most recent approved comments for friend-link extraction.",
+        "description" : "List the 10 most recent comments for friend-link extraction.",
         "operationId" : "listRecentLinkComments",
         "responses" : {
           "default" : {
