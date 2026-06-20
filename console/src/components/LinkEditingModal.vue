@@ -171,6 +171,7 @@ function handleDelete() {
       <LinkForm
         :key="link.metadata.name"
         :name="link.metadata.name"
+        mode="edit"
         :formState="{
           url: link.spec.url,
           displayName: link.spec.displayName,

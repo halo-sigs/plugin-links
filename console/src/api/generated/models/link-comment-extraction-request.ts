@@ -15,22 +15,16 @@
 
 
 /**
- * 
+ * Request body for extracting friend-link information from a comment using AI.
  * @export
- * @interface LinkFeedUnreadSummary
+ * @interface LinkCommentExtractionRequest
  */
-export interface LinkFeedUnreadSummary {
+export interface LinkCommentExtractionRequest {
     /**
-     * 
-     * @type {number}
-     * @memberof LinkFeedUnreadSummary
+     * Comment content to analyze
+     * @type {string}
+     * @memberof LinkCommentExtractionRequest
      */
-    'totalUnreadCount'?: number;
-    /**
-     * 
-     * @type {{ [key: string]: number; }}
-     * @memberof LinkFeedUnreadSummary
-     */
-    'unreadCountsByLinkName'?: { [key: string]: number; };
+    'content': string;
 }
 

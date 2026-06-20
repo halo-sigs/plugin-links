@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { linksConsoleApiClient } from "@/api";
-import type { LinkGroup } from "@/api/generated";
+import { linkAiApiClient, linksConsoleApiClient } from "@/api";
+import type { LinkAiFeatureStatus, LinkCommentExtractionResult, LinkGroup } from "@/api/generated";
 import { useLinkGroupFetch } from "@/composables/use-group-fetch";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
@@ -9,9 +9,11 @@ import MdiWebRefresh from "~icons/mdi/web-refresh";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import RiAddLine from "~icons/ri/add-line";
 import GroupCreationModal from "./GroupCreationModal.vue";
+import LinkAiExtract from "./LinkAiExtract.vue";
 
 const props = defineProps<{
   name?: string;
+  mode?: "create" | "edit";
   formState?: LinkFormState;
 }>();
 
@@ -41,6 +43,7 @@ const data = ref<LinkFormData>({
   },
 });
 const rssFeedUrlsText = shallowRef("");
+const aiStatus = ref<LinkAiFeatureStatus>();
 const groupCreationModalVisible = shallowRef(false);
 const createdGroupOption = shallowRef<{ label: string; value: string }>();
 const { data: groups } = useLinkGroupFetch();
@@ -77,6 +80,7 @@ onMounted(() => {
     };
     rssFeedUrlsText.value = feedUrlsToText(feedUrls);
   }
+  fetchAiStatus();
 });
 
 const isFetchingLinkDetail = shallowRef(false);
@@ -135,6 +139,62 @@ const handleDiscoverFeed = async () => {
 };
 
 const annotationsForm = ref();
+
+const isNew = computed(() => (props.mode ? props.mode === "create" : !props.name));
+const isAiCommentExtractionAvailable = computed(() => {
+  const status = aiStatus.value;
+  return (
+    isNew.value &&
+    status?.enabled === true &&
+    status?.available === true &&
+    status?.commentExtractionEnabled === true
+  );
+});
+
+async function fetchAiStatus() {
+  if (!isNew.value) {
+    return;
+  }
+  try {
+    const { data: status } = await linkAiApiClient.ai.getLinkAiFeatureStatus();
+    aiStatus.value = status;
+  } catch {
+    // Keep the optional AI section hidden when the status endpoint is unavailable.
+  }
+}
+
+function isValidUrl(value: string | undefined | null): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function applyAiExtractedResult(result: LinkCommentExtractionResult) {
+  if (isValidUrl(result.url)) {
+    data.value.url = result.url;
+  } else if (result.url) {
+    Toast.warning("AI 提取的网站地址格式不正确，已忽略");
+  }
+  if (result.displayName) data.value.displayName = result.displayName;
+  if (isValidUrl(result.logo)) {
+    data.value.logo = result.logo;
+  } else if (result.logo) {
+    Toast.warning("AI 提取的 Logo 地址格式不正确，已忽略");
+  }
+  if (result.description) data.value.description = result.description;
+  if (isValidUrl(result.rssUrl)) {
+    data.value.rss.enabled = true;
+    const merged = mergeFeedUrls(data.value.rss.feedUrls, [result.rssUrl]);
+    data.value.rss.feedUrls = merged;
+    rssFeedUrlsText.value = feedUrlsToText(merged);
+  } else if (result.rssUrl) {
+    Toast.warning("AI 提取的 RSS 地址格式不正确，已忽略");
+  }
+}
 
 function normalizeFeedUrls(feedUrls: string[]) {
   return [...new Set(feedUrls.map((feedUrl) => feedUrl.trim()).filter(Boolean))];
@@ -207,6 +267,23 @@ function handleGroupCreated(group: LinkGroup) {
 <template>
   <FormKit id="link-form" name="link-form" type="form" :config="{ validationVisibility: 'submit' }" @submit="onSubmit">
     <div>
+      <template v-if="isAiCommentExtractionAvailable">
+        <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+          <div class=":uno: md:col-span-1">
+            <div class=":uno: sticky top-0">
+              <span class=":uno: text-base text-gray-900 font-medium"> AI 识别 </span>
+            </div>
+          </div>
+          <div class=":uno: mt-5 md:col-span-3 md:mt-0">
+            <LinkAiExtract @extract="applyAiExtractedResult" />
+          </div>
+        </div>
+
+        <div class=":uno: py-5">
+          <div class=":uno: border-t border-gray-200"></div>
+        </div>
+      </template>
+
       <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
         <div class=":uno: md:col-span-1">
           <div class=":uno: sticky top-0">
