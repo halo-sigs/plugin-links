@@ -19,7 +19,6 @@ export interface GroupWithLinks {
 }
 
 function groupLinks(groups: LinkGroup[], links: Link[]) {
-
   const groupNames = groups.map((group) => group.metadata.name);
 
   const ungrouped: GroupWithLinks = {
