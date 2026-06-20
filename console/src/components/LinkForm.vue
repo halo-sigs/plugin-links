@@ -13,6 +13,7 @@ import LinkAiExtract from "./LinkAiExtract.vue";
 
 const props = defineProps<{
   name?: string;
+  mode?: "create" | "edit";
   formState?: LinkFormState;
 }>();
 
@@ -139,7 +140,7 @@ const handleDiscoverFeed = async () => {
 
 const annotationsForm = ref();
 
-const isNew = computed(() => !props.formState);
+const isNew = computed(() => (props.mode ? props.mode === "create" : !props.name));
 const isAiCommentExtractionAvailable = computed(() => {
   const status = aiStatus.value;
   return (

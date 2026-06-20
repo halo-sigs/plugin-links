@@ -88,6 +88,7 @@ const title = computed(() => {
 <template>
   <VModal :centered="false" :title="title" ref="modal" :mount-to-body="true" :width="650" @close="emit('close')">
     <LinkForm
+      mode="create"
       :form-state="{
         url: '',
         displayName: '',
