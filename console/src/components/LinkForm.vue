@@ -314,13 +314,7 @@ function handleGroupCreated(group: LinkGroup) {
             label="网站名称"
           ></FormKit>
           <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
-          <FormKit
-            type="select"
-            name="groupName"
-            v-model="data.groupName"
-            :options="groupOptions"
-            label="分组"
-          >
+          <FormKit type="select" name="groupName" v-model="data.groupName" :options="groupOptions" label="分组">
             <template #suffix>
               <button
                 type="button"

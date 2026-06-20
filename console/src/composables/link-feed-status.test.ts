@@ -1,5 +1,5 @@
-import { describe, expect, it } from "@rstest/core";
 import type { Link } from "@/api/generated";
+import { describe, expect, it } from "@rstest/core";
 import { aggregateLinkFeedStatusMeta, classifyLinkFeedStatus, linkFeedStatusMeta } from "./link-feed-status";
 
 describe("linkFeedStatusMeta", () => {
@@ -57,9 +57,7 @@ describe("aggregateLinkFeedStatusMeta", () => {
   });
 
   it("summarizes all-success states", () => {
-    expect(
-      aggregateLinkFeedStatusMeta([link({ lastSuccessAt: "2026-05-25T10:00:00Z" })]).state,
-    ).toBe("success");
+    expect(aggregateLinkFeedStatusMeta([link({ lastSuccessAt: "2026-05-25T10:00:00Z" })]).state).toBe("success");
   });
 });
 

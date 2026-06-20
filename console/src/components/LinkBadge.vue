@@ -1,13 +1,22 @@
 <script lang="ts" setup>
-import type { Link } from "@/api/generated";
+import { linksCoreApiClient } from "@/api";
+import type { JsonPatchInner, Link, LinkGroupVo } from "@/api/generated";
 import {
   accessVerificationStatusMeta,
   backlinkVerificationStatusMeta,
   type LinkVerificationTone,
 } from "@/composables/link-verification-status";
-import { IconExternalLinkLine } from "@halo-dev/components";
+import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { Dialog, IconExternalLinkLine, Toast } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
-import { computed } from "vue";
+import ContextMenu, { type MenuItem } from "@imengyu/vue3-context-menu";
+import "@imengyu/vue3-context-menu/lib/vue3-context-menu.css";
+import { useQueryClient } from "@tanstack/vue-query";
+import { computed, h } from "vue";
+import Delete2LineIcon from "~icons/mingcute/delete-2-line";
+import MingcuteEdit4Line from "~icons/mingcute/edit-4-line";
+import MingcuteMoveLine from "~icons/mingcute/move-line";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import RiLinkM from "~icons/ri/link-m";
 import RiPulseLine from "~icons/ri/pulse-line";
@@ -16,6 +25,8 @@ const props = defineProps<{
   selectMode?: boolean;
   sortMode?: boolean;
   link: Link;
+  groupName?: string;
+  groups?: LinkGroupVo[];
 }>();
 
 interface LinkBadgeStatusItem {
@@ -29,14 +40,61 @@ const emit = defineEmits<{
   (event: "open-edit"): void;
 }>();
 
+const queryClient = useQueryClient();
+
 function handleClick() {
   if (!props.selectMode && !props.sortMode) {
     emit("open-edit");
   }
 }
 
+function handleContextMenu(event: MouseEvent) {
+  if (!props.selectMode && !props.sortMode) {
+    const moveItems: MenuItem[] = moveTargetGroups.value.map((group) => ({
+      label: group.spec?.displayName || group.metadata.name,
+      onClick: () => handleMove(group),
+    }));
+
+    if (props.groupName) {
+      moveItems.push({
+        label: "未分组",
+        divided: moveItems.length ? "up" : false,
+        onClick: () => handleMove(),
+      });
+    }
+
+    ContextMenu.showContextMenu({
+      x: event.x,
+      y: event.y,
+      theme: "mac",
+      zIndex: 999,
+      items: [
+        {
+          label: "编辑链接",
+          onClick: () => emit("open-edit"),
+          icon: h(MingcuteEdit4Line),
+        },
+        {
+          label: "移动到",
+          disabled: !moveItems.length,
+          children: moveItems,
+          icon: h(MingcuteMoveLine),
+        },
+        {
+          label: "删除链接",
+          divided: "up",
+          icon: h(Delete2LineIcon),
+          customClass: ":uno: !text-red-500",
+          onClick: handleDelete,
+        },
+      ],
+    });
+  }
+}
+
 const displayName = computed(() => props.link.spec?.displayName || props.link.metadata.name);
 const linkUrl = computed(() => props.link.spec?.url || "");
+const moveTargetGroups = computed(() => props.groups?.filter((group) => group.metadata.name !== props.groupName) || []);
 
 const rssStatusTone = computed<LinkVerificationTone>(() => {
   if (hasPartialRssFailure(props.link)) {
@@ -148,6 +206,53 @@ function verificationTooltip(meta: ReturnType<typeof accessVerificationStatusMet
   }
   return `${meta.label}：${meta.description}，${utils.date.format(checkedAt)}`;
 }
+
+function handleMove(group?: LinkGroupVo) {
+  const targetName = group?.spec?.displayName || "未分组";
+
+  Dialog.warning({
+    title: "移动链接",
+    description: `确认将 ${displayName.value} 移动到${targetName}吗？`,
+    confirmType: "danger",
+    onConfirm: () => moveLink(group?.metadata.name),
+  });
+}
+
+async function moveLink(groupName?: string) {
+  const jsonPatchInner: JsonPatchInner[] = groupName
+    ? [{ op: "add", path: "/spec/groupName", value: groupName }]
+    : [{ op: "remove", path: "/spec/groupName" }];
+
+  await linksCoreApiClient.link.patchLink({
+    name: props.link.metadata.name,
+    jsonPatchInner,
+  });
+
+  Toast.success("移动成功");
+  invalidateLinkQueries();
+}
+
+function handleDelete() {
+  Dialog.warning({
+    title: "是否确认删除当前的链接？",
+    description: "删除之后将无法恢复。",
+    confirmType: "danger",
+    onConfirm: async () => {
+      await linksCoreApiClient.link.deleteLink({
+        name: props.link.metadata.name,
+      });
+
+      Toast.success("删除成功");
+      invalidateLinkQueries();
+    },
+  });
+}
+
+function invalidateLinkQueries() {
+  queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+  queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+  queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+}
 </script>
 <template>
   <label
@@ -158,6 +263,7 @@ function verificationTooltip(meta: ReturnType<typeof accessVerificationStatusMet
       ':uno: link-badge--plain': !showStatusDock,
     }"
     @click="handleClick"
+    @contextmenu.prevent="handleContextMenu"
   >
     <div class=":uno: link-badge__main">
       <span v-if="selectMode" class=":uno: link-badge__media">

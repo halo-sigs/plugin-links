@@ -2,11 +2,11 @@
 import type { Link, LinkFeedUnreadSummary, RssFeedStatus } from "@/api/generated";
 import {
   aggregateLinkFeedStatusMeta,
-  type LinkFeedStatusTone,
   linkFeedStatusMeta,
   linkTitle,
   rssFeedUrls,
   statusSortWeight,
+  type LinkFeedStatusTone,
 } from "@/composables/link-feed-status";
 import { linkFeedUnreadCount } from "@/composables/use-link-feed-unread-summary";
 import { VButton, VModal, VSpace } from "@halo-dev/components";
@@ -48,16 +48,18 @@ interface AttentionDetail {
 const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const selectedLink = computed(() => {
-  return props.selectedLinkName
-    ? props.links.find((link) => link.metadata.name === props.selectedLinkName)
-    : undefined;
+  return props.selectedLinkName ? props.links.find((link) => link.metadata.name === props.selectedLinkName) : undefined;
 });
 
 const isAggregate = computed(() => !selectedLink.value);
 const modalTitle = computed(() => (isAggregate.value ? "全部订阅状态" : `${linkTitle(selectedLink.value!)} 状态`));
 const aggregateStatus = computed(() => aggregateLinkFeedStatusMeta(props.links));
-const selectedStatus = computed(() => (selectedLink.value ? linkFeedStatusMeta(selectedLink.value) : aggregateStatus.value));
-const totalItemCount = computed(() => props.links.reduce((total, link) => total + (link.status?.rss?.itemCount || 0), 0));
+const selectedStatus = computed(() =>
+  selectedLink.value ? linkFeedStatusMeta(selectedLink.value) : aggregateStatus.value,
+);
+const totalItemCount = computed(() =>
+  props.links.reduce((total, link) => total + (link.status?.rss?.itemCount || 0), 0),
+);
 const totalUnreadCount = computed(() => props.unreadSummary?.totalUnreadCount || 0);
 const selectedUnreadCount = computed(() => linkFeedUnreadCount(props.unreadSummary, selectedLink.value?.metadata.name));
 
@@ -167,7 +169,15 @@ function feedStatusLabel(status: RssFeedStatus) {
 </script>
 
 <template>
-  <VModal ref="modal" layer-closable :centered="false" :title="modalTitle" :mount-to-body="true" :width="760" @close="emit('close')">
+  <VModal
+    ref="modal"
+    layer-closable
+    :centered="false"
+    :title="modalTitle"
+    :mount-to-body="true"
+    :width="760"
+    @close="emit('close')"
+  >
     <div class=":uno: feed-status-modal">
       <section class=":uno: feed-status-modal__summary">
         <span
@@ -247,10 +257,7 @@ function feedStatusLabel(status: RssFeedStatus) {
           </article>
         </div>
         <p v-else class=":uno: feed-status-modal__empty">
-          <span
-            class=":uno: feed-status-modal__dot feed-status-modal__dot--success"
-            aria-hidden="true"
-          ></span>
+          <span class=":uno: feed-status-modal__dot feed-status-modal__dot--success" aria-hidden="true"></span>
           所有订阅最近均成功获取
         </p>
       </section>
