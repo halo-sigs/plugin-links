@@ -11,7 +11,7 @@ metadata:
       ["plugin:links:view"]
 rules:
   - apiGroups: [ "core.halo.run", "console.api.link.halo.run" ]
-    resources: [ "links", "linkgroups" ]
+    resources: [ "links", "linkgroups", "linkapplications" ]
     verbs: [ "get", "list" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "rss/items", "rss/discovery" ]
@@ -37,7 +37,7 @@ metadata:
       ["role-template-link-view"]
 rules:
   - apiGroups: [ "core.halo.run", "console.api.link.halo.run" ]
-    resources: [ "links", "linkgroups" ]
+    resources: [ "links", "linkgroups", "linkapplications" ]
     verbs: [ "create", "patch", "update", "delete", "deletecollection" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "links/sort", "linkgroups/sort" ]
@@ -49,6 +49,10 @@ rules:
     verbs: [ "get" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "links/rss/refresh", "rss/cleanup" ]
+    resourceNames: [ "-" ]
+    verbs: [ "create" ]
+  - apiGroups: [ "console.api.link.halo.run" ]
+    resources: [ "linkapplications/approve", "linkapplications/reject", "linkapplications/verify" ]
     resourceNames: [ "-" ]
     verbs: [ "create" ]
 ---

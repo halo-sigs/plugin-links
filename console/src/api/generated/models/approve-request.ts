@@ -13,39 +13,42 @@
  */
 
 
-// May contain unused imports in some cases
-// @ts-ignore
-import type { LinkFeedItemVo } from './link-feed-item-vo';
 
 /**
  * 
  * @export
- * @interface LinkFeedItemPageVo
+ * @interface ApproveRequest
  */
-export interface LinkFeedItemPageVo {
-    /**
-     * 
-     * @type {boolean}
-     * @memberof LinkFeedItemPageVo
-     */
-    'hasNext'?: boolean;
-    /**
-     * 
-     * @type {Array<LinkFeedItemVo>}
-     * @memberof LinkFeedItemPageVo
-     */
-    'items'?: Array<LinkFeedItemVo>;
+export interface ApproveRequest {
     /**
      * 
      * @type {string}
-     * @memberof LinkFeedItemPageVo
+     * @memberof ApproveRequest
      */
-    'nextBeforeId'?: string;
+    'description'?: string;
     /**
      * 
      * @type {string}
-     * @memberof LinkFeedItemPageVo
+     * @memberof ApproveRequest
      */
-    'nextBeforePublishedAt'?: string;
+    'displayName'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApproveRequest
+     */
+    'groupName'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApproveRequest
+     */
+    'logo'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApproveRequest
+     */
+    'url'?: string;
 }
 
