@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.24.0')
+    implementation platform('run.halo.tools.platform:plugin:2.25.0')
     compileOnly 'run.halo.app:api'
     implementation('com.rometools:rome:2.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
@@ -63,7 +63,7 @@ tasks.named('generatePluginComponentsIdx') {
 }
 
 halo {
-    version = '2.24'
+    version = '2.25'
     port = 8091
     debug = true
 }
