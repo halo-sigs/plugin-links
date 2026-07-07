@@ -33,7 +33,7 @@ async function handleFetchComments() {
     const { data } = await linkAiApiClient.ai.listRecentLinkComments();
     recentComments.value = data;
     if (!data.length) {
-      Toast.info("暂无已审核的评论");
+      Toast.info("暂无评论");
     }
   } catch {
     // Halo's API interceptor shows request failure toasts.
@@ -105,7 +105,7 @@ function open() {
         </button>
       </div>
 
-      <p class=":uno: text-xs text-gray-500">从已审核的评论中提取网站地址、名称、Logo、描述和 RSS 订阅地址。</p>
+      <p class=":uno: text-xs text-gray-500">从最新评论中提取网站地址、名称、Logo、描述和 RSS 订阅地址。</p>
 
       <VButton size="sm" :loading="isLoadingComments" @click="handleFetchComments">
         <template #icon>
@@ -150,7 +150,7 @@ function open() {
       </div>
 
       <div v-else class=":uno: border border-gray-200 rounded-lg border-dashed py-5 text-center">
-        <p class=":uno: text-sm text-gray-400">暂无已审核的评论</p>
+        <p class=":uno: text-sm text-gray-400">暂无评论</p>
         <p class=":uno: mt-1 text-xs text-gray-400">可手动在下方粘贴评论内容</p>
       </div>
 
@@ -160,6 +160,7 @@ function open() {
         name="commentContent"
         label="评论内容"
         help="可手动粘贴或编辑"
+        rows="3"
         auto-height
         placeholder="选择上方评论或手动粘贴内容，AI 将从中提取友链信息..."
       ></FormKit>
