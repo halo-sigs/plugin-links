@@ -18,6 +18,7 @@ export * from './api/api-link-halo-run-v1alpha1-link-api';
 export * from './api/api-link-halo-run-v1alpha1-link-feed-api';
 export * from './api/api-link-halo-run-v1alpha1-link-group-api';
 export * from './api/console-api-link-halo-run-v1alpha1-link-api';
+export * from './api/console-api-link-halo-run-v1alpha1-link-ai-api';
 export * from './api/console-api-link-halo-run-v1alpha1-link-feed-api';
 export * from './api/console-api-link-halo-run-v1alpha1-link-group-api';
 export * from './api/link-group-v1alpha1-api';
