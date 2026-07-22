@@ -15,6 +15,7 @@ import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedPublicSettingsFetcher;
+import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.service.LinkFeedPublicQueryService;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
@@ -57,9 +58,12 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
     @Override
     public Mono<LinkFeedItemPageVo> listFeeds(String groupName, LinkFeedItemQuery query) {
-        return StringUtils.hasText(groupName)
-            ? listByGroup(groupName, query)
-            : listItems(query);
+        return Mono.defer(() -> StringUtils.hasText(groupName)
+                ? listByGroup(groupName, query)
+                : listItems(query))
+            .subscribeOn(Schedulers.boundedElastic())
+            .onErrorResume(LinkFeedStorageUnavailableException.class,
+                error -> Mono.just(emptyPage()));
     }
 
     public Mono<LinkFeedItemPageVo> listItems(LinkFeedItemQuery query) {
@@ -192,4 +196,7 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
         return item.getFetchedAt();
     }
 
+    private static LinkFeedItemPageVo emptyPage() {
+        return new LinkFeedItemPageVo(List.of(), null, null, false);
+    }
 }

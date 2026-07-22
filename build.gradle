@@ -26,6 +26,9 @@ dependencies {
     implementation('org.dizitart:nitrite-support:4.3.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation('org.xerial:sqlite-jdbc:3.53.2.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
 
     testImplementation 'run.halo.app:api'
     testImplementation 'run.halo.aifoundation:api:1.0.0-beta.4'
@@ -62,6 +65,35 @@ tasks.named('classes') {
 
 tasks.named('generatePluginComponentsIdx') {
     notCompatibleWithConfigurationCache('This task invokes "Task.project" at execution time, which is not supported with configuration cache.')
+}
+
+tasks.register('verifySqliteJdbcPackaging') {
+    dependsOn tasks.named('jar')
+    doLast {
+        def archive = tasks.named('jar').get().archiveFile.get().asFile
+        def requiredEntries = [
+            'META-INF/services/java.sql.Driver',
+            'META-INF/maven/org.xerial/sqlite-jdbc/VERSION',
+            'org/sqlite/JDBC.class',
+            'org/sqlite/native/Linux/x86_64/libsqlitejdbc.so',
+            'org/sqlite/native/Linux/aarch64/libsqlitejdbc.so',
+            'org/sqlite/native/Linux-Musl/x86_64/libsqlitejdbc.so',
+            'org/sqlite/native/Linux-Musl/aarch64/libsqlitejdbc.so',
+            'org/sqlite/native/Mac/x86_64/libsqlitejdbc.dylib',
+            'org/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib',
+            'org/sqlite/native/Windows/x86_64/sqlitejdbc.dll',
+            'org/sqlite/native/Windows/aarch64/sqlitejdbc.dll'
+        ]
+        requiredEntries.each { entry ->
+            if (zipTree(archive).matching { include entry }.isEmpty()) {
+                throw new GradleException("SQLite JDBC artifact entry is missing: ${entry}")
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifySqliteJdbcPackaging')
 }
 
 halo {

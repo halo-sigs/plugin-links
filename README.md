@@ -28,6 +28,12 @@ plugin-links 是 Halo 2.0 的链接管理插件，用于管理友情链接、检
 4. 如需自动检测链接或自动获取 RSS，请在插件设置中配置**链接检测**和**RSS 订阅**。
 5. 前台访问地址为 `/links`。此路由需要主题提供 `links.html` 模板。
 
+### RSS 存储要求
+
+RSS 条目使用插件数据目录中的 SQLite 文件保存，数据目录必须位于支持可靠文件锁的本地文件系统，不支持将该目录放在 NFS 等网络文件系统上。
+
+SQLite JDBC 默认将当前平台的本地库解压到 `java.io.tmpdir`。如果该目录以 `noexec` 方式挂载，请通过 JVM 参数 `-Dorg.sqlite.tmpdir=/path/to/executable-temp` 指向一个可写且允许加载本地库的专用目录。
+
 ## 主题适配
 
 此插件为主题端提供了：

@@ -1,24 +1,24 @@
-package run.halo.links.rss;
+package run.halo.links.sqlite;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dizitart.no2.collection.Document.createDocument;
 
 import java.nio.file.Path;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import run.halo.links.nitrite.LinksNitriteDatabase;
+import run.halo.links.rss.LinkFeedItem;
+import run.halo.links.rss.LinkFeedItemQuery;
 
-class NitriteLinkFeedItemStoreTest {
+class SqliteLinkFeedItemStoreTest {
 
     @TempDir
     Path tempDir;
 
     @Test
     void shouldUpsertDuplicateItemsByStableId() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             LinkFeedItem first = item("item-1", "link-a", "Original", "2026-05-20T10:00:00Z");
             LinkFeedItem updated = item("item-1", "link-a", "Updated", "2026-05-20T10:00:00Z");
 
@@ -43,9 +43,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldCountItemsByLinkNameAndFeedUrl() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("feed-a-1", "link-a", "First", "2026-05-20T10:00:00Z",
                 "https://example.com/feed.xml"));
             store.upsert(item("feed-a-2", "link-a", "Second", "2026-05-21T10:00:00Z",
@@ -65,9 +65,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldDeleteExcessItemsByLinkName() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("old", "link-a", "Old", "2026-05-20T10:00:00Z"));
             store.upsert(item("middle", "link-a", "Middle", "2026-05-21T10:00:00Z"));
             store.upsert(item("new", "link-a", "New", "2026-05-22T10:00:00Z"));
@@ -86,9 +86,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldPageItemsWithStableIdTieBreakerForSamePublishedTime() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             String samePublishedAt = "2026-05-20T10:00:00Z";
             store.upsert(item("item-a", "link-a", "A", samePublishedAt));
             store.upsert(item("item-c", "link-a", "C", samePublishedAt));
@@ -114,10 +114,44 @@ class NitriteLinkFeedItemStoreTest {
     }
 
     @Test
-    void shouldFilterAndPreserveReadState() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+    void shouldPageMixedPrecisionTimestampsInChronologicalOrder() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("precision-0", "link-a", "0", "2026-05-20T10:00:00Z"));
+            store.upsert(item("precision-3", "link-a", "3", "2026-05-20T10:00:00.123Z"));
+            store.upsert(item("precision-6", "link-a", "6", "2026-05-20T10:00:00.123456Z"));
+            store.upsert(item("precision-9", "link-a", "9",
+                "2026-05-20T10:00:00.123456789Z"));
+
+            LinkFeedItemQuery firstPage = new LinkFeedItemQuery();
+            firstPage.setLimit(2);
+            assertThat(store.listRecent(firstPage))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("precision-9", "precision-6");
+
+            LinkFeedItemQuery secondPage = new LinkFeedItemQuery();
+            secondPage.setBeforePublishedAt(Instant.parse("2026-05-20T10:00:00.123456Z"));
+            secondPage.setBeforeId("precision-6");
+            secondPage.setLimit(2);
+            assertThat(store.listRecent(secondPage))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("precision-3", "precision-0");
+
+            store.deleteExcess(2);
+            assertThat(store.listRecent(new LinkFeedItemQuery()))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("precision-9", "precision-6");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldFilterAndPreserveReadState() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             LinkFeedItem item = item("item-1", "link-a", "Unread", "2026-05-20T10:00:00Z");
             store.upsert(item);
 
@@ -150,9 +184,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldMarkAllUnreadItemsAsRead() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("a-unread", "link-a", "Unread A", "2026-05-20T10:00:00Z"));
             store.upsert(item("b-unread", "link-b", "Unread B", "2026-05-21T10:00:00Z"));
             store.upsert(item("already-read", "link-b", "Read", "2026-05-22T10:00:00Z"));
@@ -176,9 +210,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldMarkSelectedLinkUnreadItemsAsRead() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("a-unread-new", "link-a", "Unread A New",
                 "2026-05-22T10:00:00Z"));
             store.upsert(item("a-unread-old", "link-a", "Unread A Old",
@@ -208,9 +242,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldReturnZeroWhenMarkingReadWithoutUnreadItems() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("already-read", "link-a", "Read", "2026-05-20T10:00:00Z"));
             store.updateRead("already-read", true);
 
@@ -229,9 +263,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldCountUnreadItems() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("a-unread-1", "link-a", "Unread A 1", "2026-05-20T10:00:00Z"));
             store.upsert(item("a-unread-2", "link-a", "Unread A 2", "2026-05-21T10:00:00Z"));
             store.upsert(item("a-read", "link-a", "Read A", "2026-05-22T10:00:00Z"));
@@ -256,60 +290,10 @@ class NitriteLinkFeedItemStoreTest {
     }
 
     @Test
-    void shouldBackfillMissingSavedStates() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
-        try {
-            Instant beforeMigration = Instant.now();
-            database.withCollection("link-feed-items", collection -> {
-                collection.insert(createDocument("id", "legacy")
-                    .put("linkName", "link-a")
-                    .put("feedUrl", "https://example.com/feed.xml")
-                    .put("guid", "legacy")
-                    .put("url", "https://example.com/legacy")
-                    .put("title", "Legacy")
-                    .put("publishedAt", "2026-05-20T10:00:00Z")
-                    .put("fetchedAt", "2026-05-22T12:00:00Z")
-                    .put("contentHash", "legacy"));
-                collection.insert(createDocument("id", "legacy-without-fetched-at")
-                    .put("linkName", "link-a")
-                    .put("feedUrl", "https://example.com/feed.xml")
-                    .put("guid", "legacy-without-fetched-at")
-                    .put("url", "https://example.com/legacy-without-fetched-at")
-                    .put("title", "Legacy Without Fetched At")
-                    .put("publishedAt", "2026-05-21T10:00:00Z")
-                    .put("contentHash", "legacy-without-fetched-at"));
-                return null;
-            });
-            database.commit();
-
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
-            Instant afterMigration = Instant.now();
-
-            assertThat(store.listRecent(new LinkFeedItemQuery()))
-                .satisfiesExactly(
-                    fallbackItem -> {
-                        assertThat(fallbackItem.getId()).isEqualTo("legacy-without-fetched-at");
-                        assertThat(fallbackItem.getFirstSeenAt())
-                            .isBetween(beforeMigration, afterMigration);
-                    },
-                    fetchedItem -> {
-                        assertThat(fetchedItem.getId()).isEqualTo("legacy");
-                        assertThat(fetchedItem.getRead()).isFalse();
-                        assertThat(fetchedItem.getFavorite()).isFalse();
-                        assertThat(fetchedItem.getReadLater()).isFalse();
-                        assertThat(fetchedItem.getFirstSeenAt())
-                            .isEqualTo(Instant.parse("2026-05-22T12:00:00Z"));
-                    });
-        } finally {
-            database.destroy();
-        }
-    }
-
-    @Test
     void shouldPreserveFirstSeenAtWhenRefreshingExistingItem() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             LinkFeedItem first = item("item-1", "link-a", "Original", "2026-05-20T10:00:00Z",
                 "2026-05-21T12:00:00Z", "2026-05-21T12:00:00Z");
             LinkFeedItem refreshed = item("item-1", "link-a", "Updated", "2026-05-20T10:00:00Z",
@@ -334,9 +318,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldFilterToggleAndPreserveSavedStates() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("item-1", "link-a", "Saved", "2026-05-20T10:00:00Z"));
 
             assertThat(store.updateFavorite("item-1", true)).isTrue();
@@ -377,9 +361,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldKeepSavedItemsWhenDeletingByAge() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("old-unsaved", "link-a", "Old", "2026-05-20T10:00:00Z",
                 "2026-05-20T12:00:00Z", "2026-05-22T12:00:00Z"));
             store.upsert(item("old-favorite", "link-a", "Favorite", "2026-05-20T11:00:00Z",
@@ -400,9 +384,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldKeepRecentlySeenItemsWithOldPublishedAtWhenDeletingByAge() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("quiet-feed-item", "link-a", "Quiet", "2024-08-26T02:23:35Z",
                 "2026-05-22T12:00:00Z", "2026-05-22T12:00:00Z"));
 
@@ -418,9 +402,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldKeepSavedItemsWhenDeletingExcessItems() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("old-unsaved", "link-a", "Old", "2026-05-20T10:00:00Z"));
             store.upsert(item("middle-unsaved", "link-a", "Middle", "2026-05-21T10:00:00Z"));
             store.upsert(item("new-unsaved", "link-a", "New", "2026-05-22T10:00:00Z"));
@@ -439,9 +423,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldKeepSavedItemsWhenDeletingExcessItemsByLinkName() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("a-old-unsaved", "link-a", "Old", "2026-05-20T10:00:00Z"));
             store.upsert(item("a-new-unsaved", "link-a", "New", "2026-05-22T10:00:00Z"));
             store.upsert(item("a-old-later", "link-a", "Later", "2026-05-19T10:00:00Z",
@@ -460,9 +444,9 @@ class NitriteLinkFeedItemStoreTest {
 
     @Test
     void shouldDeleteAllItemsByLinkNameIncludingSavedStates() {
-        LinksNitriteDatabase database = new LinksNitriteDatabase(tempDir.resolve("links.nitrite"));
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
-            NitriteLinkFeedItemStore store = new NitriteLinkFeedItemStore(database);
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
             store.upsert(item("a-read", "link-a", "Read", "2026-05-20T10:00:00Z"));
             store.upsert(item("a-favorite", "link-a", "Favorite", "2026-05-21T10:00:00Z",
                 true, false));
