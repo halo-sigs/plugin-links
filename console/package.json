@@ -21,6 +21,7 @@
     "@halo-dev/api-client": "^2.24.0",
     "@halo-dev/components": "^2.24.0",
     "@halo-dev/ui-shared": "^2.24.0",
+    "@imengyu/vue3-context-menu": "^1.5.4",
     "@tanstack/vue-query": "^4.44.0",
     "@vueuse/core": "^10.11.1",
     "@vueuse/router": "^10.11.1",

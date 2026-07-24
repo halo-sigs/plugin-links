@@ -17,6 +17,9 @@ importers:
       '@halo-dev/ui-shared':
         specifier: ^2.24.0
         version: 2.24.0(@tiptap/extension-collaboration@3.22.5(@tiptap/core@3.22.5(@tiptap/pm@3.22.5))(@tiptap/pm@3.22.5)(@tiptap/y-tiptap@3.0.3(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.8)(y-protocols@1.0.7(yjs@13.6.30))(yjs@13.6.30))(yjs@13.6.30))(@tiptap/extension-node-range@3.22.5(@tiptap/core@3.22.5(@tiptap/pm@3.22.5))(@tiptap/pm@3.22.5))(@tiptap/y-tiptap@3.0.3(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.8)(y-protocols@1.0.7(yjs@13.6.30))(yjs@13.6.30))(axios@1.15.2)(vue-router@4.6.4(vue@3.5.33(typescript@5.9.3)))(vue@3.5.33(typescript@5.9.3))
+      '@imengyu/vue3-context-menu':
+        specifier: ^1.5.4
+        version: 1.5.4
       '@tanstack/vue-query':
         specifier: ^4.44.0
         version: 4.44.0(vue@3.5.33(typescript@5.9.3))
@@ -418,6 +421,12 @@ packages:
 
   '@iconify/utils@3.1.1':
     resolution: {integrity: sha512-MwzoDtw9rO1x+qfgLTV/IVXsHDBqeYZoMIQC8SfxfYSlaSUG+oWiAcoiB1yajAda6mqblm4/1/w2E8tRu7a7Tw==}
+
+  '@imengyu/vue-scroll-rect@0.1.10':
+    resolution: {integrity: sha512-2Cxm7WnRP7y9vNqv5YQvh4fasWZ1q5kW5cQyr3+647e4hEiS3NsgUZLaZb5+F7qOHGlIaERNYuWZVXIo7L32ug==}
+
+  '@imengyu/vue3-context-menu@1.5.4':
+    resolution: {integrity: sha512-/a6Quyn3V320/Mi6UoH+6wSTBYrln70RovT3iyfoXQQpIHpC7ZPWObzS0BXQTRlWtyJB92XmGDT703UxSO8Tvg==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -3376,6 +3385,12 @@ snapshots:
       '@antfu/install-pkg': 1.1.0
       '@iconify/types': 2.0.0
       mlly: 1.8.2
+
+  '@imengyu/vue-scroll-rect@0.1.10': {}
+
+  '@imengyu/vue3-context-menu@1.5.4':
+    dependencies:
+      '@imengyu/vue-scroll-rect': 0.1.10
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

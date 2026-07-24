@@ -5,6 +5,7 @@ api.ts
 api/api-link-halo-run-v1alpha1-link-api.ts
 api/api-link-halo-run-v1alpha1-link-feed-api.ts
 api/api-link-halo-run-v1alpha1-link-group-api.ts
+api/console-api-link-halo-run-v1alpha1-link-ai-api.ts
 api/console-api-link-halo-run-v1alpha1-link-api.ts
 api/console-api-link-halo-run-v1alpha1-link-application-api.ts
 api/console-api-link-halo-run-v1alpha1-link-feed-api.ts
@@ -24,9 +25,13 @@ models/copy-operation.ts
 models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
+models/link-ai-feature-status.ts
 models/link-application-list.ts
 models/link-application-spec.ts
 models/link-application.ts
+models/link-comment-extraction-request.ts
+models/link-comment-extraction-result.ts
+models/link-comment-summary-dto.ts
 models/link-detail-dto.ts
 models/link-feed-cleanup-result.ts
 models/link-feed-discovery-result.ts

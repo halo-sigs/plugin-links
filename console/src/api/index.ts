@@ -1,6 +1,7 @@
 import { axiosInstance } from "@halo-dev/api-client";
 import {
   ApiLinkHaloRunV1alpha1LinkGroupApi,
+  ConsoleApiLinkHaloRunV1alpha1LinkAiApi,
   ConsoleApiLinkHaloRunV1alpha1LinkApi,
   ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi,
   ConsoleApiLinkHaloRunV1alpha1LinkFeedApi,
@@ -25,4 +26,8 @@ const linksConsoleApiClient = {
   application: new ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi(undefined, "", axiosInstance),
 };
 
-export { linksConsoleApiClient, linksCoreApiClient, linksPublicApiClient };
+const linkAiApiClient = {
+  ai: new ConsoleApiLinkHaloRunV1alpha1LinkAiApi(undefined, "", axiosInstance),
+};
+
+export { linkAiApiClient, linksConsoleApiClient, linksCoreApiClient, linksPublicApiClient };

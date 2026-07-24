@@ -1,13 +1,19 @@
 <script lang="ts" setup>
-import { linksConsoleApiClient } from "@/api";
+import { linkAiApiClient, linksConsoleApiClient } from "@/api";
+import type { LinkAiFeatureStatus, LinkCommentExtractionResult, LinkGroup } from "@/api/generated";
+import { useLinkGroupFetch } from "@/composables/use-group-fetch";
 import type { LinkFormState } from "@/types";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
-import { nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
+import { computed, nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
+import RiAddLine from "~icons/ri/add-line";
+import GroupCreationModal from "./GroupCreationModal.vue";
+import LinkAiExtract from "./LinkAiExtract.vue";
 
 const props = defineProps<{
   name?: string;
+  mode?: "create" | "edit";
   formState?: LinkFormState;
 }>();
 
@@ -37,6 +43,26 @@ const data = ref<LinkFormData>({
   },
 });
 const rssFeedUrlsText = shallowRef("");
+const aiStatus = ref<LinkAiFeatureStatus>();
+const groupCreationModalVisible = shallowRef(false);
+const createdGroupOption = shallowRef<{ label: string; value: string }>();
+const { data: groups } = useLinkGroupFetch();
+
+const groupOptions = computed(() => {
+  const options = [
+    { label: "无分组", value: "" },
+    ...(groups.value || []).map((group) => {
+      return {
+        label: group.spec?.displayName || group.metadata.name,
+        value: group.metadata.name,
+      };
+    }),
+  ];
+  if (createdGroupOption.value && !options.some((option) => option.value === createdGroupOption.value?.value)) {
+    options.push(createdGroupOption.value);
+  }
+  return options;
+});
 
 onMounted(() => {
   if (props.formState) {
@@ -54,6 +80,7 @@ onMounted(() => {
     };
     rssFeedUrlsText.value = feedUrlsToText(feedUrls);
   }
+  fetchAiStatus();
 });
 
 const isFetchingLinkDetail = shallowRef(false);
@@ -113,6 +140,62 @@ const handleDiscoverFeed = async () => {
 
 const annotationsForm = ref();
 
+const isNew = computed(() => (props.mode ? props.mode === "create" : !props.name));
+const isAiCommentExtractionAvailable = computed(() => {
+  const status = aiStatus.value;
+  return (
+    isNew.value &&
+    status?.enabled === true &&
+    status?.available === true &&
+    status?.commentExtractionEnabled === true
+  );
+});
+
+async function fetchAiStatus() {
+  if (!isNew.value) {
+    return;
+  }
+  try {
+    const { data: status } = await linkAiApiClient.ai.getLinkAiFeatureStatus();
+    aiStatus.value = status;
+  } catch {
+    // Keep the optional AI section hidden when the status endpoint is unavailable.
+  }
+}
+
+function isValidUrl(value: string | undefined | null): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function applyAiExtractedResult(result: LinkCommentExtractionResult) {
+  if (isValidUrl(result.url)) {
+    data.value.url = result.url;
+  } else if (result.url) {
+    Toast.warning("AI 提取的网站地址格式不正确，已忽略");
+  }
+  if (result.displayName) data.value.displayName = result.displayName;
+  if (isValidUrl(result.logo)) {
+    data.value.logo = result.logo;
+  } else if (result.logo) {
+    Toast.warning("AI 提取的 Logo 地址格式不正确，已忽略");
+  }
+  if (result.description) data.value.description = result.description;
+  if (isValidUrl(result.rssUrl)) {
+    data.value.rss.enabled = true;
+    const merged = mergeFeedUrls(data.value.rss.feedUrls, [result.rssUrl]);
+    data.value.rss.feedUrls = merged;
+    rssFeedUrlsText.value = feedUrlsToText(merged);
+  } else if (result.rssUrl) {
+    Toast.warning("AI 提取的 RSS 地址格式不正确，已忽略");
+  }
+}
+
 function normalizeFeedUrls(feedUrls: string[]) {
   return [...new Set(feedUrls.map((feedUrl) => feedUrl.trim()).filter(Boolean))];
 }
@@ -160,6 +243,7 @@ async function onSubmit() {
     displayName: data.value.displayName,
     logo: data.value.logo,
     description: data.value.description,
+    groupName: data.value.groupName || undefined,
     rss: {
       enabled: data.value.rss.enabled,
       feedUrls,
@@ -171,10 +255,35 @@ async function onSubmit() {
     },
   });
 }
+
+function handleGroupCreated(group: LinkGroup) {
+  createdGroupOption.value = {
+    label: group.spec.displayName,
+    value: group.metadata.name,
+  };
+  data.value.groupName = group.metadata.name;
+}
 </script>
 <template>
   <FormKit id="link-form" name="link-form" type="form" :config="{ validationVisibility: 'submit' }" @submit="onSubmit">
     <div>
+      <template v-if="isAiCommentExtractionAvailable">
+        <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
+          <div class=":uno: md:col-span-1">
+            <div class=":uno: sticky top-0">
+              <span class=":uno: text-base text-gray-900 font-medium"> AI 识别 </span>
+            </div>
+          </div>
+          <div class=":uno: mt-5 md:col-span-3 md:mt-0">
+            <LinkAiExtract @extract="applyAiExtractedResult" />
+          </div>
+        </div>
+
+        <div class=":uno: py-5">
+          <div class=":uno: border-t border-gray-200"></div>
+        </div>
+      </template>
+
       <div class=":uno: md:grid md:grid-cols-4 md:gap-6">
         <div class=":uno: md:col-span-1">
           <div class=":uno: sticky top-0">
@@ -206,6 +315,21 @@ async function onSubmit() {
             label="网站名称"
           ></FormKit>
           <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
+          <FormKit type="select" name="groupName" v-model="data.groupName" :options="groupOptions" label="分组">
+            <template #suffix>
+              <button
+                type="button"
+                aria-label="新建分组"
+                v-tooltip="{
+                  content: '新建分组',
+                }"
+                class=":uno: group h-full flex cursor-pointer items-center border-0 bg-transparent px-3 transition-all"
+                @click="groupCreationModalVisible = true"
+              >
+                <RiAddLine class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
+              </button>
+            </template>
+          </FormKit>
           <FormKit type="textarea" name="description" v-model="data.description" label="描述" auto-height></FormKit>
         </div>
       </div>
@@ -289,4 +413,10 @@ async function onSubmit() {
       />
     </div>
   </div>
+
+  <GroupCreationModal
+    v-if="groupCreationModalVisible"
+    @created="handleGroupCreated"
+    @close="groupCreationModalVisible = false"
+  />
 </template>

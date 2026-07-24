@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { linksCoreApiClient } from "@/api";
+import type { LinkGroup } from "@/api/generated";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { GroupFormState } from "@/types";
@@ -10,6 +11,7 @@ import GroupForm from "./GroupForm.vue";
 
 const emit = defineEmits<{
   (event: "close"): void;
+  (event: "created", group: LinkGroup): void;
 }>();
 
 const queryClient = useQueryClient();
@@ -43,8 +45,9 @@ const { mutate, isPending } = useMutation({
       },
     });
   },
-  onSuccess: () => {
+  onSuccess: (response) => {
     Toast.success("创建分组成功");
+    emit("created", response.data);
     modal.value?.close();
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });

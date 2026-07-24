@@ -294,6 +294,8 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
         v-for="link in links"
         :key="link.metadata.name"
         :link="link"
+        :group-name="group?.metadata.name"
+        :groups="groups"
         :select-mode="enabledSelect"
         @open-edit="handleOpenEdit(link)"
       >

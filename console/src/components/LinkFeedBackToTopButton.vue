@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, shallowRef } from "vue";
-import ArrowUpFillIcon from '~icons/mingcute/arrow-up-fill?width=unset&height=unset';
+import ArrowUpFillIcon from "~icons/mingcute/arrow-up-fill?width=unset&height=unset";
 
 const VISIBLE_SCROLL_TOP = 360;
 
@@ -9,7 +9,9 @@ const scrollTarget = shallowRef<Element | null>(null);
 let animationFrameId: number | undefined;
 
 function isDocumentScrollTarget(target: Element | null) {
-  return !target || target === document.scrollingElement || target === document.documentElement || target === document.body;
+  return (
+    !target || target === document.scrollingElement || target === document.documentElement || target === document.body
+  );
 }
 
 function documentScrollTop() {
