@@ -56,7 +56,7 @@
 
 - [x] 6.1 Run `./gradlew build` to verify backend compiles
 - [x] 6.2 Run `cd console && pnpm type-check` to verify frontend types
-- [ ] 6.3 Start `./gradlew haloServer` and test submission flow from a theme form
-- [ ] 6.4 Test Console approval flow: open detail, modify fields, select group, verify backlink, approve, confirm Link created
-- [ ] 6.5 Test rate limiting and duplicate detection
-- [ ] 6.6 Test form error回填 with query params
+- [x] 6.3 Start `./gradlew haloServer` and test submission flow from a theme form
+- [x] 6.4 Test Console approval flow: open detail, modify fields, select group, verify backlink, approve, confirm Link created
+- [x] 6.5 Test rate limiting and duplicate detection
+- [x] 6.6 Test form error回填 with query params
