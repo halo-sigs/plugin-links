@@ -85,9 +85,9 @@
   against temporary database directories.
 - [x] 6.3 Benchmark the 100,000-item store for bulk migration, cursor listing, unread summaries,
   cleanup, snapshot creation, and startup `quick_check` to catch material regressions.
-- [ ] 6.4 Verify packaged native loading and database operations on Linux glibc and musl for x86_64
+- [x] 6.4 Verify packaged native loading and database operations on Linux glibc and musl for x86_64
   and ARM64, plus macOS development, plugin restart, and hot reload.
-- [ ] 6.5 Verify native extraction behavior when the default temporary directory is mounted `noexec`
+- [x] 6.5 Verify native extraction behavior when the default temporary directory is mounted `noexec`
   and document the supported local-filesystem requirement and any required extraction setting.
 
 ## 7. Review Follow-up
