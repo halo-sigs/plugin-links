@@ -1566,6 +1566,18 @@
             "type" : "boolean",
             "description" : "Whether the AI Foundation API is available at runtime"
           },
+          "commentApplicationRecognitionEnabled" : {
+            "type" : "boolean",
+            "description" : "Whether automatic comment application recognition is configured"
+          },
+          "commentApplicationRecognitionModelName" : {
+            "type" : "string",
+            "description" : "Selected automatic recognition model name"
+          },
+          "commentApplicationRecognitionOperational" : {
+            "type" : "boolean",
+            "description" : "Whether the automatic recognition model can currently be resolved"
+          },
           "commentExtractionEnabled" : {
             "type" : "boolean",
             "description" : "Whether link extraction from recent comments is enabled"
@@ -1574,9 +1586,17 @@
             "type" : "string",
             "description" : "Selected language model name, or null for default model"
           },
+          "commentExtractionOperational" : {
+            "type" : "boolean",
+            "description" : "Whether the comment extraction model can currently be resolved"
+          },
           "enabled" : {
             "type" : "boolean",
             "description" : "Whether the plugin AI feature is enabled"
+          },
+          "operational" : {
+            "type" : "boolean",
+            "description" : "Whether AI Foundation exposes an enabled model service"
           }
         }
       },
@@ -1682,6 +1702,9 @@
           "logo" : {
             "type" : "string",
             "description" : "Logo or icon URL displayed with the link."
+          },
+          "origin" : {
+            "$ref" : "#/components/schemas/Origin"
           },
           "status" : {
             "type" : "string",
@@ -2416,6 +2439,61 @@
             "example" : "/a/b/c"
           }
         }
+      },
+      "Origin" : {
+        "required" : [ "type" ],
+        "type" : "object",
+        "properties" : {
+          "commentName" : {
+            "type" : "string",
+            "description" : "Metadata name of the source Comment."
+          },
+          "commentSnapshot" : {
+            "maxLength" : 8000,
+            "type" : "string",
+            "description" : "Bounded snapshot of the original raw comment."
+          },
+          "modelName" : {
+            "type" : "string",
+            "description" : "AI Foundation model resource used for recognition."
+          },
+          "reason" : {
+            "type" : "string",
+            "description" : "Short explanation returned by the recognition model."
+          },
+          "subjectRef" : {
+            "$ref" : "#/components/schemas/Ref"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "How the application was created.",
+            "enum" : [ "FORM", "COMMENT" ]
+          }
+        },
+        "description" : "Origin and audit context of a link application."
+      },
+      "Ref" : {
+        "required" : [ "group", "kind", "name" ],
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "description" : "Extension group"
+          },
+          "kind" : {
+            "type" : "string",
+            "description" : "Extension kind"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Extension name. This field is mandatory"
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "Extension version"
+          }
+        },
+        "description" : "Extension reference object. The name is mandatory"
       },
       "RemoveOperation" : {
         "required" : [ "op", "path" ],

@@ -72,6 +72,21 @@ public class LinkPlugin extends BasePlugin {
                 .indexFunc(app -> app.getSpec().getStatus() != null
                     ? app.getSpec().getStatus().name() : null)
             );
+            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.origin.type",
+                    String.class)
+                .indexFunc(app -> {
+                    var origin = app.getSpec().getOrigin();
+                    return origin != null && origin.getType() != null
+                        ? origin.getType().name() : null;
+                })
+            );
+            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.origin.commentName",
+                    String.class)
+                .indexFunc(app -> {
+                    var origin = app.getSpec().getOrigin();
+                    return origin == null ? null : origin.getCommentName();
+                })
+            );
         });
     }
 

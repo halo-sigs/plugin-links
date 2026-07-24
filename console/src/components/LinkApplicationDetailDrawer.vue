@@ -1,26 +1,20 @@
 <script lang="ts" setup>
+import type { ApproveRequest, LinkApplication } from "@/api/generated";
+import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
+import { startLinkVerification } from "@/composables/link-verification";
+import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import {
   useApproveLinkApplication,
   useDeleteLinkApplication,
   useRejectLinkApplication,
   useVerifyBacklink,
 } from "@/composables/use-link-application";
-import { useLinkGroupFetch } from "@/composables/use-group-fetch";
-import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
-import { startLinkVerification } from "@/composables/link-verification";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
-import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
-import type { LinkApplication, ApproveRequest } from "@/api/generated";
-import {
-  Dialog,
-  Toast,
-  VButton,
-  VModal,
-  VSpace,
-  VTag,
-} from "@halo-dev/components";
+import { Dialog, Toast, VButton, VModal, VSpace, VTag } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { computed } from "vue";
+import LinkApplicationOriginDetails from "./LinkApplicationOriginDetails.vue";
+import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
 const props = defineProps<{
   application: LinkApplication;
@@ -41,10 +35,16 @@ const { mutate: verifyApplication, data: verifyResult } = useVerifyBacklink();
 
 const groupOptions = computed(() => [
   { value: "", label: "不分配" },
-  ...(groups.value || []).map((group) => ({
-    value: group.metadata.name,
-    label: group.spec?.displayName || group.metadata.name,
-  })),
+  ...(groups.value || []).flatMap((group) => {
+    const name = group.metadata?.name;
+    if (!name) {
+      return [];
+    }
+    return {
+      value: name,
+      label: group.spec?.displayName || name,
+    };
+  }),
 ]);
 
 function handleApprove(data: ApproveRequest) {
@@ -86,7 +86,7 @@ function handleApprove(data: ApproveRequest) {
         }
         emit("close");
       },
-    }
+    },
   );
 }
 
@@ -163,7 +163,10 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
         <VTag :type="statusType[application.spec.status]" size="sm">
           {{ statusText[application.spec.status] }}
         </VTag>
+        <LinkApplicationSourceBadge :application="application" />
       </div>
+
+      <LinkApplicationOriginDetails :application="application" />
 
       <!-- FormKit Form -->
       <FormKit
@@ -181,68 +184,46 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
         @submit="handleApprove"
       >
         <div class=":uno: space-y-3">
-          <FormKit
-            type="text"
-            name="displayName"
-            validation="required"
-            label="网站名称"
-          />
-          <FormKit
-            type="url"
-            name="url"
-            validation="required"
-            label="链接地址"
-          />
+          <FormKit type="text" name="displayName" validation="required" label="网站名称" />
+          <FormKit type="url" name="url" validation="required" label="链接地址" />
           <FormKit type="url" name="logo" label="Logo" />
-          <FormKit
-            type="textarea"
-            name="description"
-            label="简介"
-            auto-height
-          />
-          <FormKit
-            type="select"
-            name="groupName"
-            label="分配分组"
-            :options="groupOptions"
-          />
+          <FormKit type="textarea" name="description" label="简介" auto-height />
+          <FormKit type="select" name="groupName" label="分配分组" :options="groupOptions" />
         </div>
       </FormKit>
 
       <!-- Email (read-only display) -->
       <div v-if="application.spec.email">
-        <label class=":uno: block text-sm font-medium text-gray-700 mb-1">联系邮箱</label>
+        <label class=":uno: mb-1 block text-sm text-gray-700 font-medium">联系邮箱</label>
         <div class=":uno: text-sm text-gray-600">{{ application.spec.email }}</div>
       </div>
 
       <!-- Backlink -->
       <div v-if="application.spec.backlink">
-        <label class=":uno: block text-sm font-medium text-gray-700 mb-1">反链地址</label>
+        <label class=":uno: mb-1 block text-sm text-gray-700 font-medium">反链地址</label>
         <div class=":uno: flex items-center gap-2">
           <a
             :href="application.spec.backlink"
             target="_blank"
-            class=":uno: text-sm text-blue-600 hover:underline truncate flex-1"
+            class=":uno: flex-1 truncate text-sm text-blue-600 hover:underline"
           >
             {{ application.spec.backlink }}
           </a>
-          <VButton size="xs" type="secondary" @click="handleVerify">
-            验证反链
-          </VButton>
+          <VButton size="xs" type="secondary" @click="handleVerify"> 验证反链 </VButton>
         </div>
-        <div v-if="verifyResult" class=":uno: mt-1 text-xs" :class="verifyResult.found ? 'text-green-600' : 'text-red-600'">
+        <div
+          v-if="verifyResult"
+          class=":uno: mt-1 text-xs"
+          :class="verifyResult.found ? ':uno: text-green-600' : ':uno: text-red-600'"
+        >
           {{ verifyResult.message }}
         </div>
       </div>
 
       <!-- Feed URLs -->
       <div v-if="application.spec.feedUrls?.length">
-        <label class=":uno: block text-sm font-medium text-gray-700 mb-1">RSS 地址</label>
-        <div
-          v-for="(feedUrl, index) in application.spec.feedUrls"
-          :key="index"
-          class=":uno: text-sm text-gray-600"
-        >
+        <label class=":uno: mb-1 block text-sm text-gray-700 font-medium">RSS 地址</label>
+        <div v-for="(feedUrl, index) in application.spec.feedUrls" :key="index" class=":uno: text-sm text-gray-600">
           {{ feedUrl }}
         </div>
       </div>

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { linkAiApiClient } from "@/api";
+import type { LinkApplication } from "@/api/generated";
 import LinksCard from "@/components/LinksCard.vue";
 import { runLinkVerification } from "@/composables/link-verification";
 import {
@@ -7,7 +9,7 @@ import {
 } from "@/composables/link-verification-status";
 import { useLinkApplications } from "@/composables/use-link-application";
 import { useLinksFetch, type GroupWithLinks } from "@/composables/use-link-fetch";
-import type { LinkApplication } from "@/api/generated";
+import { isCommentRecognitionUnavailable } from "@/utils/link-application-origin";
 import {
   Dialog,
   IconExternalLinkLine,
@@ -18,7 +20,7 @@ import {
   VPageHeader,
   VSpace,
 } from "@halo-dev/components";
-import { useQueryClient } from "@tanstack/vue-query";
+import { useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, defineAsyncComponent, ref, shallowRef } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
 import RiPulseLine from "~icons/ri/pulse-line";
@@ -41,6 +43,14 @@ const LinkApplicationDetailDrawer = defineAsyncComponent(
 
 const { data, isLoading, isFetching, refetch } = useLinksFetch();
 const { data: applications } = useLinkApplications("PENDING");
+const { data: aiStatus } = useQuery({
+  queryKey: ["plugin:links:ai-status"],
+  queryFn: async () => {
+    const { data: status } = await linkAiApiClient.ai.getLinkAiFeatureStatus();
+    return status;
+  },
+  retry: false,
+});
 const queryClient = useQueryClient();
 
 const handleRouteToFront = () => {
@@ -57,6 +67,7 @@ const isVerifyingAllLinks = shallowRef(false);
 const selectedStatusFilter = shallowRef<LinkVerificationStatusFilter>("all");
 
 const pendingCount = computed(() => applications.value?.length || 0);
+const recognitionUnavailable = computed(() => isCommentRecognitionUnavailable(aiStatus.value));
 
 const statusFilterOptions: Array<{ label: string; value: LinkVerificationStatusFilter }> = [
   { label: "全部", value: "all" },
@@ -124,6 +135,18 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
   </VPageHeader>
   <div class=":uno: p-4">
     <VAlert
+      v-if="recognitionUnavailable"
+      title="评论友链申请自动识别当前不可用"
+      type="warning"
+      :closable="false"
+      class=":uno: mb-4"
+    >
+      <template #description>
+        自动识别已配置，但 AI Foundation 或所选模型当前不可用。新的评论不会补偿处理，其他链接管理功能不受影响。
+      </template>
+    </VAlert>
+
+    <VAlert
       v-if="pendingCount > 0"
       :title="`有 ${pendingCount} 条待审核的友链申请`"
       type="warning"
@@ -132,9 +155,7 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
       @click="linkApplicationListModalVisible = true"
     >
       <template #description>
-        <span class=":uno: cursor-pointer hover:underline"
-          >点击此处查看并处理申请</span
-        >
+        <span class=":uno: cursor-pointer hover:underline">点击此处查看并处理申请</span>
       </template>
     </VAlert>
 
@@ -194,10 +215,12 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
   <LinkApplicationListModal
     v-if="linkApplicationListModalVisible"
     @close="linkApplicationListModalVisible = false"
-    @view-detail="(app: LinkApplication) => {
-      selectedApplication = app;
-      linkApplicationDetailVisible = true;
-    }"
+    @view-detail="
+      (app: LinkApplication) => {
+        selectedApplication = app;
+        linkApplicationDetailVisible = true;
+      }
+    "
   />
   <LinkApplicationDetailDrawer
     v-if="linkApplicationDetailVisible && selectedApplication"

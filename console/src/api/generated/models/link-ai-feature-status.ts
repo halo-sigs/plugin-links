@@ -27,6 +27,24 @@ export interface LinkAiFeatureStatus {
      */
     'available'?: boolean;
     /**
+     * Whether automatic comment application recognition is configured
+     * @type {boolean}
+     * @memberof LinkAiFeatureStatus
+     */
+    'commentApplicationRecognitionEnabled'?: boolean;
+    /**
+     * Selected automatic recognition model name
+     * @type {string}
+     * @memberof LinkAiFeatureStatus
+     */
+    'commentApplicationRecognitionModelName'?: string;
+    /**
+     * Whether the automatic recognition model can currently be resolved
+     * @type {boolean}
+     * @memberof LinkAiFeatureStatus
+     */
+    'commentApplicationRecognitionOperational'?: boolean;
+    /**
      * Whether link extraction from recent comments is enabled
      * @type {boolean}
      * @memberof LinkAiFeatureStatus
@@ -39,10 +57,22 @@ export interface LinkAiFeatureStatus {
      */
     'commentExtractionModelName'?: string;
     /**
+     * Whether the comment extraction model can currently be resolved
+     * @type {boolean}
+     * @memberof LinkAiFeatureStatus
+     */
+    'commentExtractionOperational'?: boolean;
+    /**
      * Whether the plugin AI feature is enabled
      * @type {boolean}
      * @memberof LinkAiFeatureStatus
      */
     'enabled'?: boolean;
+    /**
+     * Whether AI Foundation exposes an enabled model service
+     * @type {boolean}
+     * @memberof LinkAiFeatureStatus
+     */
+    'operational'?: boolean;
 }
 

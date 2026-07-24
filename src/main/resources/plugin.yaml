@@ -9,7 +9,7 @@ metadata:
 spec:
   requires: ">=2.25.0"
   pluginDependencies:
-    ai-foundation?: "*"
+    ai-foundation?: ">=1.0.0-beta.4 & <2.0.0"
   author:
     name: Halo
     website: https://github.com/halo-dev

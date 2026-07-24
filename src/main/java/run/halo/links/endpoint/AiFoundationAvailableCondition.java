@@ -11,6 +11,6 @@ public class AiFoundationAvailableCondition implements Condition {
 
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        return AiFoundationAvailability.isAvailable();
+        return AiFoundationAvailability.isAvailable(context.getClassLoader());
     }
 }

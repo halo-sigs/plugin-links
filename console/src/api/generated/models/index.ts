@@ -36,6 +36,8 @@ export * from './link-vo';
 export * from './link-vo-list';
 export * from './metadata';
 export * from './move-operation';
+export * from './origin';
+export * from './ref';
 export * from './remove-operation';
 export * from './replace-operation';
 export * from './rss-feed-status';

@@ -3,6 +3,7 @@ import { linkAiApiClient, linksConsoleApiClient } from "@/api";
 import type { LinkAiFeatureStatus, LinkCommentExtractionResult, LinkGroup } from "@/api/generated";
 import { useLinkGroupFetch } from "@/composables/use-group-fetch";
 import type { LinkFormState } from "@/types";
+import { applyLinkCommentExtraction } from "@/utils/link-comment-extraction";
 import { Toast, VButton, VLoading } from "@halo-dev/components";
 import { computed, nextTick, onMounted, ref, shallowRef, toRaw } from "vue";
 import MdiWebRefresh from "~icons/mdi/web-refresh";
@@ -51,10 +52,14 @@ const { data: groups } = useLinkGroupFetch();
 const groupOptions = computed(() => {
   const options = [
     { label: "无分组", value: "" },
-    ...(groups.value || []).map((group) => {
+    ...(groups.value || []).flatMap((group) => {
+      const name = group.metadata?.name;
+      if (!name) {
+        return [];
+      }
       return {
-        label: group.spec?.displayName || group.metadata.name,
-        value: group.metadata.name,
+        label: group.spec?.displayName || name,
+        value: name,
       };
     }),
   ];
@@ -147,7 +152,8 @@ const isAiCommentExtractionAvailable = computed(() => {
     isNew.value &&
     status?.enabled === true &&
     status?.available === true &&
-    status?.commentExtractionEnabled === true
+    status?.commentExtractionEnabled === true &&
+    status?.commentExtractionOperational === true
   );
 });
 
@@ -163,36 +169,11 @@ async function fetchAiStatus() {
   }
 }
 
-function isValidUrl(value: string | undefined | null): value is string {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function applyAiExtractedResult(result: LinkCommentExtractionResult) {
-  if (isValidUrl(result.url)) {
-    data.value.url = result.url;
-  } else if (result.url) {
-    Toast.warning("AI 提取的网站地址格式不正确，已忽略");
-  }
-  if (result.displayName) data.value.displayName = result.displayName;
-  if (isValidUrl(result.logo)) {
-    data.value.logo = result.logo;
-  } else if (result.logo) {
-    Toast.warning("AI 提取的 Logo 地址格式不正确，已忽略");
-  }
-  if (result.description) data.value.description = result.description;
-  if (isValidUrl(result.rssUrl)) {
-    data.value.rss.enabled = true;
-    const merged = mergeFeedUrls(data.value.rss.feedUrls, [result.rssUrl]);
-    data.value.rss.feedUrls = merged;
-    rssFeedUrlsText.value = feedUrlsToText(merged);
-  } else if (result.rssUrl) {
-    Toast.warning("AI 提取的 RSS 地址格式不正确，已忽略");
+  const { warnings } = applyLinkCommentExtraction(data.value, result);
+  rssFeedUrlsText.value = feedUrlsToText(data.value.rss.feedUrls);
+  for (const warning of warnings) {
+    Toast.warning(warning);
   }
 }
 

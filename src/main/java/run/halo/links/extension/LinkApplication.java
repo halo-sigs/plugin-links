@@ -1,6 +1,5 @@
 package run.halo.links.extension;
 
-import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.NOT_REQUIRED;
 import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -10,6 +9,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import run.halo.app.extension.AbstractExtension;
 import run.halo.app.extension.GVK;
+import run.halo.app.extension.Ref;
 
 /**
  * @author ryanwang
@@ -55,6 +55,32 @@ public class LinkApplication extends AbstractExtension {
 
         @Schema(description = "Status of the application.", requiredMode = REQUIRED)
         private Status status;
+
+        @Schema(description = "Origin and audit context of the application.")
+        private Origin origin;
+    }
+
+    @Data
+    @Schema(description = "Origin and audit context of a link application.")
+    public static class Origin {
+        @Schema(description = "How the application was created.", requiredMode = REQUIRED)
+        private OriginType type;
+
+        @Schema(description = "Metadata name of the source Comment.")
+        private String commentName;
+
+        @Schema(description = "Subject referenced by the source Comment.")
+        private Ref subjectRef;
+
+        @Schema(description = "AI Foundation model resource used for recognition.")
+        private String modelName;
+
+        @Schema(description = "Short explanation returned by the recognition model.")
+        private String reason;
+
+        @Schema(description = "Bounded snapshot of the original raw comment.",
+            maxLength = 8000)
+        private String commentSnapshot;
     }
 
     @Schema(description = "Application status.")
@@ -62,5 +88,10 @@ public class LinkApplication extends AbstractExtension {
         PENDING,
         APPROVED,
         REJECTED
+    }
+
+    public enum OriginType {
+        FORM,
+        COMMENT
     }
 }

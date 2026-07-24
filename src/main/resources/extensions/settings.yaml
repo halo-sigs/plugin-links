@@ -85,9 +85,63 @@ spec:
               value: true
             - $formkit: aiModelSelector
               if: "$get(ai_comment_extraction_enabled).value === true"
+              label: AI 模型
               modelType: language
               clearable: true
               name: modelName
               key: modelName
               placeholder: 请选择语言模型
               help: 可选，不设置时会使用 AI Foundation 的默认语言模型
+        - $formkit: group
+          if: "$get(ai_enabled).value === true"
+          name: commentApplicationRecognition
+          label: 从新评论中识别友链申请
+          children:
+            - $formkit: checkbox
+              label: 开启
+              name: enabled
+              id: ai_comment_application_recognition_enabled
+              value: false
+              help: 仅处理开启后新创建且来源匹配的顶级评论，不会扫描历史评论
+            - $formkit: aiModelSelector
+              if: "$get(ai_comment_application_recognition_enabled).value === true"
+              modelType: language
+              requiredFeatures:
+                - structured-output
+              clearable: false
+              name: modelName
+              key: recognitionModelName
+              label: 识别模型
+              placeholder: 请选择支持结构化输出的语言模型
+              validation: required
+            - $formkit: repeater
+              if: "$get(ai_comment_application_recognition_enabled).value === true"
+              name: sources
+              label: 评论来源
+              value: []
+              validation: required
+              min: 1
+              children:
+                - $formkit: select
+                  name: type
+                  label: 页面类型
+                  validation: required
+                  options:
+                    - label: 链接页面
+                      value: LINKS
+                    - label: 文章
+                      value: POST
+                    - label: 页面
+                      value: SINGLE_PAGE
+                - $formkit: postSelect
+                  if: "$value.type === 'POST'"
+                  name: name
+                  label: 文章
+                  validation: required
+                  clearable: false
+                - $formkit: singlePageSelect
+                  if: "$value.type === 'SINGLE_PAGE'"
+                  name: name
+                  label: 页面
+                  validation: required
+                  clearable: false

@@ -1,8 +1,10 @@
 <script lang="ts" setup>
-import { useDeleteLinkApplication, useLinkApplications } from "@/composables/use-link-application";
 import type { LinkApplication } from "@/api/generated";
+import { useDeleteLinkApplication, useLinkApplications } from "@/composables/use-link-application";
 import { Dialog, Toast, VButton, VEmpty, VModal, VSpace } from "@halo-dev/components";
-import { ref, computed } from "vue";
+import { utils } from "@halo-dev/ui-shared";
+import { computed } from "vue";
+import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
 const emit = defineEmits<{
   (event: "close"): void;
@@ -13,14 +15,7 @@ const { data: applications, isLoading } = useLinkApplications("PENDING");
 
 const { mutate: deleteApplication } = useDeleteLinkApplication();
 
-const selectedApplication = ref<LinkApplication | null>(null);
-
 const pendingCount = computed(() => applications.value?.length || 0);
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleString("zh-CN");
-}
 
 function handleDelete(app: LinkApplication) {
   Dialog.warning({
@@ -41,7 +36,7 @@ function handleDelete(app: LinkApplication) {
 <template>
   <VModal title="友链申请" :width="800" :mount-to-body="true" @close="emit('close')">
     <div class=":uno: mb-3 text-sm text-gray-500">
-      当前有 <span class=":uno: font-medium text-gray-900">{{ pendingCount }}</span> 条待审核申请
+      当前有 <span class=":uno: text-gray-900 font-medium">{{ pendingCount }}</span> 条待审核申请
     </div>
 
     <VLoading v-if="isLoading" />
@@ -52,10 +47,17 @@ function handleDelete(app: LinkApplication) {
       <table class=":uno: min-w-full divide-y divide-gray-200">
         <thead class=":uno: bg-gray-50">
           <tr>
-            <th class=":uno: px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">网站名称</th>
-            <th class=":uno: px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">链接地址</th>
-            <th class=":uno: px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申请时间</th>
-            <th class=":uno: px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+              网站名称
+            </th>
+            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+              链接地址
+            </th>
+            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">来源</th>
+            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+              申请时间
+            </th>
+            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">操作</th>
           </tr>
         </thead>
         <tbody class=":uno: bg-white divide-y divide-gray-200">
@@ -66,15 +68,18 @@ function handleDelete(app: LinkApplication) {
                 {{ app.spec.url }}
               </a>
             </td>
-            <td class=":uno: px-4 py-2 text-sm text-gray-500">{{ app.metadata.creationTimestamp ? formatDate(app.metadata.creationTimestamp) : '-' }}</td>
+            <td class=":uno: px-4 py-2 text-sm">
+              <LinkApplicationSourceBadge :application="app" />
+            </td>
+            <td class=":uno: px-4 py-2 text-sm text-gray-500">
+              {{ app.metadata.creationTimestamp ? utils.date.format(app.metadata.creationTimestamp) : "-" }}
+            </td>
             <td class=":uno: px-4 py-2 text-sm">
               <VSpace>
                 <VButton size="xs" type="secondary" @click="app.metadata.name && emit('view-detail', app)">
                   审核
                 </VButton>
-                <VButton size="xs" type="danger" @click="handleDelete(app)">
-                  删除
-                </VButton>
+                <VButton size="xs" type="danger" @click="handleDelete(app)"> 删除 </VButton>
               </VSpace>
             </td>
           </tr>

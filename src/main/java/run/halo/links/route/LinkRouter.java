@@ -6,8 +6,6 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
 import static run.halo.app.extension.index.query.Queries.equal;
 import static run.halo.app.extension.index.query.Queries.isNull;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -28,12 +26,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.thymeleaf.context.LazyContextVariable;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
-import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.finders.LinkFinder;
 import run.halo.links.security.LinkApplicationRateLimiter;
+import run.halo.links.service.LinkApplicationService;
 import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
@@ -50,7 +48,7 @@ public class LinkRouter {
     private final LinkPublicQueryService linkPublicQueryService;
     private final PluginContext pluginContext;
     private final ReactiveSettingFetcher settingFetcher;
-    private final ReactiveExtensionClient extensionClient;
+    private final LinkApplicationService applicationService;
     private final LinkApplicationRateLimiter rateLimiter = new LinkApplicationRateLimiter();
 
     @Bean
@@ -77,63 +75,28 @@ public class LinkRouter {
                     String url = getFormValue(formData, "url");
                     String displayName = getFormValue(formData, "displayName");
 
-                    // Validate required fields
-                if (StringUtils.isBlank(url)) {
-                    return redirectWithFieldError("url", url, "URL不能为空");
-                }
-                if (StringUtils.isBlank(displayName)) {
-                    return redirectWithFieldError("displayName", displayName, "网站名称不能为空");
-                }
-
-                // Validate URL format
-                try {
-                    new URL(url);
-                } catch (MalformedURLException e) {
-                    return redirectWithFieldError("url", url, "URL格式错误");
-                }
-
-                String normalizedUrl = url.trim();
-
-                // Check for duplicates (PENDING or REJECTED)
-                return checkDuplicate(normalizedUrl)
-                    .flatMap(isDuplicate -> {
-                        if (isDuplicate) {
-                            return redirectWithFieldError("url", normalizedUrl,
-                                "该链接已提交申请");
-                        }
-
-                        // Create LinkApplication
-                        LinkApplication application = new LinkApplication();
-                        application.setMetadata(new run.halo.app.extension.Metadata());
-                        application.getMetadata().setGenerateName("link-app-");
-
-                        LinkApplication.LinkApplicationSpec spec =
-                            new LinkApplication.LinkApplicationSpec();
-                        spec.setUrl(normalizedUrl);
-                        spec.setDisplayName(displayName.trim());
-                        spec.setLogo(getFormValue(formData, "logo"));
-                        spec.setDescription(getFormValue(formData, "description"));
-                        spec.setEmail(getFormValue(formData, "email"));
-                        spec.setBacklink(getFormValue(formData, "backlink"));
-
-                        String feedUrlsStr = getFormValue(formData, "feedUrls");
-                        if (StringUtils.isNotBlank(feedUrlsStr)) {
-                            spec.setFeedUrls(
-                                List.of(feedUrlsStr.split("\\r?\\n"))
-                                    .stream()
-                                    .map(String::trim)
-                                    .filter(StringUtils::isNotBlank)
-                                    .toList()
-                            );
-                        }
-
-                        spec.setStatus(LinkApplication.Status.PENDING);
-                        application.setSpec(spec);
-
-                        return extensionClient.create(application)
-                            .then(redirectSuccess());
-                    });
-            });
+                    var origin = new LinkApplication.Origin();
+                    origin.setType(LinkApplication.OriginType.FORM);
+                    var submission = new LinkApplicationService.Submission(
+                        url,
+                        displayName,
+                        getFormValue(formData, "logo"),
+                        getFormValue(formData, "description"),
+                        getFormValue(formData, "email"),
+                        getFormValue(formData, "backlink"),
+                        parseFeedUrls(getFormValue(formData, "feedUrls")),
+                        origin
+                    );
+                    return applicationService.create(submission)
+                        .flatMap(result -> {
+                            if (result.status()
+                                == LinkApplicationService.CreateStatus.CREATED) {
+                                return redirectSuccess();
+                            }
+                            return redirectWithFieldError(result.field(), result.value(),
+                                result.message());
+                        });
+                });
         };
     }
 
@@ -146,14 +109,14 @@ public class LinkRouter {
         return StringUtils.isBlank(value) ? null : value.trim();
     }
 
-    private Mono<Boolean> checkDuplicate(String url) {
-        var options = ListOptions.builder()
-            .andQuery(equal("spec.url", url))
-            .andQuery(equal("spec.status", LinkApplication.Status.PENDING.name())
-                .or(equal("spec.status", LinkApplication.Status.REJECTED.name())))
-            .build();
-        return extensionClient.listAll(LinkApplication.class, options, Sort.unsorted())
-            .hasElements();
+    private static List<String> parseFeedUrls(String value) {
+        if (StringUtils.isBlank(value)) {
+            return List.of();
+        }
+        return List.of(value.split("\\r?\\n")).stream()
+            .map(String::trim)
+            .filter(StringUtils::isNotBlank)
+            .toList();
     }
 
     private static Mono<ServerResponse> redirectSuccess() {
