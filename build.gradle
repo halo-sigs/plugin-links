@@ -26,6 +26,9 @@ dependencies {
     implementation('org.dizitart:nitrite-support:4.3.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation('org.xerial:sqlite-jdbc:3.53.2.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
 
     testImplementation 'run.halo.app:api'
     testImplementation 'run.halo.aifoundation:api:1.0.0-beta.4'

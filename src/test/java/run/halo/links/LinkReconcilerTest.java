@@ -1,9 +1,12 @@
 package run.halo.links;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -24,6 +27,7 @@ import run.halo.app.extension.controller.ControllerBuilder;
 import run.halo.app.extension.controller.Reconciler;
 import run.halo.links.extension.Link;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedStorageUnavailableException;
 
 @ExtendWith(MockitoExtension.class)
 class LinkReconcilerTest {
@@ -105,6 +109,44 @@ class LinkReconcilerTest {
 
         assertThat(result).isEqualTo(Reconciler.Result.doNotRetry());
         verify(itemStore).deleteByLinkName("link-empty");
+        verify(client).update(link);
+    }
+
+    @Test
+    void shouldKeepFinalizerWhenFeedStorageIsUnavailable() {
+        Link link = deletedLink("link-pending");
+        LinkReconciler reconciler = new LinkReconciler(client, itemStore);
+        when(client.fetch(Link.class, "link-pending")).thenReturn(Optional.of(link));
+        doThrow(new LinkFeedStorageUnavailableException("unavailable"))
+            .when(itemStore).deleteByLinkName("link-pending");
+
+        assertThatThrownBy(() -> reconciler.reconcile(
+            new Reconciler.Request("link-pending")))
+            .isInstanceOf(LinkFeedStorageUnavailableException.class);
+        assertThat(link.getMetadata().getFinalizers()).containsExactly(LinkReconciler.FINALIZER);
+        verify(client).fetch(Link.class, "link-pending");
+        verifyNoMoreInteractions(client);
+    }
+
+    @Test
+    void shouldFinalizeDeletedLinkAfterStorageRecoversOnRestart() {
+        Link link = deletedLink("link-recovered");
+        when(client.fetch(Link.class, "link-recovered")).thenReturn(Optional.of(link));
+        doThrow(new LinkFeedStorageUnavailableException("unavailable"))
+            .doNothing()
+            .when(itemStore).deleteByLinkName("link-recovered");
+
+        LinkReconciler beforeRestart = new LinkReconciler(client, itemStore);
+        assertThatThrownBy(() -> beforeRestart.reconcile(
+            new Reconciler.Request("link-recovered")))
+            .isInstanceOf(LinkFeedStorageUnavailableException.class);
+        assertThat(link.getMetadata().getFinalizers()).containsExactly(LinkReconciler.FINALIZER);
+
+        LinkReconciler afterRestart = new LinkReconciler(client, itemStore);
+        assertThat(afterRestart.reconcile(new Reconciler.Request("link-recovered")))
+            .isEqualTo(Reconciler.Result.doNotRetry());
+        assertThat(link.getMetadata().getFinalizers()).isEmpty();
+        verify(itemStore, times(2)).deleteByLinkName("link-recovered");
         verify(client).update(link);
     }
 

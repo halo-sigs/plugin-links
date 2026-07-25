@@ -16,7 +16,6 @@ import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
-import run.halo.links.nitrite.LinksNitriteDatabase;
 
 @Slf4j
 @Component
@@ -28,7 +27,7 @@ public class LinkFeedScheduler {
     private final ReactiveExtensionClient client;
     private final LinkFeedService linkFeedService;
     private final LinkFeedRetentionService retentionService;
-    private final LinksNitriteDatabase database;
+    private final LinkFeedStorageMaintenance storageMaintenance;
     private final LinkFeedRefreshSettingsFetcher settingsFetcher;
     private final Clock clock;
     private Instant lastAutomaticRefreshAt;
@@ -37,33 +36,33 @@ public class LinkFeedScheduler {
     public LinkFeedScheduler(ReactiveExtensionClient client,
         LinkFeedService linkFeedService,
         LinkFeedRetentionService retentionService,
-        LinksNitriteDatabase database,
+        LinkFeedStorageMaintenance storageMaintenance,
         LinkFeedRefreshSettingsFetcher settingsFetcher) {
-        this(client, linkFeedService, retentionService, database, settingsFetcher,
+        this(client, linkFeedService, retentionService, storageMaintenance, settingsFetcher,
             Clock.systemUTC());
     }
 
     LinkFeedScheduler(ReactiveExtensionClient client,
         LinkFeedService linkFeedService,
         LinkFeedRetentionService retentionService,
-        LinksNitriteDatabase database,
+        LinkFeedStorageMaintenance storageMaintenance,
         LinkFeedRefreshSettingsFetcher settingsFetcher,
         Clock clock) {
-        this(client, linkFeedService, retentionService, database, settingsFetcher, clock,
+        this(client, linkFeedService, retentionService, storageMaintenance, settingsFetcher, clock,
             Instant.now(clock));
     }
 
     LinkFeedScheduler(ReactiveExtensionClient client,
         LinkFeedService linkFeedService,
         LinkFeedRetentionService retentionService,
-        LinksNitriteDatabase database,
+        LinkFeedStorageMaintenance storageMaintenance,
         LinkFeedRefreshSettingsFetcher settingsFetcher,
         Clock clock,
         Instant lastAutomaticRefreshAt) {
         this.client = client;
         this.linkFeedService = linkFeedService;
         this.retentionService = retentionService;
-        this.database = database;
+        this.storageMaintenance = storageMaintenance;
         this.settingsFetcher = settingsFetcher;
         this.clock = clock;
         this.lastAutomaticRefreshAt = lastAutomaticRefreshAt;
@@ -79,6 +78,11 @@ public class LinkFeedScheduler {
     }
 
     Mono<Void> refreshIfDue() {
+        if (!storageMaintenance.isAvailable()) {
+            log.debug("[plugin-links] Scheduled RSS refresh skipped because storage is "
+                + "unavailable");
+            return Mono.empty();
+        }
         return settingsFetcher.fetch()
             .flatMap(settings -> {
                 if (!settings.automaticRefreshEnabled()) {
@@ -126,9 +130,12 @@ public class LinkFeedScheduler {
 
     @Scheduled(cron = "0 30 3 * * *")
     public void cleanupAndCompact() {
+        if (!storageMaintenance.isAvailable()) {
+            return;
+        }
         try {
             retentionService.enforce(LinkFeedRetentionPolicy.defaults());
-            database.compact();
+            storageMaintenance.compactIfNeeded();
         } catch (Throwable e) {
             log.warn("[plugin-links] Scheduled RSS retention cleanup failed", e);
         }
