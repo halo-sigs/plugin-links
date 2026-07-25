@@ -26,10 +26,10 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.Ref;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
-import run.halo.links.dto.LinkAiSettings;
+import run.halo.links.dto.LinkApplicationSettings;
 import run.halo.links.dto.LinkCommentRecognitionRequest;
 import run.halo.links.dto.LinkCommentRecognitionResult;
-import run.halo.links.endpoint.LinkAiSettingsFetcher;
+import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.route.LinkBaseSettings;
 import run.halo.links.service.LinkApplicationService;
@@ -39,7 +39,7 @@ import run.halo.links.service.ai.LinkAiService;
 class CommentApplicationRecognitionProcessorTest {
 
     @Mock
-    LinkAiSettingsFetcher aiSettingsFetcher;
+    LinkApplicationSettingsFetcher applicationSettingsFetcher;
 
     @Mock
     LinkAiService aiService;
@@ -61,7 +61,7 @@ class CommentApplicationRecognitionProcessorTest {
     @BeforeEach
     void setUp() {
         processor = new CommentApplicationRecognitionProcessor(
-            aiSettingsFetcher,
+            applicationSettingsFetcher,
             aiService,
             applicationService,
             extensionClient,
@@ -72,8 +72,8 @@ class CommentApplicationRecognitionProcessorTest {
 
     @Test
     void shouldCreateCommentOriginApplicationForMatchingPost() {
-        var settings = settings(source(LinkAiSettings.SourceType.POST, "post-a"));
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(settings));
+        var settings = settings(source(LinkApplicationSettings.SourceType.POST, "post-a"));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(settings));
         when(aiService.isOperational("model-a")).thenReturn(Mono.just(true));
         var post = new Post();
         var postSpec = new Post.PostSpec();
@@ -128,8 +128,8 @@ class CommentApplicationRecognitionProcessorTest {
     void shouldMatchLinksAndSinglePageSources() {
         when(pluginContext.getName()).thenReturn("PluginLinks");
 
-        var linksSettings = settings(source(LinkAiSettings.SourceType.LINKS, null));
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(linksSettings));
+        var linksSettings = settings(source(LinkApplicationSettings.SourceType.LINKS, null));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(linksSettings));
         when(aiService.isOperational("model-a")).thenReturn(Mono.just(true));
         var baseSettings = new LinkBaseSettings();
         baseSettings.setTitle("Friends");
@@ -143,8 +143,8 @@ class CommentApplicationRecognitionProcessorTest {
             .expectNext(CommentApplicationRecognitionProcessor.ProcessOutcome.NEGATIVE)
             .verifyComplete();
 
-        var pageSettings = settings(source(LinkAiSettings.SourceType.SINGLE_PAGE, "page-a"));
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(pageSettings));
+        var pageSettings = settings(source(LinkApplicationSettings.SourceType.SINGLE_PAGE, "page-a"));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(pageSettings));
         var page = new SinglePage();
         var pageSpec = new SinglePage.SinglePageSpec();
         pageSpec.setTitle("About");
@@ -160,8 +160,8 @@ class CommentApplicationRecognitionProcessorTest {
 
     @Test
     void shouldSkipUnmatchedOrUnavailableCommentsWithoutCallingModel() {
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(
-            settings(source(LinkAiSettings.SourceType.POST, "post-a"))));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
         var unmatched = comment("comment-a", Ref.of("post-b",
             GroupVersionKind.fromExtension(Post.class)));
 
@@ -172,9 +172,25 @@ class CommentApplicationRecognitionProcessorTest {
     }
 
     @Test
+    void shouldSkipWhenApplicationMasterIsDisabled() {
+        when(applicationSettingsFetcher.fetch())
+            .thenReturn(Mono.just(LinkApplicationSettings.defaults()));
+        var comment = comment("comment-a", Ref.of("post-a",
+            GroupVersionKind.fromExtension(Post.class)));
+
+        StepVerifier.create(processor.process(comment))
+            .expectNext(CommentApplicationRecognitionProcessor.ProcessOutcome.SKIPPED)
+            .verifyComplete();
+
+        verify(aiService, never()).isOperational(any());
+        verify(aiService, never()).recognize(any(), any());
+        verify(applicationService, never()).create(any());
+    }
+
+    @Test
     void shouldUseOwnerWebsiteAndDisplayNameFallbacksAfterPositiveDecision() {
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(
-            settings(source(LinkAiSettings.SourceType.POST, "post-a"))));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
         when(aiService.isOperational("model-a")).thenReturn(Mono.just(true));
         var post = new Post();
         var postSpec = new Post.PostSpec();
@@ -205,8 +221,8 @@ class CommentApplicationRecognitionProcessorTest {
 
     @Test
     void shouldNotCreateApplicationWithoutUsableUrl() {
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(
-            settings(source(LinkAiSettings.SourceType.POST, "post-a"))));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
         when(aiService.isOperational("model-a")).thenReturn(Mono.just(true));
         var post = new Post();
         post.setSpec(new Post.PostSpec());
@@ -227,8 +243,8 @@ class CommentApplicationRecognitionProcessorTest {
 
     @Test
     void shouldUseUrlHostAndNotCopyEmailForHaloUserOwner() {
-        when(aiSettingsFetcher.fetch()).thenReturn(Mono.just(
-            settings(source(LinkAiSettings.SourceType.POST, "post-a"))));
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
         when(aiService.isOperational("model-a")).thenReturn(Mono.just(true));
         var post = new Post();
         post.setSpec(new Post.PostSpec());
@@ -260,20 +276,22 @@ class CommentApplicationRecognitionProcessorTest {
         assertThat(submission.getValue().email()).isNull();
     }
 
-    private static LinkAiSettings settings(LinkAiSettings.RecognitionSource source) {
-        var settings = new LinkAiSettings();
+    private static LinkApplicationSettings settings(
+        LinkApplicationSettings.RecognitionSource source) {
+        var settings = new LinkApplicationSettings();
         settings.setEnabled(true);
-        var recognition = new LinkAiSettings.CommentApplicationRecognition();
+        var recognition = new LinkApplicationSettings.CommentRecognition();
         recognition.setEnabled(true);
         recognition.setModelName("model-a");
         recognition.setSources(List.of(source));
-        settings.setCommentApplicationRecognition(recognition);
+        settings.setCommentRecognition(recognition);
         return settings.normalized();
     }
 
-    private static LinkAiSettings.RecognitionSource source(LinkAiSettings.SourceType type,
+    private static LinkApplicationSettings.RecognitionSource source(
+        LinkApplicationSettings.SourceType type,
         String name) {
-        var source = new LinkAiSettings.RecognitionSource();
+        var source = new LinkApplicationSettings.RecognitionSource();
         source.setType(type);
         source.setName(name);
         return source;

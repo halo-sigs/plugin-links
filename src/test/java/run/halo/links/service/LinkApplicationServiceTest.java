@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +31,8 @@ class LinkApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new LinkApplicationService(client);
+        service = new LinkApplicationService(client,
+            new LinkApplicationCreationCoordinator());
     }
 
     @Test
@@ -77,6 +79,7 @@ class LinkApplicationServiceTest {
     @Test
     void shouldBlockPendingOrApprovedApplicationFromAnySource() {
         for (var status : List.of(LinkApplication.Status.PENDING,
+            LinkApplication.Status.APPROVING,
             LinkApplication.Status.APPROVED)) {
             givenExisting(List.of(), List.of(application("https://example.com", status,
                 LinkApplication.OriginType.COMMENT, "old-comment")));
@@ -153,6 +156,39 @@ class LinkApplicationServiceTest {
         StepVerifier.create(service.create(submission))
             .assertNext(result -> assertThat(result.application().getSpec().getOrigin()
                 .getComment().getName()).isEqualTo("comment-a"))
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldCoordinateConcurrentFormAndCommentCreation() {
+        var stored = new CopyOnWriteArrayList<LinkApplication>();
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(Link.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenReturn(Flux.empty());
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(LinkApplication.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenAnswer(ignored -> Flux.defer(() -> Flux.fromIterable(stored)));
+        when(client.create(any(LinkApplication.class))).thenAnswer(invocation -> {
+            LinkApplication application = invocation.getArgument(0);
+            stored.add(application);
+            return Mono.just(application);
+        });
+
+        var form = service.create(submission("https://example.com",
+            LinkApplication.OriginType.FORM, null));
+        var comment = service.create(submission("https://example.com/",
+            LinkApplication.OriginType.COMMENT, "comment-a"));
+
+        StepVerifier.create(Flux.merge(form, comment).map(LinkApplicationService.CreateResult::status)
+                .collectList())
+            .assertNext(statuses -> assertThat(statuses)
+                .containsExactlyInAnyOrder(
+                    LinkApplicationService.CreateStatus.CREATED,
+                    LinkApplicationService.CreateStatus.DUPLICATE))
             .verifyComplete();
     }
 

@@ -27,4 +27,3 @@ export interface CommentOrigin {
      */
     'name': string;
 }
-

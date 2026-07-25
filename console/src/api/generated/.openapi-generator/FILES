@@ -19,6 +19,8 @@ git_push.sh
 index.ts
 models/access-status.ts
 models/add-operation.ts
+models/approval-request.ts
+models/approval.ts
 models/approve-request.ts
 models/backlink-status.ts
 models/comment-origin.ts
@@ -27,7 +29,9 @@ models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
 models/link-ai-feature-status.ts
+models/link-application-cleanup-result.ts
 models/link-application-list.ts
+models/link-application-origin-comment.ts
 models/link-application-spec.ts
 models/link-application.ts
 models/link-comment-extraction-request.ts
@@ -58,6 +62,7 @@ models/link.ts
 models/metadata.ts
 models/move-operation.ts
 models/origin.ts
+models/ref.ts
 models/remove-operation.ts
 models/replace-operation.ts
 models/rss-feed-status.ts

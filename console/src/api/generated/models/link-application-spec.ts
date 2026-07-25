@@ -15,6 +15,9 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
+import type { Approval } from './approval';
+// May contain unused imports in some cases
+// @ts-ignore
 import type { Origin } from './origin';
 
 /**
@@ -23,6 +26,12 @@ import type { Origin } from './origin';
  * @interface LinkApplicationSpec
  */
 export interface LinkApplicationSpec {
+    /**
+     *
+     * @type {Approval}
+     * @memberof LinkApplicationSpec
+     */
+    'approval'?: Approval;
     /**
      * Absolute URL of the backlink page on the applicant\'s site.
      * @type {string}
@@ -81,10 +90,9 @@ export interface LinkApplicationSpec {
 
 export const LinkApplicationSpecStatusEnum = {
     Pending: 'PENDING',
+    Approving: 'APPROVING',
     Approved: 'APPROVED',
     Rejected: 'REJECTED'
 } as const;
 
 export type LinkApplicationSpecStatusEnum = typeof LinkApplicationSpecStatusEnum[keyof typeof LinkApplicationSpecStatusEnum];
-
-

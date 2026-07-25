@@ -57,6 +57,9 @@ public class LinkApplication extends AbstractExtension {
 
         @Schema(description = "Origin of the application.")
         private Origin origin;
+
+        @Schema(description = "Frozen approval state for resumable approval.")
+        private Approval approval;
     }
 
     @Data
@@ -76,9 +79,41 @@ public class LinkApplication extends AbstractExtension {
         private String name;
     }
 
+    @Data
+    @Schema(description = "Frozen state of an application approval.")
+    public static class Approval {
+        @Schema(description = "Metadata name reserved for the formal Link.",
+            requiredMode = REQUIRED)
+        private String linkName;
+
+        @Schema(description = "Normalized Link fields frozen when approval starts.",
+            requiredMode = REQUIRED)
+        private ApprovalRequest request;
+    }
+
+    @Data
+    @Schema(description = "Normalized Link fields used by a resumable approval.")
+    public static class ApprovalRequest {
+        @Schema(description = "Approved absolute Link URL.", requiredMode = REQUIRED)
+        private String url;
+
+        @Schema(description = "Approved Link display name.", requiredMode = REQUIRED)
+        private String displayName;
+
+        @Schema(description = "Approved Link logo URL.")
+        private String logo;
+
+        @Schema(description = "Approved Link description.")
+        private String description;
+
+        @Schema(description = "Metadata name of the selected LinkGroup.")
+        private String groupName;
+    }
+
     @Schema(description = "Application status.")
     public enum Status {
         PENDING,
+        APPROVING,
         APPROVED,
         REJECTED
     }

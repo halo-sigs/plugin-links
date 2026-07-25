@@ -32,6 +32,8 @@
 | `group` | `String \| null` | 当前 URL 上的 `group` 查询参数 |
 | `linksTitle` | `String` | 页面标题，来自插件设置 `base.title`，默认值为 `链接` |
 | `pluginName` | `String` | 当前插件名称，可用于评论组件的 `name` |
+| `csrfToken` | `String` | 当前请求的 CSRF token，可用于友链申请表单的隐藏字段 |
+| `linkApplicationEnabled` | `Boolean` | 友链申请总开关与访客提交子开关同时开启时为 `true` |
 | `_templateId` | `String` | 固定为 `"links"` |
 
 `links` 示例：
@@ -78,6 +80,73 @@
     </ul>
 </section>
 ```
+
+---
+
+## 访客友链申请
+
+插件设置中的“友链申请”总开关默认关闭。总开关和“允许访客提交”子开关同时开启时，
+`linkApplicationEnabled` 为 `true`，主题才应展示申请入口。
+
+提交端点为同源、CSRF 保护的 `POST /links/apply`，仅接受
+`application/x-www-form-urlencoded`。当前没有 JSON 申请 API。
+
+字段如下：
+
+| 字段 | 必填 | 说明 |
+| ---- | ---- | ---- |
+| `url` | 是 | 申请网站的 HTTP/HTTPS 地址 |
+| `displayName` | 是 | 网站名称 |
+| `logo` | 否 | Logo 地址 |
+| `description` | 否 | 网站描述 |
+| `email` | 否 | 联系邮箱 |
+| `backlink` | 否 | 反链页面地址 |
+| `feedUrls` | 否 | RSS/Atom 地址，一行一个 |
+| `_csrf` | 是 | 使用模板变量 `csrfToken` |
+
+HTML 示例：
+
+```html
+<form
+    th:if="${linkApplicationEnabled}"
+    method="post"
+    th:action="@{/links/apply}"
+>
+    <input type="hidden" name="_csrf" th:value="${csrfToken}">
+    <input name="url" required th:value="${param.field == 'url' ? param.value : ''}">
+    <input name="displayName" required
+           th:value="${param.field == 'displayName' ? param.value : ''}">
+    <input name="logo">
+    <textarea name="description"></textarea>
+    <input name="email" type="email">
+    <input name="backlink">
+    <textarea name="feedUrls" placeholder="每行一个订阅地址"></textarea>
+    <button type="submit">申请友链</button>
+</form>
+```
+
+同源 JavaScript 示例：
+
+```js
+const body = new URLSearchParams({
+  _csrf: document.querySelector('meta[name="csrf-token"]').content,
+  url: 'https://example.com',
+  displayName: 'Example',
+})
+
+await fetch('/links/apply', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+  body,
+})
+```
+
+端点通过 `303` 重定向回 `/links`：
+
+- 成功：`applied=success`
+- 验证或限流失败：`applied=error&message=...`；字段错误还包含 `field`，并在有原值时包含
+  `value`，主题可据此回填
+- 功能关闭：`applied=disabled&message=友链申请功能暂未开放`
 
 ---
 

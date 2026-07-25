@@ -215,14 +215,83 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/linkapplications" : {
       "get" : {
-        "description" : "List link applications with optional status filter.",
+        "description" : "List paginated link application history.",
         "operationId" : "listLinkApplications",
         "parameters" : [ {
-          "description" : "Filter by application status.",
+          "description" : "Application status.",
           "in" : "query",
           "name" : "status",
           "schema" : {
             "type" : "string"
+          }
+        }, {
+          "description" : "Application origin type.",
+          "in" : "query",
+          "name" : "originType",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Inclusive ISO-8601 creation-time lower bound.",
+          "in" : "query",
+          "name" : "createdAfter",
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "description" : "Inclusive ISO-8601 creation-time upper bound.",
+          "in" : "query",
+          "name" : "createdBefore",
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "description" : "Page number. Default is 0.",
+          "in" : "query",
+          "name" : "page",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Size number. Default is 0.",
+          "in" : "query",
+          "name" : "size",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Label selector. e.g.: hidden!=true",
+          "in" : "query",
+          "name" : "labelSelector",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "description" : "Field selector. e.g.: metadata.name==halo",
+          "in" : "query",
+          "name" : "fieldSelector",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           }
         } ],
         "responses" : {
@@ -240,12 +309,108 @@
         "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
       }
     },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications/-/cleanup" : {
+      "post" : {
+        "description" : "Delete every deletable application matching the list filters.",
+        "operationId" : "cleanupLinkApplications",
+        "parameters" : [ {
+          "description" : "Application status.",
+          "in" : "query",
+          "name" : "status",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Application origin type.",
+          "in" : "query",
+          "name" : "originType",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Inclusive ISO-8601 creation-time lower bound.",
+          "in" : "query",
+          "name" : "createdAfter",
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "description" : "Inclusive ISO-8601 creation-time upper bound.",
+          "in" : "query",
+          "name" : "createdBefore",
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "description" : "Page number. Default is 0.",
+          "in" : "query",
+          "name" : "page",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Size number. Default is 0.",
+          "in" : "query",
+          "name" : "size",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Label selector. e.g.: hidden!=true",
+          "in" : "query",
+          "name" : "labelSelector",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "description" : "Field selector. e.g.: metadata.name==halo",
+          "in" : "query",
+          "name" : "fieldSelector",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationCleanupResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
     "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}" : {
       "delete" : {
-        "description" : "Delete a link application.",
+        "description" : "Delete a link application unless approval is in progress.",
         "operationId" : "deleteLinkApplication",
         "parameters" : [ {
-          "description" : "Metadata name of the link application to delete.",
+          "description" : "LinkApplication metadata name.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -264,7 +429,7 @@
         "description" : "Get a link application by metadata name.",
         "operationId" : "getLinkApplication",
         "parameters" : [ {
-          "description" : "Metadata name of the link application.",
+          "description" : "LinkApplication metadata name.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -289,10 +454,10 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/approve" : {
       "post" : {
-        "description" : "Approve a link application, creating a Link.",
+        "description" : "Approve or resume approving a link application.",
         "operationId" : "approveLinkApplication",
         "parameters" : [ {
-          "description" : "Metadata name of the link application to approve.",
+          "description" : "LinkApplication metadata name.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -308,7 +473,7 @@
               }
             }
           },
-          "description" : "Approval request with optional field overrides and group assignment."
+          "description" : "Optional approval field overrides."
         },
         "responses" : {
           "200" : {
@@ -325,12 +490,40 @@
         "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
       }
     },
+    "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/origin-comment" : {
+      "get" : {
+        "description" : "Get minimal source Comment context for one link application.",
+        "operationId" : "getLinkApplicationOriginComment",
+        "parameters" : [ {
+          "description" : "LinkApplication metadata name.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationOriginComment"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
     "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/reject" : {
       "post" : {
-        "description" : "Reject a link application.",
+        "description" : "Reject a pending link application.",
         "operationId" : "rejectLinkApplication",
         "parameters" : [ {
-          "description" : "Metadata name of the link application to reject.",
+          "description" : "LinkApplication metadata name.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -348,10 +541,10 @@
     },
     "/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/verify" : {
       "post" : {
-        "description" : "Manually verify the backlink for a link application.",
+        "description" : "Manually verify this application's backlink.",
         "operationId" : "verifyBacklink",
         "parameters" : [ {
-          "description" : "Metadata name of the link application.",
+          "description" : "LinkApplication metadata name.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1406,6 +1599,47 @@
           }
         }
       },
+      "Approval" : {
+        "required" : [ "linkName", "request" ],
+        "type" : "object",
+        "properties" : {
+          "linkName" : {
+            "type" : "string",
+            "description" : "Metadata name reserved for the formal Link."
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/ApprovalRequest"
+          }
+        },
+        "description" : "Frozen state of an application approval."
+      },
+      "ApprovalRequest" : {
+        "required" : [ "displayName", "url" ],
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "description" : "Approved Link description."
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Approved Link display name."
+          },
+          "groupName" : {
+            "type" : "string",
+            "description" : "Metadata name of the selected LinkGroup."
+          },
+          "logo" : {
+            "type" : "string",
+            "description" : "Approved Link logo URL."
+          },
+          "url" : {
+            "type" : "string",
+            "description" : "Approved absolute Link URL."
+          }
+        },
+        "description" : "Normalized Link fields used by a resumable approval."
+      },
       "ApproveRequest" : {
         "type" : "object",
         "properties" : {
@@ -1630,6 +1864,28 @@
         },
         "description" : "Link application extension that represents a pending link submission."
       },
+      "LinkApplicationCleanupResult" : {
+        "type" : "object",
+        "properties" : {
+          "deleted" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "failed" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "matched" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "skipped" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "description" : "Result of cleaning all LinkApplications matching the supplied filters."
+      },
       "LinkApplicationList" : {
         "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
         "type" : "object",
@@ -1679,10 +1935,32 @@
           }
         }
       },
+      "LinkApplicationOriginComment" : {
+        "type" : "object",
+        "properties" : {
+          "creationTime" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "raw" : {
+            "type" : "string"
+          },
+          "subjectRef" : {
+            "$ref" : "#/components/schemas/Ref"
+          }
+        },
+        "description" : "Minimal source Comment context for one LinkApplication."
+      },
       "LinkApplicationSpec" : {
         "required" : [ "displayName", "status", "url" ],
         "type" : "object",
         "properties" : {
+          "approval" : {
+            "$ref" : "#/components/schemas/Approval"
+          },
           "backlink" : {
             "pattern" : "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$",
             "type" : "string",
@@ -1720,7 +1998,7 @@
           "status" : {
             "type" : "string",
             "description" : "Application status.",
-            "enum" : [ "PENDING", "APPROVED", "REJECTED" ]
+            "enum" : [ "PENDING", "APPROVING", "APPROVED", "REJECTED" ]
           },
           "url" : {
             "type" : "string",
@@ -1796,7 +2074,6 @@
         }
       },
       "LinkDetailDTO" : {
-        "required" : [ "title" ],
         "type" : "object",
         "properties" : {
           "description" : {
@@ -2466,6 +2743,29 @@
           }
         },
         "description" : "Origin of a link application."
+      },
+      "Ref" : {
+        "required" : [ "group", "kind", "name" ],
+        "type" : "object",
+        "properties" : {
+          "group" : {
+            "type" : "string",
+            "description" : "Extension group"
+          },
+          "kind" : {
+            "type" : "string",
+            "description" : "Extension kind"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Extension name. This field is mandatory"
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "Extension version"
+          }
+        },
+        "description" : "Extension reference object. The name is mandatory"
       },
       "RemoveOperation" : {
         "required" : [ "op", "path" ],

@@ -11,7 +11,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param commentExtractionEnabled   whether link extraction from recent comments is enabled
  * @param commentExtractionOperational whether the extraction model can currently be resolved
  * @param commentExtractionModelName selected language model name, or null for default model
- * @param commentApplicationRecognitionEnabled whether automatic recognition is configured
+ * @param commentApplicationRecognitionEnabled whether automatic recognition is effective in
+ *                                             Link Application settings
  * @param commentApplicationRecognitionOperational whether its selected model is available
  * @param commentApplicationRecognitionModelName selected automatic recognition model
  */

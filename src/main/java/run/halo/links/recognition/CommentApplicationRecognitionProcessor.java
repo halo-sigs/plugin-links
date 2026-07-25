@@ -19,11 +19,11 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.Ref;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
-import run.halo.links.dto.LinkAiSettings;
+import run.halo.links.dto.LinkApplicationSettings;
 import run.halo.links.dto.LinkCommentRecognitionRequest;
 import run.halo.links.dto.LinkCommentRecognitionResult;
 import run.halo.links.endpoint.AiFoundationAvailableCondition;
-import run.halo.links.endpoint.LinkAiSettingsFetcher;
+import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.route.LinkBaseSettings;
 import run.halo.links.service.LinkApplicationService;
@@ -40,7 +40,7 @@ public class CommentApplicationRecognitionProcessor {
 
     private static final String BASE_SETTING_GROUP = "base";
 
-    private final LinkAiSettingsFetcher aiSettingsFetcher;
+    private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
     private final LinkAiService aiService;
     private final LinkApplicationService applicationService;
     private final ReactiveExtensionClient extensionClient;
@@ -52,19 +52,19 @@ public class CommentApplicationRecognitionProcessor {
             || comment.getSpec().getSubjectRef() == null) {
             return Mono.just(ProcessOutcome.SKIPPED);
         }
-        return aiSettingsFetcher.fetch()
+        return applicationSettingsFetcher.fetch()
             .flatMap(settings -> {
-                if (!settings.commentApplicationRecognitionEnabled()) {
+                if (!settings.commentRecognitionEnabled()) {
                     return Mono.just(ProcessOutcome.SKIPPED);
                 }
                 var source = findSource(
-                    settings.commentApplicationRecognitionSources(),
+                    settings.commentRecognitionSources(),
                     comment.getSpec().getSubjectRef()
                 );
                 if (source.isEmpty()) {
                     return Mono.just(ProcessOutcome.SKIPPED);
                 }
-                var modelName = settings.commentApplicationRecognitionModelName();
+                var modelName = settings.commentRecognitionModelName();
                 return aiService.isOperational(modelName)
                     .onErrorReturn(false)
                     .flatMap(operational -> {
@@ -78,7 +78,7 @@ public class CommentApplicationRecognitionProcessor {
     }
 
     private Mono<ProcessOutcome> analyze(Comment comment,
-        LinkAiSettings.RecognitionSource source, String subjectTitle, String modelName) {
+        LinkApplicationSettings.RecognitionSource source, String subjectTitle, String modelName) {
         var spec = comment.getSpec();
         var owner = spec.getOwner();
         var ownerDisplayName = owner == null ? null : owner.getDisplayName();
@@ -140,14 +140,14 @@ public class CommentApplicationRecognitionProcessor {
             });
     }
 
-    private Optional<LinkAiSettings.RecognitionSource> findSource(
-        List<LinkAiSettings.RecognitionSource> sources, Ref subjectRef) {
+    private Optional<LinkApplicationSettings.RecognitionSource> findSource(
+        List<LinkApplicationSettings.RecognitionSource> sources, Ref subjectRef) {
         return sources.stream()
             .filter(source -> matches(source, subjectRef))
             .findFirst();
     }
 
-    private boolean matches(LinkAiSettings.RecognitionSource source, Ref subjectRef) {
+    private boolean matches(LinkApplicationSettings.RecognitionSource source, Ref subjectRef) {
         return switch (source.getType()) {
             case LINKS -> Ref.groupKindEquals(subjectRef,
                 GroupVersionKind.fromExtension(Plugin.class))
@@ -161,7 +161,7 @@ public class CommentApplicationRecognitionProcessor {
         };
     }
 
-    private Mono<String> subjectTitle(LinkAiSettings.RecognitionSource source) {
+    private Mono<String> subjectTitle(LinkApplicationSettings.RecognitionSource source) {
         return switch (source.getType()) {
             case LINKS -> settingFetcher.fetch(BASE_SETTING_GROUP, LinkBaseSettings.class)
                 .defaultIfEmpty(LinkBaseSettings.defaults())

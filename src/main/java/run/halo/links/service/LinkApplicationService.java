@@ -20,6 +20,7 @@ import run.halo.links.extension.LinkApplication;
 public class LinkApplicationService {
 
     private final ReactiveExtensionClient client;
+    private final LinkApplicationCreationCoordinator creationCoordinator;
 
     public Mono<CreateResult> create(Submission submission) {
         var validation = validate(submission);
@@ -27,6 +28,11 @@ public class LinkApplicationService {
             return Mono.just(validation);
         }
         var canonicalUrl = LinkUrlCanonicalizer.canonicalKey(submission.url()).orElseThrow();
+        return creationCoordinator.coordinate(canonicalUrl,
+            () -> createCoordinated(submission, canonicalUrl));
+    }
+
+    private Mono<CreateResult> createCoordinated(Submission submission, String canonicalUrl) {
         var listOptions = ListOptions.builder().build();
         var links = client.listAll(Link.class, listOptions, Sort.unsorted()).collectList();
         var applications = client.listAll(LinkApplication.class, listOptions, Sort.unsorted())
@@ -86,6 +92,7 @@ public class LinkApplicationService {
             }
             var status = spec.getStatus();
             if (status == null || status == LinkApplication.Status.PENDING
+                || status == LinkApplication.Status.APPROVING
                 || status == LinkApplication.Status.APPROVED) {
                 return true;
             }

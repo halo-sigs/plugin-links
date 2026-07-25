@@ -29,6 +29,7 @@ import run.halo.app.extension.ListOptions;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.extension.LinkApplication;
+import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.finders.LinkFinder;
 import run.halo.links.security.LinkApplicationRateLimiter;
 import run.halo.links.service.LinkApplicationService;
@@ -48,8 +49,9 @@ public class LinkRouter {
     private final LinkPublicQueryService linkPublicQueryService;
     private final PluginContext pluginContext;
     private final ReactiveSettingFetcher settingFetcher;
+    private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
     private final LinkApplicationService applicationService;
-    private final LinkApplicationRateLimiter rateLimiter = new LinkApplicationRateLimiter();
+    private final LinkApplicationRateLimiter rateLimiter;
 
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
@@ -65,12 +67,15 @@ public class LinkRouter {
     }
 
     private HandlerFunction<ServerResponse> applyHandler() {
-        return request -> {
-            if (!rateLimiter.isAllowed(request)) {
-                return redirectWithError("提交过于频繁，请稍后再试");
-            }
-
-            return request.formData()
+        return request -> applicationSettingsFetcher.fetch()
+            .flatMap(settings -> {
+                if (!settings.selfSubmissionEnabled()) {
+                    return redirectDisabled();
+                }
+                if (!rateLimiter.isAllowed(request)) {
+                    return redirectWithError("提交过于频繁，请稍后再试");
+                }
+                return request.formData()
                 .flatMap(formData -> {
                     String url = getFormValue(formData, "url");
                     String displayName = getFormValue(formData, "displayName");
@@ -97,7 +102,7 @@ public class LinkRouter {
                                 result.message());
                         });
                 });
-        };
+            });
     }
 
     private static String getFormValue(MultiValueMap<String, String> formData, String key) {
@@ -148,6 +153,15 @@ public class LinkRouter {
         ).build();
     }
 
+    private static Mono<ServerResponse> redirectDisabled() {
+        return ServerResponse.seeOther(
+            UriComponentsBuilder.fromPath("/links")
+                .queryParam("applied", "disabled")
+                .queryParam("message", "友链申请功能暂未开放")
+                .build().toUri()
+        ).build();
+    }
+
     private HandlerFunction<ServerResponse> listHandler() {
         return request -> {
             String group = queryParam(request, "group");
@@ -185,10 +199,14 @@ public class LinkRouter {
             Mono<CsrfToken> csrfTokenMono = request.exchange()
                 .getAttributeOrDefault(CsrfToken.class.getName(), Mono.empty());
 
-            return csrfTokenMono
-                .map(CsrfToken::getToken)
-                .defaultIfEmpty("")
-                .map(csrfToken -> {
+            var applicationEnabledMono = applicationSettingsFetcher.fetch()
+                .map(settings -> settings.selfSubmissionEnabled());
+
+            return Mono.zip(
+                    csrfTokenMono.map(CsrfToken::getToken).defaultIfEmpty(""),
+                    applicationEnabledMono
+                )
+                .map(tuple -> {
                     Map<String, Object> model = new HashMap<>();
                     model.put("links", links);
                     model.put("simpleGroups", simpleGroups);
@@ -196,7 +214,8 @@ public class LinkRouter {
                     model.put("group", group);
                     model.put("pluginName", pluginContext.getName());
                     model.put("linksTitle", linksTitle);
-                    model.put("csrfToken", csrfToken);
+                    model.put("csrfToken", tuple.getT1());
+                    model.put("linkApplicationEnabled", tuple.getT2());
                     model.put(TEMPLATE_ID, "links");
                     return model;
                 })

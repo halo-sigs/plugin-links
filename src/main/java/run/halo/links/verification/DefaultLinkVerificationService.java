@@ -73,6 +73,18 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
             .map(resolvedLinks -> enqueue(resolvedLinks, normalizedMode(mode)));
     }
 
+    @Override
+    public Mono<Link.BacklinkStatus> verifyBacklink(String scanUrl) {
+        var link = new Link();
+        var spec = new Link.LinkSpec();
+        var verification = new Link.VerificationSpec();
+        verification.setBacklinkScanUrl(scanUrl);
+        spec.setVerification(verification);
+        link.setSpec(spec);
+        return Mono.fromCallable(() -> verifyBacklinkBlocking(link))
+            .subscribeOn(scheduler);
+    }
+
     @PreDestroy
     void disposeScheduler() {
         scheduler.dispose();
@@ -176,7 +188,7 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         Link.VerificationStatus status = new Link.VerificationStatus();
         Link.AccessStatus access = verifyAccess(link);
         Link.BacklinkStatus backlink = mode.includeBacklink()
-            ? verifyBacklink(link)
+            ? verifyBacklinkBlocking(link)
             : previousBacklink;
         status.setAccess(access);
         status.setBacklink(backlink);
@@ -213,7 +225,7 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         return status;
     }
 
-    private Link.BacklinkStatus verifyBacklink(Link link) {
+    private Link.BacklinkStatus verifyBacklinkBlocking(Link link) {
         Instant checkedAt = Instant.now();
         Link.BacklinkStatus status = new Link.BacklinkStatus();
         status.setCheckedAt(checkedAt);

@@ -21,6 +21,7 @@ import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.dto.LinkAiFeatureStatus;
 import run.halo.links.dto.LinkAiSettings;
+import run.halo.links.dto.LinkApplicationSettings;
 import run.halo.links.service.ai.LinkAiService;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,6 +34,9 @@ class LinkAiStatusEndpointTest {
     LinkAiSettingsFetcher settingsFetcher;
 
     @Mock
+    LinkApplicationSettingsFetcher applicationSettingsFetcher;
+
+    @Mock
     ObjectProvider<LinkAiService> aiServiceProvider;
 
     @Mock
@@ -41,8 +45,10 @@ class LinkAiStatusEndpointTest {
     @Test
     void shouldReturnDisabledStatusWhenAiIsNotEnabled() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(disabledSettings()));
+        when(applicationSettingsFetcher.fetch())
+            .thenReturn(Mono.just(LinkApplicationSettings.defaults()));
 
-        var endpoint = new LinkAiStatusEndpoint(client, settingsFetcher, aiServiceProvider);
+        var endpoint = endpoint();
         var request = getRequest("/links/-/ai-status");
 
         StepVerifier.create(endpoint.endpoint().route(request)
@@ -55,7 +61,7 @@ class LinkAiStatusEndpointTest {
     void shouldReturnNotFoundWhenCommentExtractionIsDisabled() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(disabledSettings()));
 
-        var endpoint = new LinkAiStatusEndpoint(client, settingsFetcher, aiServiceProvider);
+        var endpoint = endpoint();
         var request = getRequest("/links/-/recent-comments");
 
         StepVerifier.create(endpoint.endpoint().route(request)
@@ -72,7 +78,7 @@ class LinkAiStatusEndpointTest {
         when(client.listBy(any(), any(), any()))
             .thenReturn(Mono.just(new ListResult<>(1, 10, 0, java.util.List.of())));
 
-        var endpoint = new LinkAiStatusEndpoint(client, settingsFetcher, aiServiceProvider);
+        var endpoint = endpoint();
         var request = getRequest("/links/-/recent-comments");
 
         StepVerifier.create(endpoint.endpoint().route(request)
@@ -83,11 +89,13 @@ class LinkAiStatusEndpointTest {
 
     @Test
     void shouldDistinguishConfiguredRecognitionFromOperationalModel() {
-        when(settingsFetcher.fetch()).thenReturn(Mono.just(recognitionSettings()));
+        when(settingsFetcher.fetch()).thenReturn(Mono.just(disabledSettings()));
+        when(applicationSettingsFetcher.fetch())
+            .thenReturn(Mono.just(recognitionSettings()));
         when(aiServiceProvider.getIfAvailable()).thenReturn(aiService);
         when(aiService.isOperational(null)).thenReturn(Mono.just(false));
         when(aiService.isOperational("model-a")).thenReturn(Mono.just(false));
-        var endpoint = new LinkAiStatusEndpoint(client, settingsFetcher, aiServiceProvider);
+        var endpoint = endpoint();
         var request = getRequest("/links/-/ai-status");
 
         StepVerifier.create(endpoint.endpoint().route(request)
@@ -120,20 +128,22 @@ class LinkAiStatusEndpointTest {
         return settings.normalized();
     }
 
-    private static LinkAiSettings recognitionSettings() {
-        var settings = new LinkAiSettings();
+    private static LinkApplicationSettings recognitionSettings() {
+        var settings = new LinkApplicationSettings();
         settings.setEnabled(true);
-        var extraction = new LinkAiSettings.CommentExtraction();
-        extraction.setEnabled(false);
-        settings.setCommentExtraction(extraction);
-        var recognition = new LinkAiSettings.CommentApplicationRecognition();
+        var recognition = new LinkApplicationSettings.CommentRecognition();
         recognition.setEnabled(true);
         recognition.setModelName("model-a");
-        var source = new LinkAiSettings.RecognitionSource();
-        source.setType(LinkAiSettings.SourceType.LINKS);
+        var source = new LinkApplicationSettings.RecognitionSource();
+        source.setType(LinkApplicationSettings.SourceType.LINKS);
         recognition.setSources(java.util.List.of(source));
-        settings.setCommentApplicationRecognition(recognition);
+        settings.setCommentRecognition(recognition);
         return settings.normalized();
+    }
+
+    private LinkAiStatusEndpoint endpoint() {
+        return new LinkAiStatusEndpoint(client, settingsFetcher, applicationSettingsFetcher,
+            aiServiceProvider);
     }
 
     private static MockServerRequest getRequest(String path) {

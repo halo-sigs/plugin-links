@@ -53,6 +53,12 @@ rules:
     verbs: [ "create" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "linkapplications/approve", "linkapplications/reject", "linkapplications/verify" ]
+    verbs: [ "create" ]
+  - apiGroups: [ "console.api.link.halo.run" ]
+    resources: [ "linkapplications/origin-comment" ]
+    verbs: [ "get" ]
+  - apiGroups: [ "console.api.link.halo.run" ]
+    resources: [ "linkapplications/cleanup" ]
     resourceNames: [ "-" ]
     verbs: [ "create" ]
 ---

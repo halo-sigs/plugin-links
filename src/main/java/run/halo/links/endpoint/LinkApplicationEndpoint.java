@@ -6,17 +6,9 @@ import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuil
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import java.net.URI;
-import java.net.URL;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.jsoup.nodes.Document;
-import org.springdoc.core.fn.builders.content.Builder;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -24,120 +16,93 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
+import run.halo.app.core.extension.content.Comment;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
-import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ListResult;
-import run.halo.app.extension.MetadataUtil;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.router.IListRequest;
-import run.halo.app.extension.router.selector.FieldSelector;
-import run.halo.app.infra.ExternalUrlSupplier;
+import run.halo.links.dto.LinkApplicationCleanupResult;
+import run.halo.links.dto.LinkApplicationOriginComment;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
-import run.halo.links.security.SafeUrlFetcher;
+import run.halo.links.query.LinkApplicationQuery;
+import run.halo.links.service.LinkApplicationApprovalService;
+import run.halo.links.verification.LinkVerificationService;
 
 @Component
 @RequiredArgsConstructor
 public class LinkApplicationEndpoint implements CustomEndpoint {
 
     private final ReactiveExtensionClient client;
-    private final ExternalUrlSupplier externalUrlSupplier;
+    private final LinkApplicationApprovalService approvalService;
+    private final LinkVerificationService verificationService;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
         final var tag = "console.api.link.halo.run/v1alpha1/LinkApplication";
         return route()
-            .GET("linkapplications", this::listLinkApplications,
-                builder -> builder.operationId("listLinkApplications")
-                    .description("List link applications with optional status filter.")
+            .GET("linkapplications", this::listLinkApplications, builder -> {
+                builder.operationId("listLinkApplications")
+                    .description("List paginated link application history.")
                     .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("status")
-                        .in(ParameterIn.QUERY)
-                        .description("Filter by application status.")
-                        .implementation(String.class)
-                    )
                     .response(responseBuilder()
                         .responseCode("200")
-                        .implementation(ListResult.generateGenericClass(LinkApplication.class)))
-            )
+                        .implementation(ListResult.generateGenericClass(LinkApplication.class)));
+                LinkApplicationQuery.buildParameters(builder);
+            })
             .GET("linkapplications/{name}", this::getLinkApplication,
                 builder -> builder.operationId("getLinkApplication")
                     .description("Get a link application by metadata name.")
                     .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("name")
-                        .in(ParameterIn.PATH)
-                        .description("Metadata name of the link application.")
-                        .implementation(String.class)
-                        .required(true)
-                    )
-                    .response(responseBuilder()
-                        .responseCode("200")
-                        .implementation(LinkApplication.class))
-            )
+                    .parameter(pathNameParameter())
+                    .response(responseBuilder().responseCode("200")
+                        .implementation(LinkApplication.class)))
+            .GET("linkapplications/{name}/origin-comment", this::getOriginComment,
+                builder -> builder.operationId("getLinkApplicationOriginComment")
+                    .description("Get minimal source Comment context for one link application.")
+                    .tag(tag)
+                    .parameter(pathNameParameter())
+                    .response(responseBuilder().responseCode("200")
+                        .implementation(LinkApplicationOriginComment.class)))
             .DELETE("linkapplications/{name}", this::deleteLinkApplication,
                 builder -> builder.operationId("deleteLinkApplication")
-                    .description("Delete a link application.")
+                    .description("Delete a link application unless approval is in progress.")
                     .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("name")
-                        .in(ParameterIn.PATH)
-                        .description("Metadata name of the link application to delete.")
-                        .implementation(String.class)
-                        .required(true)
-                    )
-                    .response(responseBuilder().responseCode("200"))
-            )
+                    .parameter(pathNameParameter())
+                    .response(responseBuilder().responseCode("200")))
             .POST("linkapplications/{name}/approve", this::approveLinkApplication,
                 builder -> builder.operationId("approveLinkApplication")
-                    .description("Approve a link application, creating a Link.")
+                    .description("Approve or resume approving a link application.")
                     .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("name")
-                        .in(ParameterIn.PATH)
-                        .description("Metadata name of the link application to approve.")
-                        .implementation(String.class)
-                        .required(true)
-                    )
+                    .parameter(pathNameParameter())
                     .requestBody(requestBodyBuilder()
-                        .description("Approval request with optional field overrides and group assignment.")
+                        .description("Optional approval field overrides.")
                         .implementation(ApproveRequest.class))
-                    .response(responseBuilder()
-                        .responseCode("200")
-                        .implementation(Link.class))
-            )
+                    .response(responseBuilder().responseCode("200")
+                        .implementation(Link.class)))
             .POST("linkapplications/{name}/reject", this::rejectLinkApplication,
                 builder -> builder.operationId("rejectLinkApplication")
-                    .description("Reject a link application.")
+                    .description("Reject a pending link application.")
                     .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("name")
-                        .in(ParameterIn.PATH)
-                        .description("Metadata name of the link application to reject.")
-                        .implementation(String.class)
-                        .required(true)
-                    )
-                    .response(responseBuilder().responseCode("200"))
-            )
+                    .parameter(pathNameParameter())
+                    .response(responseBuilder().responseCode("200")))
             .POST("linkapplications/{name}/verify", this::verifyBacklink,
                 builder -> builder.operationId("verifyBacklink")
-                    .description("Manually verify the backlink for a link application.")
+                    .description("Manually verify this application's backlink.")
                     .tag(tag)
-                    .parameter(parameterBuilder()
-                        .name("name")
-                        .in(ParameterIn.PATH)
-                        .description("Metadata name of the link application.")
-                        .implementation(String.class)
-                        .required(true)
-                    )
-                    .response(responseBuilder()
-                        .responseCode("200")
-                        .implementation(VerifyResult.class))
-            )
+                    .parameter(pathNameParameter())
+                    .response(responseBuilder().responseCode("200")
+                        .implementation(VerifyResult.class)))
+            .POST("linkapplications/-/cleanup", this::cleanupLinkApplications, builder -> {
+                builder.operationId("cleanupLinkApplications")
+                    .description("Delete every deletable application matching the list filters.")
+                    .tag(tag)
+                    .response(responseBuilder().responseCode("200")
+                        .implementation(LinkApplicationCleanupResult.class));
+                LinkApplicationQuery.buildParameters(builder);
+            })
             .build();
     }
 
@@ -147,238 +112,155 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
     }
 
     private Mono<ServerResponse> listLinkApplications(ServerRequest request) {
-        String status = request.queryParam("status").orElse(null);
-        var listOptions = ListOptions.builder().build();
-        if (StringUtils.isNotBlank(status)) {
-            var fieldSelector = run.halo.app.extension.router.selector.FieldSelector.of(
-                run.halo.app.extension.index.query.Queries.equal("spec.status", status)
-            );
-            listOptions.setFieldSelector(fieldSelector);
-        }
-        return client.listAll(LinkApplication.class, listOptions,
-                Sort.by(Sort.Order.desc("metadata.creationTimestamp")))
-            .collectList()
-            .flatMap(list -> ServerResponse.ok().bodyValue(
-                new ListResult<>(0, 0, list.size(), list)));
+        var query = new LinkApplicationQuery(request.exchange());
+        return client.listBy(LinkApplication.class, query.toListOptions(), query.toPageRequest())
+            .flatMap(result -> ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(result));
     }
 
     private Mono<ServerResponse> getLinkApplication(ServerRequest request) {
-        String name = request.pathVariable("name");
-        return client.fetch(LinkApplication.class, name)
-            .flatMap(app -> ServerResponse.ok().bodyValue(app))
+        return client.fetch(LinkApplication.class, request.pathVariable("name"))
+            .flatMap(application -> ServerResponse.ok().bodyValue(application))
             .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
+    private Mono<ServerResponse> getOriginComment(ServerRequest request) {
+        return client.fetch(LinkApplication.class, request.pathVariable("name"))
+            .switchIfEmpty(Mono.error(notFound("Link application not found.")))
+            .flatMap(application -> {
+                var origin = application.getSpec() == null
+                    ? null : application.getSpec().getOrigin();
+                if (origin == null || origin.getType() != LinkApplication.OriginType.COMMENT
+                    || origin.getComment() == null
+                    || StringUtils.isBlank(origin.getComment().getName())) {
+                    return Mono.error(notFound("Source Comment is unavailable."));
+                }
+                return client.fetch(Comment.class, origin.getComment().getName())
+                    .switchIfEmpty(Mono.error(notFound("Source Comment is unavailable.")));
+            })
+            .map(comment -> new LinkApplicationOriginComment(
+                comment.getMetadata().getName(),
+                comment.getSpec().getRaw(),
+                comment.getSpec().getSubjectRef(),
+                comment.getSpec().getCreationTime()))
+            .flatMap(result -> ServerResponse.ok().bodyValue(result));
     }
 
     private Mono<ServerResponse> deleteLinkApplication(ServerRequest request) {
-        String name = request.pathVariable("name");
-        return client.fetch(LinkApplication.class, name)
-            .flatMap(client::delete)
-            .then(ServerResponse.ok().build())
-            .switchIfEmpty(ServerResponse.notFound().build());
+        return client.fetch(LinkApplication.class, request.pathVariable("name"))
+            .switchIfEmpty(Mono.error(notFound("Link application not found.")))
+            .flatMap(application -> {
+                if (application.getSpec() != null
+                    && application.getSpec().getStatus() == LinkApplication.Status.APPROVING) {
+                    return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Approving applications cannot be deleted."));
+                }
+                return client.delete(application);
+            })
+            .then(ServerResponse.ok().build());
     }
 
     private Mono<ServerResponse> approveLinkApplication(ServerRequest request) {
-        String name = request.pathVariable("name");
         return request.bodyToMono(ApproveRequest.class)
-            .flatMap(approveReq -> client.fetch(LinkApplication.class, name)
-                .flatMap(application -> {
-                    var appSpec = application.getSpec();
-                    ensurePending(appSpec, "approved");
-
-                    // Create Link
-                    Link link = new Link();
-                    link.setMetadata(new run.halo.app.extension.Metadata());
-                    link.getMetadata().setGenerateName("link-");
-
-                    Link.LinkSpec linkSpec = new Link.LinkSpec();
-                    linkSpec.setUrl(getOrDefault(approveReq.getUrl(), appSpec.getUrl()));
-                    linkSpec.setDisplayName(
-                        getOrDefault(approveReq.getDisplayName(), appSpec.getDisplayName()));
-                    linkSpec.setLogo(getOrDefault(approveReq.getLogo(), appSpec.getLogo()));
-                    linkSpec.setDescription(
-                        getOrDefault(approveReq.getDescription(), appSpec.getDescription()));
-                    linkSpec.setGroupName(approveReq.getGroupName());
-                    linkSpec.setPriority(0);
-
-                    if (appSpec.getFeedUrls() != null && !appSpec.getFeedUrls().isEmpty()) {
-                        Link.RssSpec rss = new Link.RssSpec();
-                        rss.setEnabled(true);
-                        rss.setFeedUrls(appSpec.getFeedUrls());
-                        linkSpec.setRss(rss);
-                    }
-
-                    if (StringUtils.isNotBlank(appSpec.getBacklink())) {
-                        Link.VerificationSpec verification = new Link.VerificationSpec();
-                        verification.setBacklinkScanUrl(appSpec.getBacklink());
-                        linkSpec.setVerification(verification);
-                    }
-
-                    link.setSpec(linkSpec);
-
-                    return client.create(link)
-                        .flatMap(createdLink -> {
-                            appSpec.setStatus(LinkApplication.Status.APPROVED);
-                            return client.update(application)
-                                .thenReturn(createdLink);
-                        });
-                })
-            )
-            .flatMap(createdLink -> ServerResponse.ok().bodyValue(createdLink))
-            .switchIfEmpty(ServerResponse.notFound().build());
+            .defaultIfEmpty(new ApproveRequest())
+            .flatMap(body -> approvalService.approve(request.pathVariable("name"),
+                new LinkApplicationApprovalService.ApprovalCommand(
+                    body.getUrl(), body.getDisplayName(), body.getLogo(),
+                    body.getDescription(), body.getGroupName())))
+            .flatMap(link -> ServerResponse.ok().bodyValue(link));
     }
 
     private Mono<ServerResponse> rejectLinkApplication(ServerRequest request) {
-        String name = request.pathVariable("name");
-        return client.fetch(LinkApplication.class, name)
+        return client.fetch(LinkApplication.class, request.pathVariable("name"))
+            .switchIfEmpty(Mono.error(notFound("Link application not found.")))
             .flatMap(application -> {
-                var appSpec = application.getSpec();
-                ensurePending(appSpec, "rejected");
-                appSpec.setStatus(LinkApplication.Status.REJECTED);
+                var spec = application.getSpec();
+                if (spec == null || spec.getStatus() != LinkApplication.Status.PENDING) {
+                    return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Only pending link applications can be rejected."));
+                }
+                spec.setStatus(LinkApplication.Status.REJECTED);
                 return client.update(application);
             })
-            .flatMap(app -> ServerResponse.ok().build())
-            .switchIfEmpty(ServerResponse.notFound().build());
+            .then(ServerResponse.ok().build());
     }
 
     private Mono<ServerResponse> verifyBacklink(ServerRequest request) {
-        String name = request.pathVariable("name");
-        return client.fetch(LinkApplication.class, name)
-            .flatMap(application -> Mono.fromCallable(() -> {
-                String backlink = application.getSpec().getBacklink();
+        return client.fetch(LinkApplication.class, request.pathVariable("name"))
+            .switchIfEmpty(Mono.error(notFound("Link application not found.")))
+            .flatMap(application -> {
+                String backlink = application.getSpec() == null
+                    ? null : application.getSpec().getBacklink();
                 if (StringUtils.isBlank(backlink)) {
-                    return new VerifyResult(false, "未提供反链地址");
+                    return Mono.just(new VerifyResult(false, "未提供反链地址"));
                 }
+                return verificationService.verifyBacklink(backlink.trim())
+                    .map(status -> switch (status.getState()) {
+                        case FOUND -> new VerifyResult(true,
+                            "反链已找到: " + status.getMatchedUrl());
+                        case MISSING -> new VerifyResult(false,
+                            "未在对方页面找到指向本站的链接");
+                        case NOT_CONFIGURED -> new VerifyResult(false, "未提供反链地址");
+                        case FAILED -> new VerifyResult(false,
+                            "验证失败: " + status.getError());
+                        case CHECKING -> new VerifyResult(false, "反链验证尚未完成");
+                    });
+            })
+            .flatMap(result -> ServerResponse.ok().bodyValue(result));
+    }
 
-                URI targetUri = getExternalUri();
-                if (targetUri == null) {
-                    return new VerifyResult(false, "Halo 外部访问地址未配置");
-                }
-
-                try {
-                    SafeUrlFetcher.FetchResult result =
-                        SafeUrlFetcher.fetch(backlink.trim(),
-                            SafeUrlFetcher.FetchOptions.verificationHtml(null, 5 * 1024 * 1024));
-                    if (!isSuccessStatus(result.statusCode())) {
-                        return new VerifyResult(false,
-                            "反链页面返回 HTTP " + result.statusCode());
+    private Mono<ServerResponse> cleanupLinkApplications(ServerRequest request) {
+        var query = new LinkApplicationQuery(request.exchange());
+        return client.listAll(LinkApplication.class, query.toListOptions(), query.getSort())
+            .collectList()
+            .flatMap(applications -> Flux.fromIterable(applications)
+                .concatMap(application -> {
+                    if (application.getSpec() != null
+                        && application.getSpec().getStatus()
+                        == LinkApplication.Status.APPROVING) {
+                        return Mono.just(CleanupOutcome.SKIPPED);
                     }
-                    Document document = result.document();
-                    if (document == null) {
-                        document = org.jsoup.Jsoup.parse(result.body(),
-                            result.url().toExternalForm());
-                    }
-                    Optional<String> matched = findBacklink(document, targetUri);
-                    if (matched.isPresent()) {
-                        return new VerifyResult(true,
-                            "反链已找到: " + matched.get());
-                    }
-                    return new VerifyResult(false, "未在对方页面找到指向本站的链接");
-                } catch (Exception e) {
-                    return new VerifyResult(false,
-                        "验证失败: " + e.getMessage());
-                }
-            }).subscribeOn(Schedulers.boundedElastic()))
-            .flatMap(result -> ServerResponse.ok().bodyValue(result))
-            .switchIfEmpty(ServerResponse.notFound().build());
+                    return client.delete(application)
+                        .thenReturn(CleanupOutcome.DELETED)
+                        .onErrorReturn(CleanupOutcome.FAILED);
+                })
+                .collectList()
+                .map(outcomes -> new LinkApplicationCleanupResult(
+                    applications.size(),
+                    count(outcomes, CleanupOutcome.DELETED),
+                    count(outcomes, CleanupOutcome.FAILED),
+                    count(outcomes, CleanupOutcome.SKIPPED))))
+            .flatMap(result -> ServerResponse.ok().bodyValue(result));
     }
 
-    private URI getExternalUri() {
-        try {
-            URL externalUrl = externalUrlSupplier.getRaw();
-            if (externalUrl == null) {
-                return null;
+    private static long count(Iterable<CleanupOutcome> outcomes, CleanupOutcome expected) {
+        long count = 0;
+        for (var outcome : outcomes) {
+            if (outcome == expected) {
+                count++;
             }
-            URI uri = externalUrl.toURI().normalize();
-            if (StringUtils.isBlank(uri.getScheme()) || StringUtils.isBlank(uri.getHost())) {
-                return null;
-            }
-            return uri;
-        } catch (Exception e) {
-            return null;
         }
+        return count;
     }
 
-    private static boolean isSuccessStatus(int statusCode) {
-        return statusCode >= 200 && statusCode < 300;
+    private static org.springdoc.core.fn.builders.parameter.Builder pathNameParameter() {
+        return parameterBuilder()
+            .name("name")
+            .in(ParameterIn.PATH)
+            .description("LinkApplication metadata name.")
+            .implementation(String.class)
+            .required(true);
     }
 
-    private static Optional<String> findBacklink(Document document, URI targetUri) {
-        if (document == null) {
-            return Optional.empty();
-        }
-        return document.select("a[href]")
-            .stream()
-            .map(element -> element.absUrl("href"))
-            .filter(href -> StringUtils.isNotBlank(href))
-            .map(String::trim)
-            .filter(href -> pointsToTarget(href, targetUri))
-            .findFirst();
+    private static ResponseStatusException notFound(String message) {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, message);
     }
 
-    private static boolean pointsToTarget(String href, URI targetUri) {
-        try {
-            URI hrefUri = URI.create(href).normalize();
-            if (!sameOrigin(hrefUri, targetUri)) {
-                return false;
-            }
-            String targetPath = normalizePath(targetUri.getPath());
-            if ("/".equals(targetPath)) {
-                return true;
-            }
-            String hrefPath = normalizePath(hrefUri.getPath());
-            return hrefPath.equals(targetPath) || hrefPath.startsWith(targetPath + "/");
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private static boolean sameOrigin(URI left, URI right) {
-        return Objects.equals(lower(left.getScheme()), lower(right.getScheme()))
-            && Objects.equals(lower(left.getHost()), lower(right.getHost()))
-            && effectivePort(left) == effectivePort(right);
-    }
-
-    private static int effectivePort(URI uri) {
-        if (uri.getPort() != -1) {
-            return uri.getPort();
-        }
-        String scheme = lower(uri.getScheme());
-        if ("http".equals(scheme)) {
-            return 80;
-        }
-        if ("https".equals(scheme)) {
-            return 443;
-        }
-        return -1;
-    }
-
-    private static String normalizePath(String path) {
-        if (path == null || path.isBlank()) {
-            return "/";
-        }
-        String normalized = path;
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-        if (normalized.endsWith("/") && normalized.length() > 1) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized;
-    }
-
-    private static String lower(String s) {
-        return s == null ? null : s.toLowerCase(java.util.Locale.ROOT);
-    }
-
-    private static String getOrDefault(String override, String original) {
-        return StringUtils.isNotBlank(override) ? override.trim() : original;
-    }
-
-    private static void ensurePending(LinkApplication.LinkApplicationSpec spec, String operation) {
-        if (spec.getStatus() != LinkApplication.Status.PENDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "Only pending link applications can be " + operation + ".");
-        }
+    private enum CleanupOutcome {
+        DELETED,
+        FAILED,
+        SKIPPED
     }
 
     @Data

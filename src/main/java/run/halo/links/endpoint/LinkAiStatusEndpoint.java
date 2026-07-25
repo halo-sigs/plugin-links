@@ -30,6 +30,7 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
 
     private final ReactiveExtensionClient client;
     private final LinkAiSettingsFetcher settingsFetcher;
+    private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
     private final ObjectProvider<LinkAiService> aiServiceProvider;
 
     @Override
@@ -61,8 +62,10 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
     }
 
     Mono<ServerResponse> getAiStatus(ServerRequest request) {
-        return settingsFetcher.fetch()
-            .flatMap(settings -> {
+        return Mono.zip(settingsFetcher.fetch(), applicationSettingsFetcher.fetch())
+            .flatMap(settingsTuple -> {
+                var settings = settingsTuple.getT1();
+                var applicationSettings = settingsTuple.getT2();
                 var aiService = aiServiceProvider.getIfAvailable();
                 var serviceOperational = aiService == null
                     ? Mono.just(false)
@@ -74,8 +77,8 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
                 );
                 var recognitionOperational = operational(
                     aiService,
-                    settings.commentApplicationRecognitionEnabled(),
-                    settings.commentApplicationRecognitionModelName()
+                    applicationSettings.commentRecognitionEnabled(),
+                    applicationSettings.commentRecognitionModelName()
                 );
                 return Mono.zip(serviceOperational, extractionOperational,
                         recognitionOperational)
@@ -86,9 +89,9 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
                         settings.commentExtractionEnabled(),
                         operational.getT2(),
                         settings.commentExtractionModelName(),
-                        settings.commentApplicationRecognitionEnabled(),
+                        applicationSettings.commentRecognitionEnabled(),
                         operational.getT3(),
-                        settings.commentApplicationRecognitionModelName()
+                        applicationSettings.commentRecognitionModelName()
                     ));
             })
             .flatMap(status -> ServerResponse.ok().bodyValue(status));

@@ -1,7 +1,8 @@
 # link-application Specification
 
 ## Purpose
-TBD - created by archiving change add-link-application. Update Purpose after archive.
+Define how visitor and Comment-origin friend-link applications are created, deduplicated, reviewed,
+approved into formal Links, rejected, inspected, and deleted.
 ## Requirements
 
 ### Requirement: Link applications record their origin
