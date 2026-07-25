@@ -42,7 +42,7 @@ const LinkApplicationDetailModal = defineAsyncComponent(
 );
 
 const { data, isLoading, isFetching, refetch } = useLinksFetch();
-const { data: applications } = useLinkApplications("PENDING");
+const { data: pendingApplicationsPage } = useLinkApplications({ page: 1, size: 1, status: "PENDING" });
 const { data: aiStatus } = useQuery({
   queryKey: ["plugin:links:ai-status"],
   queryFn: async () => {
@@ -66,7 +66,7 @@ const selectedApplication = ref<LinkApplication | undefined>(undefined);
 const isVerifyingAllLinks = shallowRef(false);
 const selectedStatusFilter = shallowRef<LinkVerificationStatusFilter>("all");
 
-const pendingCount = computed(() => applications.value?.length || 0);
+const pendingCount = computed(() => pendingApplicationsPage.value?.total ?? 0);
 const recognitionUnavailable = computed(() => isCommentRecognitionUnavailable(aiStatus.value));
 
 const statusFilterOptions: Array<{ label: string; value: LinkVerificationStatusFilter }> = [

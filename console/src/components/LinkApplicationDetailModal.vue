@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 import type { ApproveRequest, LinkApplication } from "@/api/generated";
-import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
-import { startLinkVerification } from "@/composables/link-verification";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import {
   useApproveLinkApplication,
@@ -10,7 +8,13 @@ import {
   useVerifyBacklink,
 } from "@/composables/use-link-application";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
-import { Dialog, Toast, VButton, VModal, VSpace, VTag } from "@halo-dev/components";
+import {
+  linkApplicationEffectiveFields,
+  linkApplicationRejectDescription,
+  linkApplicationReviewMode,
+  linkApplicationStatusMeta,
+} from "@/utils/link-application-review";
+import { Dialog, Toast, VAlert, VButton, VModal, VSpace, VTag } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { computed, useTemplateRef } from "vue";
 import LinkApplicationOriginDetails from "./LinkApplicationOriginDetails.vue";
@@ -35,6 +39,25 @@ const { mutate: rejectApplication, isPending: isRejecting } = useRejectLinkAppli
 const { mutate: deleteApplication } = useDeleteLinkApplication();
 const { mutate: verifyApplication, data: verifyResult } = useVerifyBacklink();
 
+const reviewMode = computed(() => linkApplicationReviewMode(props.application));
+const statusMeta = computed(() => linkApplicationStatusMeta(props.application.spec.status));
+const frozenFields = computed(() => linkApplicationEffectiveFields(props.application));
+
+const modalTitle = computed(() =>
+  reviewMode.value === "editable"
+    ? `审核申请 - ${props.application.spec.displayName}`
+    : `申请详情 - ${props.application.spec.displayName}`,
+);
+
+const frozenGroupLabel = computed(() => {
+  const groupName = frozenFields.value.groupName;
+  if (!groupName) {
+    return "不分配";
+  }
+  const group = groups.value?.find((item) => item.metadata?.name === groupName);
+  return group?.spec?.displayName || groupName;
+});
+
 const groupOptions = computed(() => [
   { value: "", label: "不分配" },
   ...(groups.value || []).flatMap((group) => {
@@ -48,6 +71,14 @@ const groupOptions = computed(() => [
     };
   }),
 ]);
+
+function handleApproveSuccess() {
+  Toast.success("已通过申请");
+  queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+  queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+  queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
+  modal.value?.close();
+}
 
 function handleApprove(data: ApproveRequest) {
   if (!data.displayName?.trim()) {
@@ -70,24 +101,18 @@ function handleApprove(data: ApproveRequest) {
       },
     },
     {
-      onSuccess: (createdLink) => {
-        Toast.success("已通过申请");
-        queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
-        queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
-        queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
-        // Trigger post-approval automation
-        if (createdLink?.metadata?.name) {
-          startLinkVerification({
-            request: { names: [createdLink.metadata.name] },
-            queryClient,
-          });
-          startInitialLinkFeedRefresh({
-            linkName: createdLink.metadata.name,
-            queryClient,
-          });
-        }
-        modal.value?.close();
-      },
+      onSuccess: handleApproveSuccess,
+    },
+  );
+}
+
+function handleResumeApproval() {
+  approveApplication(
+    {
+      name: props.application.metadata.name,
+    },
+    {
+      onSuccess: handleApproveSuccess,
     },
   );
 }
@@ -95,7 +120,7 @@ function handleApprove(data: ApproveRequest) {
 function handleReject() {
   Dialog.warning({
     title: "确认拒绝申请？",
-    description: `拒绝 "${props.application.spec.displayName}" 的申请后，该链接将无法再次提交。`,
+    description: linkApplicationRejectDescription(props.application),
     confirmType: "danger",
     onConfirm: () => {
       rejectApplication(props.application.metadata.name, {
@@ -137,43 +162,29 @@ function handleDelete() {
     },
   });
 }
-
-const statusText: Record<string, string> = {
-  PENDING: "待审核",
-  APPROVED: "已通过",
-  REJECTED: "已拒绝",
-};
-
-const statusType: Record<string, "default" | "primary" | "success" | "warning" | "danger"> = {
-  PENDING: "warning",
-  APPROVED: "success",
-  REJECTED: "danger",
-};
 </script>
 
 <template>
-  <VModal
-    ref="modal"
-    :title="`审核申请 - ${application.spec.displayName}`"
-    :width="600"
-    :mount-to-body="true"
-    :centered="false"
-    @close="emit('close')"
-  >
+  <VModal ref="modal" :title="modalTitle" :width="600" :mount-to-body="true" :centered="false" @close="emit('close')">
     <div class=":uno: space-y-4">
       <!-- Status -->
       <div class=":uno: flex items-center gap-2">
         <span class=":uno: text-sm text-gray-500">状态：</span>
-        <VTag :type="statusType[application.spec.status]" size="sm">
-          {{ statusText[application.spec.status] }}
+        <VTag :type="statusMeta.tagType" size="sm">
+          {{ statusMeta.label }}
         </VTag>
         <LinkApplicationSourceBadge :application="application" />
       </div>
 
+      <VAlert v-if="reviewMode === 'resume'" title="审批已保留" type="info" :closable="false">
+        <template #description> 审批字段已冻结，无法修改、拒绝或删除。点击“继续审批”以完成创建正式链接。 </template>
+      </VAlert>
+
       <LinkApplicationOriginDetails :application="application" />
 
-      <!-- FormKit Form -->
+      <!-- Editable approval form for pending applications -->
       <FormKit
+        v-if="reviewMode === 'editable'"
         id="link-application-form"
         name="link-application-form"
         type="form"
@@ -193,6 +204,38 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
         <FormKit type="textarea" name="description" label="简介" auto-height />
         <FormKit type="select" name="groupName" label="分配分组" :options="groupOptions" />
       </FormKit>
+
+      <!-- Frozen fields for approving / terminal applications -->
+      <dl v-else class=":uno: text-sm space-y-3">
+        <div>
+          <dt class=":uno: text-gray-500">网站名称</dt>
+          <dd class=":uno: mt-1 text-gray-700">{{ frozenFields.displayName }}</dd>
+        </div>
+        <div>
+          <dt class=":uno: text-gray-500">链接地址</dt>
+          <dd class=":uno: mt-1 text-gray-700">
+            <a :href="frozenFields.url" target="_blank" class=":uno: text-blue-600 hover:underline">
+              {{ frozenFields.url }}
+            </a>
+          </dd>
+        </div>
+        <div v-if="frozenFields.logo">
+          <dt class=":uno: text-gray-500">Logo</dt>
+          <dd class=":uno: mt-1 break-all text-gray-700">{{ frozenFields.logo }}</dd>
+        </div>
+        <div v-if="frozenFields.description">
+          <dt class=":uno: text-gray-500">简介</dt>
+          <dd class=":uno: mt-1 whitespace-pre-wrap text-gray-700">{{ frozenFields.description }}</dd>
+        </div>
+        <div>
+          <dt class=":uno: text-gray-500">分配分组</dt>
+          <dd class=":uno: mt-1 text-gray-700">{{ frozenGroupLabel }}</dd>
+        </div>
+        <div v-if="application.spec.approval?.linkName">
+          <dt class=":uno: text-gray-500">正式链接</dt>
+          <dd class=":uno: mt-1 text-gray-700">{{ application.spec.approval.linkName }}</dd>
+        </div>
+      </dl>
 
       <!-- Email (read-only display) -->
       <div v-if="application.spec.email">
@@ -232,25 +275,21 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
     </div>
 
     <template #footer>
-      <VSpace>
-        <VButton
-          v-if="application.spec.status === 'PENDING'"
-          :loading="isApproving"
-          type="secondary"
-          @click="$formkit.submit('link-application-form')"
-        >
+      <VSpace v-if="reviewMode === 'editable'">
+        <VButton :loading="isApproving" type="secondary" @click="$formkit.submit('link-application-form')">
           通过
         </VButton>
-        <VButton
-          v-if="application.spec.status === 'PENDING'"
-          :loading="isRejecting"
-          type="danger"
-          @click="handleReject"
-        >
-          拒绝
-        </VButton>
+        <VButton :loading="isRejecting" type="danger" @click="handleReject"> 拒绝 </VButton>
         <VButton type="default" @click="handleDelete">删除</VButton>
         <VButton @click="modal?.close()">取消</VButton>
+      </VSpace>
+      <VSpace v-else-if="reviewMode === 'resume'">
+        <VButton :loading="isApproving" type="secondary" @click="handleResumeApproval"> 继续审批 </VButton>
+        <VButton @click="modal?.close()">取消</VButton>
+      </VSpace>
+      <VSpace v-else>
+        <VButton type="danger" @click="handleDelete">删除</VButton>
+        <VButton @click="modal?.close()">关闭</VButton>
       </VSpace>
     </template>
   </VModal>

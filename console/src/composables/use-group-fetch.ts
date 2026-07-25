@@ -13,7 +13,7 @@ export function useLinkGroupFetch() {
     },
     refetchInterval(data) {
       const hasDeletingData = data?.some((group) => {
-        return !!group.metadata.deletionTimestamp;
+        return !!group.metadata?.deletionTimestamp;
       });
       return hasDeletingData ? 1000 : false;
     },

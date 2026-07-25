@@ -1,5 +1,4 @@
-import type { LinkAiFeatureStatus, LinkApplication } from "@/api/generated";
-import type { Ref } from "@halo-dev/api-client";
+import type { LinkAiFeatureStatus, LinkApplication, Ref } from "@/api/generated";
 import type { RouteLocationRaw } from "vue-router";
 
 export interface LinkApplicationSourceMeta {

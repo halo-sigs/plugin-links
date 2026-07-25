@@ -40,7 +40,10 @@ onMounted(() => {
 async function handleSave() {
   isSubmitting.value = true;
   try {
-    const names = groups.value.map((group) => group.metadata.name);
+    const names = groups.value.flatMap((group) => {
+      const name = group.metadata?.name;
+      return name ? [name] : [];
+    });
     await linksConsoleApiClient.group.sortLinkGroups({
       sortRequest: { names },
     });
@@ -61,7 +64,7 @@ async function handleSave() {
       <VueDraggable v-model="groups" class=":uno: rounded-base overflow-hidden border divide-y divide-gray-100">
         <div
           v-for="group in groups"
-          :key="group.metadata.name"
+          :key="group.metadata?.name"
           class=":uno: flex cursor-move items-center gap-2 px-3 py-2 text-sm text-gray-600 font-semibold transition-colors hover:text-gray-900"
         >
           <RiDragMove2Line class=":uno: size-4" />
