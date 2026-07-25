@@ -26,7 +26,6 @@ import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
-import run.halo.links.nitrite.LinksNitriteDatabase;
 
 @ExtendWith(MockitoExtension.class)
 class LinkFeedSchedulerTest {
@@ -44,10 +43,23 @@ class LinkFeedSchedulerTest {
     LinkFeedRetentionService retentionService;
 
     @Mock
-    LinksNitriteDatabase database;
+    LinkFeedStorageMaintenance storageMaintenance;
 
     @Mock
     LinkFeedRefreshSettingsFetcher settingsFetcher;
+
+    @Test
+    void shouldSkipAllWorkWhenStorageIsUnavailable() {
+        when(storageMaintenance.isAvailable()).thenReturn(false);
+        LinkFeedScheduler scheduler = new LinkFeedScheduler(client, linkFeedService,
+            retentionService, storageMaintenance, settingsFetcher, CLOCK,
+            NOW.minusSeconds(3600));
+
+        StepVerifier.create(scheduler.refreshIfDue())
+            .verifyComplete();
+
+        verifyNoInteractions(settingsFetcher, client, linkFeedService, retentionService);
+    }
 
     @Test
     void shouldSkipAutomaticRefreshWhenGloballyDisabled() {
@@ -117,7 +129,8 @@ class LinkFeedSchedulerTest {
     }
 
     private LinkFeedScheduler scheduler(Instant lastAutomaticRefreshAt) {
-        return new LinkFeedScheduler(client, linkFeedService, retentionService, database,
+        when(storageMaintenance.isAvailable()).thenReturn(true);
+        return new LinkFeedScheduler(client, linkFeedService, retentionService, storageMaintenance,
             settingsFetcher, CLOCK, lastAutomaticRefreshAt);
     }
 

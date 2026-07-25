@@ -23,6 +23,7 @@ import run.halo.links.finders.LinkFeedFinder;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.service.LinkFeedPublicQueryService;
 import run.halo.links.vo.LinkFeedGroupVo;
 import run.halo.links.vo.LinkFeedItemPageVo;
@@ -62,7 +63,8 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
     @Override
     public Flux<LinkFeedGroupVo> groupBy(Integer limit) {
         return linkFeedPublicQueryService.isPublicEnabled()
-            .flatMapMany(enabled -> enabled ? groupByWhenPublicEnabled(limit) : Flux.empty());
+            .flatMapMany(enabled -> enabled ? groupByWhenPublicEnabled(limit) : Flux.empty())
+            .onErrorResume(LinkFeedStorageUnavailableException.class, error -> Flux.empty());
     }
 
     private Mono<LinkFeedItemPageVo> listWhenPublicEnabled(Map<String, Object> params) {

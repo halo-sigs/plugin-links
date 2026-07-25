@@ -24,7 +24,7 @@ public class LinkFeedItemQuery {
         return Math.min(limit, MAX_LIMIT);
     }
 
-    int normalizedFetchLimit() {
+    public int normalizedFetchLimit() {
         if (limit <= 0) {
             return DEFAULT_LIMIT;
         }

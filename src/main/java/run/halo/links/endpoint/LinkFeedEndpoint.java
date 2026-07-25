@@ -29,7 +29,6 @@ import run.halo.app.extension.GroupVersion;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
-import run.halo.links.nitrite.LinksNitriteDatabase;
 import run.halo.links.rss.LinkFeedCleanupResult;
 import run.halo.links.rss.LinkFeedDiscoveryResult;
 import run.halo.links.rss.LinkFeedItem;
@@ -41,6 +40,8 @@ import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedRetentionPolicy;
 import run.halo.links.rss.LinkFeedRetentionService;
 import run.halo.links.rss.LinkFeedService;
+import run.halo.links.rss.LinkFeedStorageMaintenance;
+import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.rss.LinkFeedUnreadSummary;
 
 @Component
@@ -50,7 +51,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
     private final LinkFeedService linkFeedService;
     private final LinkFeedRetentionService retentionService;
     private final LinkFeedItemStore itemStore;
-    private final LinksNitriteDatabase database;
+    private final LinkFeedStorageMaintenance storageMaintenance;
     private final ReactiveExtensionClient client;
 
     @Override
@@ -227,7 +228,11 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                 .tag(tag)
                 .response(responseBuilder().implementation(LinkFeedCleanupResult.class))
             )
-            .build();
+            .build()
+            .filter((request, next) -> Mono.defer(() -> next.handle(request))
+                .onErrorResume(LinkFeedStorageUnavailableException.class,
+                    error -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .bodyValue(Map.of("error", "RSS feed storage is unavailable."))));
     }
 
     @Override
@@ -343,7 +348,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
     private Mono<ServerResponse> cleanupFeedItems(ServerRequest request) {
         return Mono.fromCallable(() -> {
                 retentionService.enforce(LinkFeedRetentionPolicy.defaults());
-                database.compact();
+                storageMaintenance.compactIfNeeded();
                 return new LinkFeedCleanupResult(itemStore.count());
             })
             .subscribeOn(Schedulers.boundedElastic())

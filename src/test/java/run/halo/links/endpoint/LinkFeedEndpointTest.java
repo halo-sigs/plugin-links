@@ -21,8 +21,23 @@ import run.halo.links.rss.LinkFeedDiscoveryResult;
 import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedService;
+import run.halo.links.rss.LinkFeedStorageUnavailableException;
 
 class LinkFeedEndpointTest {
+
+    @Test
+    void shouldReturnServiceUnavailableWhenRssStorageFails() {
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        when(itemStore.countUnread()).thenThrow(new LinkFeedStorageUnavailableException(
+            "unavailable"));
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
+        MockServerRequest request = request(HttpMethod.GET, "/rss/items/-/unread-summary");
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(503))
+            .verifyComplete();
+    }
 
     @Test
     void shouldReturnNotFoundWhenFavoriteItemIsMissing() {
