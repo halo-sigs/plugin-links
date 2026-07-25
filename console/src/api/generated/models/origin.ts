@@ -15,46 +15,22 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { Ref } from './ref';
+import type { CommentOrigin } from './comment-origin';
 
 /**
- * Origin and audit context of a link application.
+ * Origin of a link application.
  * @export
  * @interface Origin
  */
 export interface Origin {
     /**
-     * Metadata name of the source Comment.
-     * @type {string}
-     * @memberof Origin
-     */
-    'commentName'?: string;
-    /**
-     * Bounded snapshot of the original raw comment.
-     * @type {string}
-     * @memberof Origin
-     */
-    'commentSnapshot'?: string;
-    /**
-     * AI Foundation model resource used for recognition.
-     * @type {string}
-     * @memberof Origin
-     */
-    'modelName'?: string;
-    /**
-     * Short explanation returned by the recognition model.
-     * @type {string}
-     * @memberof Origin
-     */
-    'reason'?: string;
-    /**
      *
-     * @type {Ref}
+     * @type {CommentOrigin}
      * @memberof Origin
      */
-    'subjectRef'?: Ref;
+    'comment'?: CommentOrigin;
     /**
-     * How the application was created.
+     * Where the application originated.
      * @type {string}
      * @memberof Origin
      */

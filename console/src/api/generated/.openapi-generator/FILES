@@ -21,6 +21,7 @@ models/access-status.ts
 models/add-operation.ts
 models/approve-request.ts
 models/backlink-status.ts
+models/comment-origin.ts
 models/copy-operation.ts
 models/feed-result.ts
 models/index.ts
@@ -57,7 +58,6 @@ models/link.ts
 models/metadata.ts
 models/move-operation.ts
 models/origin.ts
-models/ref.ts
 models/remove-operation.ts
 models/replace-operation.ts
 models/rss-feed-status.ts

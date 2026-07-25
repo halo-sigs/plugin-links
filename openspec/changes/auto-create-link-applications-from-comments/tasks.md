@@ -9,9 +9,9 @@
 
 - [x] 2.1 Add the disabled-by-default automatic-recognition settings, structured-output model selector, and Repeater source rules for links, post, and single-page subjects.
 - [x] 2.2 Add conditional settings validation for post and single-page selections and normalize duplicate or incomplete source rules at runtime.
-- [x] 2.3 Extend `LinkApplication` with the optional `FORM`/`COMMENT` origin metadata and bounded comment snapshot while preserving records without origin.
+- [x] 2.3 Extend `LinkApplication` with optional `FORM`/`COMMENT` origin metadata while preserving records without origin.
 - [x] 2.4 Register indexes for source-aware duplicate checks and stable comment-name idempotency.
-- [x] 2.5 Regenerate the OpenAPI TypeScript client and verify the generated schema represents the additive origin fields and recognition settings/status contracts.
+- [x] 2.5 Regenerate the OpenAPI TypeScript client and verify the generated schema represents the origin and recognition settings/status contracts.
 
 ## 3. Centralize LinkApplication Creation
 
@@ -37,16 +37,16 @@
 - [x] 5.2 Match new comments against normalized links-page, post, and single-page source rules, including subject-title lookup for model context.
 - [x] 5.3 Gate processing on all required AI and recognition settings without preventing comment creation or other plugin behavior.
 - [x] 5.4 Invoke recognition, resolve field fallbacks, copy email only after a positive decision, and create a `COMMENT`-origin `PENDING` application through the shared service.
-- [x] 5.5 Persist the source comment name, subject reference, selected model, reason, and at most 8,000 characters of the original comment while never creating a formal Link.
-- [x] 5.6 Add controller tests for every source type, duplicate rules, owner/status variants, ignored lifecycle events, missed unavailable-period comments, bounded failures, and retained snapshots after source changes.
+- [x] 5.5 Persist the source Comment name as `origin.comment.name` while never creating a formal Link.
+- [x] 5.6 Add controller tests for every source type, duplicate rules, owner/status variants, ignored lifecycle events, missed unavailable-period comments, and bounded failures.
 
 ## 6. Extend the Console Review Flow
 
 - [x] 6.1 Fix the generated-client request-property use in the existing manual extraction flow and add a focused frontend test for successful form prefill.
 - [x] 6.2 Show form, comment, and historical source labels in the existing pending-application list.
-- [x] 6.3 Show comment subject/link, retained snapshot, model name, and recognition reason in application details, including a safe fallback when the original comment is unavailable.
+- [x] 6.3 Load and show the current comment subject, management link, and raw content in application details, including a safe fallback when the original comment is unavailable.
 - [x] 6.4 Display a non-blocking warning when recognition is configured but the AI integration is not operational.
-- [x] 6.5 Add focused Vue tests for source presentation, unavailable comments, historical records, and AI status warning states.
+- [x] 6.5 Add focused Vue tests for source presentation, comment references, historical records, and AI status warning states.
 
 ## 7. Verify the Complete Change
 
@@ -54,4 +54,12 @@
 - [x] 7.2 Run targeted frontend tests, formatting, and type checking; fix failures in touched files and document unrelated pre-existing diagnostics separately.
 - [x] 7.3 Regenerate the API client from the final backend schema and verify no hand-written duplicate API wrapper or stale generated diff remains.
 - [x] 7.4 Run the full Gradle build and `git diff --check`.
-- [x] 7.5 Smoke-test in Halo with AI Foundation absent and present, confirming configured new comments create only reviewable pending applications and missed or historical comments are not replayed.
+- [x] 7.5 Smoke-test in Halo with AI Foundation absent and present, confirming configured new comments create only reviewable pending applications with source references and missed or historical comments are not replayed.
+
+## 8. Simplify Comment Origin Data
+
+- [x] 8.1 Replace the flat comment recognition audit fields with a `comment.name` source reference while keeping `FORM` and `COMMENT` as stable origin types.
+- [x] 8.2 Update duplicate detection, recognition creation, indexes, and backend tests for the nested comment reference.
+- [x] 8.3 Resolve current comment subject and content on demand in the Console, regenerate the API client, and update focused frontend tests.
+- [x] 8.4 Update the change artifacts and rerun backend, frontend, OpenSpec, build, and diff validation.
+- [x] 8.5 Accept explicit null values for optional automatic-recognition fields and cover the real-model structured-output regression.

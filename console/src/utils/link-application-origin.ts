@@ -1,4 +1,5 @@
-import type { LinkAiFeatureStatus, LinkApplication, Ref } from "@/api/generated";
+import type { LinkAiFeatureStatus, LinkApplication } from "@/api/generated";
+import type { Ref } from "@halo-dev/api-client";
 import type { RouteLocationRaw } from "vue-router";
 
 export interface LinkApplicationSourceMeta {
@@ -75,7 +76,7 @@ export function linkApplicationSubjectMeta(subjectRef: Ref | undefined): LinkApp
 }
 
 export function linkApplicationCommentRoute(application: LinkApplication): RouteLocationRaw | undefined {
-  const commentName = application.spec.origin?.commentName;
+  const commentName = application.spec.origin?.comment?.name;
   if (!commentName) {
     return undefined;
   }

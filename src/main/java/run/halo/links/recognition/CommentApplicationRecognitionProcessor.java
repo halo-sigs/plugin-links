@@ -93,12 +93,11 @@ public class CommentApplicationRecognitionProcessor {
         );
         return aiService.recognize(request, modelName)
             .flatMap(result -> createApplication(
-                comment, result, modelName, ownerDisplayName, ownerWebsite));
+                comment, result, ownerDisplayName, ownerWebsite));
     }
 
     private Mono<ProcessOutcome> createApplication(Comment comment,
-        LinkCommentRecognitionResult result, String modelName, String ownerDisplayName,
-        String ownerWebsite) {
+        LinkCommentRecognitionResult result, String ownerDisplayName, String ownerWebsite) {
         if (!result.isLinkApplication()) {
             return Mono.just(ProcessOutcome.NEGATIVE);
         }
@@ -119,11 +118,9 @@ public class CommentApplicationRecognitionProcessor {
         var owner = commentSpec.getOwner();
         var origin = new LinkApplication.Origin();
         origin.setType(LinkApplication.OriginType.COMMENT);
-        origin.setCommentName(comment.getMetadata().getName());
-        origin.setSubjectRef(commentSpec.getSubjectRef());
-        origin.setModelName(modelName);
-        origin.setReason(result.reason());
-        origin.setCommentSnapshot(commentSpec.getRaw());
+        var commentOrigin = new LinkApplication.CommentOrigin();
+        commentOrigin.setName(comment.getMetadata().getName());
+        origin.setComment(commentOrigin);
 
         var submission = new LinkApplicationService.Submission(
             url,

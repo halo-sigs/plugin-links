@@ -1458,6 +1458,17 @@
         },
         "description" : "Observed reciprocal-link state."
       },
+      "CommentOrigin" : {
+        "required" : [ "name" ],
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Metadata name of the source Comment."
+          }
+        },
+        "description" : "Reference to the source Comment."
+      },
       "CopyOperation" : {
         "required" : [ "op", "from", "path" ],
         "type" : "object",
@@ -1785,6 +1796,7 @@
         }
       },
       "LinkDetailDTO" : {
+        "required" : [ "title" ],
         "type" : "object",
         "properties" : {
           "description" : {
@@ -2444,56 +2456,16 @@
         "required" : [ "type" ],
         "type" : "object",
         "properties" : {
-          "commentName" : {
-            "type" : "string",
-            "description" : "Metadata name of the source Comment."
-          },
-          "commentSnapshot" : {
-            "maxLength" : 8000,
-            "type" : "string",
-            "description" : "Bounded snapshot of the original raw comment."
-          },
-          "modelName" : {
-            "type" : "string",
-            "description" : "AI Foundation model resource used for recognition."
-          },
-          "reason" : {
-            "type" : "string",
-            "description" : "Short explanation returned by the recognition model."
-          },
-          "subjectRef" : {
-            "$ref" : "#/components/schemas/Ref"
+          "comment" : {
+            "$ref" : "#/components/schemas/CommentOrigin"
           },
           "type" : {
             "type" : "string",
-            "description" : "How the application was created.",
+            "description" : "Where the application originated.",
             "enum" : [ "FORM", "COMMENT" ]
           }
         },
-        "description" : "Origin and audit context of a link application."
-      },
-      "Ref" : {
-        "required" : [ "group", "kind", "name" ],
-        "type" : "object",
-        "properties" : {
-          "group" : {
-            "type" : "string",
-            "description" : "Extension group"
-          },
-          "kind" : {
-            "type" : "string",
-            "description" : "Extension kind"
-          },
-          "name" : {
-            "type" : "string",
-            "description" : "Extension name. This field is mandatory"
-          },
-          "version" : {
-            "type" : "string",
-            "description" : "Extension version"
-          }
-        },
-        "description" : "Extension reference object. The name is mandatory"
+        "description" : "Origin of a link application."
       },
       "RemoveOperation" : {
         "required" : [ "op", "path" ],

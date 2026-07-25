@@ -113,14 +113,28 @@ public class AiFoundationLinkAiService implements LinkAiService {
         return OutputSpec.object(JsonSchema.object()
             .property("isLinkApplication",
                 JsonSchema.bool().description("Whether this is a friend-link application"))
-            .property("reason", JsonSchema.string().description("Short classification reason"))
-            .property("url", JsonSchema.string().description("Applicant website URL"))
-            .property("displayName", JsonSchema.string().description("Applicant website name"))
-            .property("logo", JsonSchema.string().description("Applicant logo URL"))
-            .property("description", JsonSchema.string().description("Applicant description"))
-            .property("backlink", JsonSchema.string().description("Backlink page URL"))
-            .property("feedUrls", JsonSchema.array(JsonSchema.string().build()))
+            .property("url", nullable(
+                JsonSchema.string().description("Applicant website URL")))
+            .property("displayName", nullable(
+                JsonSchema.string().description("Applicant website name")))
+            .property("logo", nullable(
+                JsonSchema.string().description("Applicant logo URL")))
+            .property("description", nullable(
+                JsonSchema.string().description("Applicant description")))
+            .property("backlink", nullable(
+                JsonSchema.string().description("Backlink page URL")))
+            .property("feedUrls", nullable(
+                JsonSchema.array(JsonSchema.string().build())))
             .required("isLinkApplication"));
+    }
+
+    private static JsonSchema nullable(JsonSchema.Builder<?> schema) {
+        return JsonSchema.fromMap(Map.of(
+            "anyOf", List.of(
+                schema.build().toMap(),
+                Map.of("type", "null")
+            )
+        ));
     }
 
     private static String recognitionPrompt(LinkCommentRecognitionRequest request) {
@@ -173,12 +187,11 @@ public class AiFoundationLinkAiService implements LinkAiService {
             }
             return new LinkCommentRecognitionResult(
                 isLinkApplication,
-                stringValue(map.get("reason")),
-                stringValue(map.get("url")),
-                stringValue(map.get("displayName")),
-                stringValue(map.get("logo")),
-                stringValue(map.get("description")),
-                stringValue(map.get("backlink")),
+                recognitionStringValue(map.get("url")),
+                recognitionStringValue(map.get("displayName")),
+                recognitionStringValue(map.get("logo")),
+                recognitionStringValue(map.get("description")),
+                recognitionStringValue(map.get("backlink")),
                 stringList(map.get("feedUrls"))
             );
         }
@@ -194,8 +207,21 @@ public class AiFoundationLinkAiService implements LinkAiService {
         }
         return values.stream()
             .filter(item -> item != null)
-            .map(Object::toString)
+            .map(item -> {
+                if (!(item instanceof String text)) {
+                    throw new IllegalStateException(
+                        "AI recognition feedUrls items must be strings.");
+                }
+                return text;
+            })
             .toList();
+    }
+
+    private static String recognitionStringValue(Object value) {
+        if (value == null || value instanceof String) {
+            return (String) value;
+        }
+        throw new IllegalStateException("AI recognition optional fields must be strings or null.");
     }
 
     private static String stringValue(Object value) {

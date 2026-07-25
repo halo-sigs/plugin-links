@@ -83,7 +83,6 @@ class CommentApplicationRecognitionProcessorTest {
         when(aiService.recognize(any(), org.mockito.ArgumentMatchers.eq("model-a")))
             .thenReturn(Mono.just(new LinkCommentRecognitionResult(
                 true,
-                "explicit application",
                 "https://example.com",
                 "Example",
                 "https://example.com/logo.png",
@@ -122,11 +121,7 @@ class CommentApplicationRecognitionProcessorTest {
         var value = submission.getValue();
         assertThat(value.email()).isEqualTo("alice@example.com");
         assertThat(value.origin().getType()).isEqualTo(LinkApplication.OriginType.COMMENT);
-        assertThat(value.origin().getCommentName()).isEqualTo("comment-a");
-        assertThat(value.origin().getSubjectRef()).isEqualTo(comment.getSpec().getSubjectRef());
-        assertThat(value.origin().getModelName()).isEqualTo("model-a");
-        assertThat(value.origin().getReason()).isEqualTo("explicit application");
-        assertThat(value.origin().getCommentSnapshot()).isEqualTo("raw application");
+        assertThat(value.origin().getComment().getName()).isEqualTo("comment-a");
     }
 
     @Test
@@ -188,7 +183,7 @@ class CommentApplicationRecognitionProcessorTest {
         when(extensionClient.fetch(Post.class, "post-a")).thenReturn(Mono.just(post));
         when(aiService.recognize(any(), any())).thenReturn(Mono.just(
             new LinkCommentRecognitionResult(true, null, null, null, null,
-                null, null, List.of())
+                null, List.of())
         ));
         when(applicationService.create(any())).thenReturn(Mono.just(
             new LinkApplicationService.CreateResult(
@@ -217,7 +212,7 @@ class CommentApplicationRecognitionProcessorTest {
         post.setSpec(new Post.PostSpec());
         when(extensionClient.fetch(Post.class, "post-a")).thenReturn(Mono.just(post));
         when(aiService.recognize(any(), any())).thenReturn(Mono.just(
-            new LinkCommentRecognitionResult(true, null, "not-a-url", null, null,
+            new LinkCommentRecognitionResult(true, "not-a-url", null, null,
                 null, null, List.of())
         ));
         var comment = comment("comment-a", Ref.of("post-a",
@@ -239,7 +234,7 @@ class CommentApplicationRecognitionProcessorTest {
         post.setSpec(new Post.PostSpec());
         when(extensionClient.fetch(Post.class, "post-a")).thenReturn(Mono.just(post));
         when(aiService.recognize(any(), any())).thenReturn(Mono.just(
-            new LinkCommentRecognitionResult(true, null,
+            new LinkCommentRecognitionResult(true,
                 "https://Blog.Example/path", null, null, null, null, List.of())
         ));
         when(applicationService.create(any())).thenReturn(Mono.just(
@@ -285,8 +280,8 @@ class CommentApplicationRecognitionProcessorTest {
     }
 
     private static LinkCommentRecognitionResult negative() {
-        return new LinkCommentRecognitionResult(false, "not an application", null,
-            null, null, null, null, List.of());
+        return new LinkCommentRecognitionResult(false, null, null, null,
+            null, null, List.of());
     }
 
     private static Comment comment(String name, Ref subjectRef) {

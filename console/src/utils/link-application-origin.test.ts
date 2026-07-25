@@ -42,16 +42,14 @@ describe("link application source presentation", () => {
     });
   });
 
-  it("keeps the retained snapshot reviewable when the original comment has no route", () => {
+  it("builds a comment route from the nested source reference", () => {
     const withComment = application({
       type: "COMMENT",
-      commentName: "comment-a",
-      commentSnapshot: "retained content",
+      comment: {
+        name: "comment-a",
+      },
     });
-    const withoutComment = application({
-      type: "COMMENT",
-      commentSnapshot: "retained content",
-    });
+    const withoutComment = application({ type: "COMMENT" });
 
     expect(linkApplicationCommentRoute(withComment)).toEqual({
       name: "Comments",
@@ -60,7 +58,6 @@ describe("link application source presentation", () => {
       },
     });
     expect(linkApplicationCommentRoute(withoutComment)).toBeUndefined();
-    expect(withoutComment.spec.origin?.commentSnapshot).toBe("retained content");
   });
 });
 

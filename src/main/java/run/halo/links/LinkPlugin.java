@@ -80,11 +80,12 @@ public class LinkPlugin extends BasePlugin {
                         ? origin.getType().name() : null;
                 })
             );
-            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.origin.commentName",
+            indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.origin.comment.name",
                     String.class)
                 .indexFunc(app -> {
                     var origin = app.getSpec().getOrigin();
-                    return origin == null ? null : origin.getCommentName();
+                    return origin == null || origin.getComment() == null
+                        ? null : origin.getComment().getName();
                 })
             );
         });

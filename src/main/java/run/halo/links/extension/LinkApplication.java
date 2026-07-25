@@ -9,7 +9,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import run.halo.app.extension.AbstractExtension;
 import run.halo.app.extension.GVK;
-import run.halo.app.extension.Ref;
 
 /**
  * @author ryanwang
@@ -56,31 +55,25 @@ public class LinkApplication extends AbstractExtension {
         @Schema(description = "Status of the application.", requiredMode = REQUIRED)
         private Status status;
 
-        @Schema(description = "Origin and audit context of the application.")
+        @Schema(description = "Origin of the application.")
         private Origin origin;
     }
 
     @Data
-    @Schema(description = "Origin and audit context of a link application.")
+    @Schema(description = "Origin of a link application.")
     public static class Origin {
-        @Schema(description = "How the application was created.", requiredMode = REQUIRED)
+        @Schema(description = "Where the application originated.", requiredMode = REQUIRED)
         private OriginType type;
 
-        @Schema(description = "Metadata name of the source Comment.")
-        private String commentName;
+        @Schema(description = "Source Comment when the origin type is COMMENT.")
+        private CommentOrigin comment;
+    }
 
-        @Schema(description = "Subject referenced by the source Comment.")
-        private Ref subjectRef;
-
-        @Schema(description = "AI Foundation model resource used for recognition.")
-        private String modelName;
-
-        @Schema(description = "Short explanation returned by the recognition model.")
-        private String reason;
-
-        @Schema(description = "Bounded snapshot of the original raw comment.",
-            maxLength = 8000)
-        private String commentSnapshot;
+    @Data
+    @Schema(description = "Reference to the source Comment.")
+    public static class CommentOrigin {
+        @Schema(description = "Metadata name of the source Comment.", requiredMode = REQUIRED)
+        private String name;
     }
 
     @Schema(description = "Application status.")

@@ -143,17 +143,16 @@ class LinkApplicationServiceTest {
     }
 
     @Test
-    void shouldBoundStoredCommentSnapshot() {
+    void shouldNormalizeStoredCommentName() {
         givenExisting(List.of(), List.of());
         when(client.create(any(LinkApplication.class)))
             .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
         var submission = submission("https://example.com",
-            LinkApplication.OriginType.COMMENT, "comment-a");
-        submission.origin().setCommentSnapshot("a".repeat(8_100));
+            LinkApplication.OriginType.COMMENT, " comment-a ");
 
         StepVerifier.create(service.create(submission))
             .assertNext(result -> assertThat(result.application().getSpec().getOrigin()
-                .getCommentSnapshot()).hasSize(8_000))
+                .getComment().getName()).isEqualTo("comment-a"))
             .verifyComplete();
     }
 
@@ -181,7 +180,11 @@ class LinkApplicationServiceTest {
         LinkApplication.OriginType originType, String commentName) {
         var origin = new LinkApplication.Origin();
         origin.setType(originType);
-        origin.setCommentName(commentName);
+        if (commentName != null) {
+            var comment = new LinkApplication.CommentOrigin();
+            comment.setName(commentName);
+            origin.setComment(comment);
+        }
         return new LinkApplicationService.Submission(
             url,
             "Example",
@@ -213,7 +216,11 @@ class LinkApplicationServiceTest {
         if (originType != null) {
             var origin = new LinkApplication.Origin();
             origin.setType(originType);
-            origin.setCommentName(commentName);
+            if (commentName != null) {
+                var comment = new LinkApplication.CommentOrigin();
+                comment.setName(commentName);
+                origin.setComment(comment);
+            }
             spec.setOrigin(origin);
         }
         application.setSpec(spec);

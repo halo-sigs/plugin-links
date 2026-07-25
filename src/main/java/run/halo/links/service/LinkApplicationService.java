@@ -19,8 +19,6 @@ import run.halo.links.extension.LinkApplication;
 @RequiredArgsConstructor
 public class LinkApplicationService {
 
-    static final int MAX_COMMENT_SNAPSHOT_LENGTH = 8_000;
-
     private final ReactiveExtensionClient client;
 
     public Mono<CreateResult> create(Submission submission) {
@@ -69,8 +67,7 @@ public class LinkApplicationService {
     private static boolean hasDuplicateApplication(List<LinkApplication> applications,
         Submission incoming, String canonicalUrl) {
         var incomingOriginType = originType(incoming.origin());
-        var incomingCommentName = incoming.origin() == null
-            ? null : incoming.origin().getCommentName();
+        var incomingCommentName = commentName(incoming.origin());
         for (var application : applications) {
             var spec = application.getSpec();
             if (spec == null) {
@@ -80,7 +77,7 @@ public class LinkApplicationService {
             if (incomingOriginType == LinkApplication.OriginType.COMMENT
                 && StringUtils.isNotBlank(incomingCommentName)
                 && existingOrigin != null
-                && incomingCommentName.equals(existingOrigin.getCommentName())) {
+                && incomingCommentName.equals(commentName(existingOrigin))) {
                 return true;
             }
             var existingKey = LinkUrlCanonicalizer.canonicalKey(spec.getUrl());
@@ -106,6 +103,13 @@ public class LinkApplicationService {
             return LinkApplication.OriginType.FORM;
         }
         return origin.getType();
+    }
+
+    private static String commentName(LinkApplication.Origin origin) {
+        if (origin == null || origin.getComment() == null) {
+            return null;
+        }
+        return origin.getComment().getName();
     }
 
     private static LinkApplication toApplication(Submission submission) {
@@ -134,15 +138,12 @@ public class LinkApplicationService {
         if (source == null) {
             return target;
         }
-        target.setCommentName(normalizeOptional(source.getCommentName()));
-        target.setSubjectRef(source.getSubjectRef());
-        target.setModelName(normalizeOptional(source.getModelName()));
-        target.setReason(normalizeOptional(source.getReason()));
-        var snapshot = source.getCommentSnapshot();
-        if (snapshot != null && snapshot.length() > MAX_COMMENT_SNAPSHOT_LENGTH) {
-            snapshot = snapshot.substring(0, MAX_COMMENT_SNAPSHOT_LENGTH);
+        var commentName = normalizeOptional(commentName(source));
+        if (commentName != null) {
+            var comment = new LinkApplication.CommentOrigin();
+            comment.setName(commentName);
+            target.setComment(comment);
         }
-        target.setCommentSnapshot(snapshot);
         return target;
     }
 

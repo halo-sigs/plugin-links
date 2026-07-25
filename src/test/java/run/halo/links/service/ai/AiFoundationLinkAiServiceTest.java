@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -99,6 +100,74 @@ class AiFoundationLinkAiServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void shouldAllowNullRecognitionOptionalFieldsInStructuredOutputSchema() {
+        var properties = (Map<String, Map<String, Object>>) AiFoundationLinkAiService
+            .recognitionOutput()
+            .getSchema()
+            .get("properties");
+
+        assertNullableTypes(properties.get("url"), "string");
+        assertNullableTypes(properties.get("displayName"), "string");
+        assertNullableTypes(properties.get("logo"), "string");
+        assertNullableTypes(properties.get("description"), "string");
+        assertNullableTypes(properties.get("backlink"), "string");
+        assertNullableTypes(properties.get("feedUrls"), "array");
+    }
+
+    @Test
+    void shouldTreatNullRecognitionOptionalFieldsAsOmitted() {
+        var output = new LinkedHashMap<String, Object>();
+        output.put("isLinkApplication", true);
+        output.put("url", "https://example.com");
+        output.put("displayName", "Example");
+        output.put("logo", null);
+        output.put("description", null);
+        output.put("backlink", null);
+        output.put("feedUrls", null);
+        givenModel("model-a", output);
+
+        StepVerifier.create(service.recognize(new LinkCommentRecognitionRequest(
+                "申请友链", "POST", "About", "Example", null), "model-a"))
+            .assertNext(result -> {
+                assertThat(result.isLinkApplication()).isTrue();
+                assertThat(result.url()).isEqualTo("https://example.com");
+                assertThat(result.displayName()).isEqualTo("Example");
+                assertThat(result.logo()).isNull();
+                assertThat(result.description()).isNull();
+                assertThat(result.backlink()).isNull();
+                assertThat(result.feedUrls()).isEmpty();
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldRejectNonStringRecognitionOptionalField() {
+        givenModel("model-a", Map.of(
+            "isLinkApplication", true,
+            "logo", 42
+        ));
+
+        StepVerifier.create(service.recognize(new LinkCommentRecognitionRequest(
+                "申请友链", "POST", "About", "Example", null), "model-a"))
+            .expectError(IllegalStateException.class)
+            .verify();
+    }
+
+    @Test
+    void shouldRejectNonStringRecognitionFeedUrl() {
+        givenModel("model-a", Map.of(
+            "isLinkApplication", true,
+            "feedUrls", List.of(42)
+        ));
+
+        StepVerifier.create(service.recognize(new LinkCommentRecognitionRequest(
+                "申请友链", "POST", "About", "Example", null), "model-a"))
+            .expectError(IllegalStateException.class)
+            .verify();
+    }
+
+    @Test
     void shouldRejectMalformedManualExtractionOutput() {
         givenModel("model-a", 42);
 
@@ -157,5 +226,13 @@ class AiFoundationLinkAiServiceTest {
         var captor = ArgumentCaptor.forClass(GenerateTextRequest.class);
         org.mockito.Mockito.verify(languageModel).generateText(captor.capture());
         return captor.getValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void assertNullableTypes(Map<String, Object> schema, String valueType) {
+        var alternatives = (List<Map<String, Object>>) schema.get("anyOf");
+        assertThat(alternatives)
+            .extracting(alternative -> alternative.get("type"))
+            .containsExactly(valueType, "null");
     }
 }

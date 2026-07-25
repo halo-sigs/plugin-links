@@ -91,8 +91,7 @@ expose AI Foundation classes in fields, constructors, or signatures.
 The service supports two request contracts:
 
 - existing manual extraction, preserving its Console behavior;
-- automatic recognition, returning a classification decision, reason, and optional application
-  fields.
+- automatic recognition, returning a classification decision and optional application fields.
 
 Both paths resolve `AiModelService` through `ExtensionGetter`; neither autowires across plugin
 application contexts. The automatic path uses a fixed, versioned system prompt that labels comment
@@ -119,7 +118,7 @@ locally only after a positive decision. No tools or external fetching are enable
 The recognition output is:
 
 - required `isLinkApplication`;
-- optional `reason`, `url`, `displayName`, `logo`, `description`, `backlink`, and `feedUrls`.
+- optional `url`, `displayName`, `logo`, `description`, `backlink`, and `feedUrls`.
 
 When the decision is positive, URL resolution is model URL then owner website. Display-name
 resolution is model value, owner display name, then normalized URL host. If no valid HTTP(S) URL is
@@ -150,20 +149,18 @@ The duplicate matrix is:
 Comment-name lookup is a separate stable idempotency check so the same Comment can never create a
 second application even if its URL presentation changes.
 
-### 6. Add additive origin data to LinkApplication
+### 6. Add minimal origin data to LinkApplication
 
 Add an optional `origin` object:
 
 - `type`: `FORM` or `COMMENT`;
-- `commentName`;
-- `subjectRef`;
-- `modelName`;
-- `reason`;
-- `commentSnapshot`.
+- `comment.name`: metadata name of the source Comment for `COMMENT` origins.
 
-New form records write `FORM`; recognized records write `COMMENT`. Records without `origin` remain
-valid and are presented as historical applications. Comment snapshots are truncated to 8,000
-characters before storage and are not removed when the original comment is edited or deleted.
+New form records write `FORM`; recognized records write `COMMENT` with the source Comment name.
+Records without `origin` remain valid and are presented as historical applications. The Comment
+name is a stable reference used to load the current subject and raw content when an administrator
+opens application details. Derived Comment data and AI implementation details are not duplicated
+in the LinkApplication.
 
 Register indexes needed for comment-name idempotency and source-aware application queries. This is
 an additive schema change and requires OpenAPI/client regeneration.
@@ -171,8 +168,8 @@ an additive schema change and requires OpenAPI/client regeneration.
 ### 7. Extend the existing review UI instead of creating a second queue
 
 The existing pending count and application list remain the single review queue. Add a source badge,
-and show the comment subject, source link, retained snapshot, model name, and recognition reason in
-the application details when present.
+and load the current comment subject, source link, and raw content in the application details when
+the source Comment remains available.
 
 Extend the AI status contract so the UI can distinguish class presence from an enabled
 `AiModelService`. If recognition is configured but cannot run, show a non-blocking warning on the
@@ -203,17 +200,18 @@ a file directly modified here.
   → Mitigation: make this explicit in settings/status messaging; this is the chosen new-event-only
   behavior and avoids surprising historical scans.
 - [Risk] Model classification can create false-positive pending applications.
-  → Mitigation: never create a formal Link automatically, retain the source snapshot and reason,
-  and allow a later form submission after a rejected comment-origin false positive.
+  → Mitigation: never create a formal Link automatically, retain a reference to the source
+  Comment, and allow a later form submission after a rejected comment-origin false positive.
 - [Risk] URL lookup and create are not transactionally unique across the extension store.
   → Mitigation: serialize automatic processing through one worker, use stable comment idempotency,
   centralize duplicate checks, and test concurrent/repeated delivery behavior.
 - [Risk] Optional AI classes can leak into an always-loaded component during later refactoring.
   → Mitigation: keep AI types inside conditionally loaded implementation classes and enforce an
   absent-classpath registration test.
-- [Risk] Retaining a comment snapshot outlives deletion of the original comment.
-  → Mitigation: document this behavior, cap the snapshot size, expose it only in the existing
-  privileged application review UI, and remove it when the application is deleted.
+- [Risk] Editing or deleting the source Comment changes or removes the source context visible from
+  an existing application.
+  → Mitigation: keep the extracted application fields unchanged and clearly show when the source
+  Comment is unavailable.
 - [Risk] Full frontend type-check may remain red because of unrelated baseline failures.
   → Mitigation: add targeted tests, fix errors in touched files, record remaining baseline
   diagnostics, and do not report the full check as passing unless it actually does.

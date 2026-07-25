@@ -14,14 +14,13 @@ traceable pending applications without bypassing administrator review.
   resolved, automatically create a `PENDING` `LinkApplication`; do not create a formal `Link`
   automatically.
 - Add source metadata to `LinkApplication` so form submissions, comment-recognized applications,
-  historical records, source comments, model decisions, and retained comment snapshots can be
-  distinguished and audited.
+  historical records, and source comments can be distinguished.
 - Add source-aware URL deduplication so rejected AI false positives do not block later form
   submissions while explicit form rejections still prevent comment recognition from bypassing an
   administrator decision.
-- Extend the Console application review UI with source badges, recognition context, source links,
-  and an operational warning when automatic recognition is configured but AI Foundation is
-  unavailable.
+- Extend the Console application review UI with source badges, current source-comment context,
+  source links, and an operational warning when automatic recognition is configured but AI
+  Foundation is unavailable.
 - Preserve the existing administrator-initiated "extract from comment" tool and repair the
   request and structured-output contracts required to share its AI integration safely.
 - Keep AI Foundation optional, constrain its compatible version range, and leave all non-AI link
@@ -37,8 +36,8 @@ traceable pending applications without bypassing administrator review.
 
 ### Modified Capabilities
 
-- `link-application`: Add application origin and recognition audit data, source-aware duplicate
-  handling, and source context in the existing administrator review workflow.
+- `link-application`: Add application origin data, source-aware duplicate handling, and current
+  source context in the existing administrator review workflow.
 
 ## Impact
 

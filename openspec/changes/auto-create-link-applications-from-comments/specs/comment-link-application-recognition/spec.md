@@ -105,8 +105,8 @@ comment and extract structured friend-link application fields.
 - **THEN** the system uses the owner display name when present
 - **AND** otherwise uses the normalized application URL host
 
-#### Scenario: Optional fields are omitted
-- **WHEN** the model omits logo, description, backlink, feed URLs, or reason
+#### Scenario: Optional fields are absent
+- **WHEN** the model omits or explicitly returns null for logo, description, backlink, or feed URLs
 - **THEN** structured-output validation accepts the result
 - **AND** the system creates the application when all business-required data is available
 
@@ -122,7 +122,7 @@ SHALL NOT create a formal Link automatically.
 - **WHEN** a matching Comment is positively classified with a resolved URL and display name
 - **THEN** the system creates one LinkApplication with status `PENDING`
 - **AND** sets its origin type to `COMMENT`
-- **AND** records the source Comment, subject, selected model, decision reason, and bounded comment snapshot
+- **AND** records the source Comment metadata name as `origin.comment.name`
 - **AND** copies the owner email locally when the Comment has an email owner
 - **AND** does not create a Link
 
@@ -132,7 +132,8 @@ SHALL NOT create a formal Link automatically.
 
 #### Scenario: Source Comment changes after creation
 - **WHEN** the source Comment is edited or deleted after its application is created
-- **THEN** the LinkApplication retains its original extracted fields and comment snapshot
+- **THEN** the LinkApplication retains its original extracted application fields
+- **AND** continues to reference the original Comment name
 
 ### Requirement: Recognition failures are isolated
 The system SHALL bound background model execution and SHALL NOT make Comment creation depend on AI

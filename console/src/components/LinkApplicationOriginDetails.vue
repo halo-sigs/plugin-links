@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { LinkApplication } from "@/api/generated";
 import { linkApplicationCommentRoute, linkApplicationSubjectMeta } from "@/utils/link-application-origin";
+import { coreApiClient } from "@halo-dev/api-client";
+import { useQuery } from "@tanstack/vue-query";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -8,7 +10,22 @@ const props = defineProps<{
 }>();
 
 const origin = computed(() => props.application.spec.origin);
-const subject = computed(() => linkApplicationSubjectMeta(origin.value?.subjectRef));
+const commentName = computed(() => origin.value?.comment?.name);
+const commentQueryEnabled = computed(() => origin.value?.type === "COMMENT" && !!commentName.value);
+const { data: sourceComment, isFetching: isCommentLoading } = useQuery({
+  queryKey: ["plugin:links:link-application-origin-comment", commentName],
+  enabled: commentQueryEnabled,
+  queryFn: async () => {
+    const { data } = await coreApiClient.content.comment.listComment({
+      fieldSelector: [`metadata.name==${commentName.value}`],
+      page: 1,
+      size: 1,
+    });
+    return data.items[0] ?? null;
+  },
+  retry: false,
+});
+const subject = computed(() => linkApplicationSubjectMeta(sourceComment.value?.spec.subjectRef));
 const commentRoute = computed(() => linkApplicationCommentRoute(props.application));
 </script>
 
@@ -27,37 +44,26 @@ const commentRoute = computed(() => linkApplicationCommentRoute(props.applicatio
         </dd>
       </div>
 
-      <div v-if="origin.commentName">
+      <div>
         <dt class=":uno: text-gray-500">原评论</dt>
-        <dd class=":uno: mt-1">
+        <dd v-if="isCommentLoading" class=":uno: mt-1 text-gray-500">正在加载评论...</dd>
+        <dd v-else-if="sourceComment" class=":uno: mt-1">
           <RouterLink v-if="commentRoute" :to="commentRoute" class=":uno: text-blue-600 hover:underline">
             在评论管理中查找
           </RouterLink>
-          <span v-else class=":uno: text-gray-500">原评论不可用</span>
-          <span class=":uno: ml-2 break-all text-xs text-gray-400">{{ origin.commentName }}</span>
+          <span class=":uno: ml-2 break-all text-xs text-gray-400">{{ commentName }}</span>
         </dd>
+        <dd v-else class=":uno: mt-1 text-gray-500">原评论不可用</dd>
       </div>
 
-      <div v-if="origin.modelName">
-        <dt class=":uno: text-gray-500">识别模型</dt>
-        <dd class=":uno: mt-1 break-all text-gray-700">{{ origin.modelName }}</dd>
-      </div>
-
-      <div v-if="origin.reason">
-        <dt class=":uno: text-gray-500">识别原因</dt>
-        <dd class=":uno: mt-1 whitespace-pre-wrap text-gray-700">{{ origin.reason }}</dd>
-      </div>
-
-      <div>
-        <dt class=":uno: text-gray-500">评论快照</dt>
-        <dd v-if="origin.commentSnapshot" class=":uno: mt-1">
+      <div v-if="sourceComment">
+        <dt class=":uno: text-gray-500">当前评论内容</dt>
+        <dd class=":uno: mt-1">
           <pre
             class=":uno: max-h-60 overflow-auto whitespace-pre-wrap break-words border border-gray-200 rounded bg-white p-3 text-xs text-gray-700"
-            >{{ origin.commentSnapshot }}</pre
+            >{{ sourceComment.spec.raw }}</pre
           >
         </dd>
-        <dd v-else class=":uno: mt-1 text-gray-500">未保留评论快照</dd>
-        <p class=":uno: mt-1 text-xs text-gray-400">原评论已删除或无法访问时，仍可依据此处保留的快照审核。</p>
       </div>
     </dl>
   </section>

@@ -11,7 +11,7 @@ remaining compatible with historical records that have no origin.
 #### Scenario: Comment application records recognition origin
 - **WHEN** comment recognition creates a LinkApplication
 - **THEN** the application has origin type `COMMENT`
-- **AND** records its source Comment name, subject reference, model name, decision reason, and bounded comment snapshot when available
+- **AND** records its source Comment metadata name as `origin.comment.name`
 
 #### Scenario: Historical application has no origin
 - **WHEN** an administrator views a LinkApplication created before origin support
@@ -27,12 +27,13 @@ The system SHALL expose application-origin context in the existing pending appli
 
 #### Scenario: Comment application detail is opened
 - **WHEN** an administrator opens a comment-origin application
-- **THEN** the detail view displays its source subject, comment link, retained snapshot, model name, and decision reason when available
+- **THEN** the Console loads the referenced Comment
+- **AND** displays its current subject, comment-management link, and raw content when available
 
 #### Scenario: Original comment is unavailable
 - **WHEN** a comment-origin application references a Comment that has been deleted or is otherwise unavailable
 - **THEN** the application remains reviewable
-- **AND** the retained snapshot remains visible
+- **AND** the Console indicates that the original Comment is unavailable
 
 ## MODIFIED Requirements
 

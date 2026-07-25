@@ -9,7 +9,6 @@ import java.util.List;
 public record LinkCommentRecognitionResult(
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     boolean isLinkApplication,
-    String reason,
     String url,
     String displayName,
     String logo,
