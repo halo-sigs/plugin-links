@@ -12,7 +12,7 @@ import {
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { Dialog, Toast, VButton, VModal, VSpace, VTag } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { computed } from "vue";
+import { computed, useTemplateRef } from "vue";
 import LinkApplicationOriginDetails from "./LinkApplicationOriginDetails.vue";
 import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
@@ -25,6 +25,8 @@ const emit = defineEmits<{
 }>();
 
 const queryClient = useQueryClient();
+
+const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const { data: groups } = useLinkGroupFetch();
 
@@ -84,7 +86,7 @@ function handleApprove(data: ApproveRequest) {
             queryClient,
           });
         }
-        emit("close");
+        modal.value?.close();
       },
     },
   );
@@ -99,7 +101,7 @@ function handleReject() {
       rejectApplication(props.application.metadata.name, {
         onSuccess: () => {
           Toast.success("已拒绝申请");
-          emit("close");
+          modal.value?.close();
         },
       });
     },
@@ -129,7 +131,7 @@ function handleDelete() {
       deleteApplication(props.application.metadata.name, {
         onSuccess: () => {
           Toast.success("删除成功");
-          emit("close");
+          modal.value?.close();
         },
       });
     },
@@ -151,9 +153,11 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
 
 <template>
   <VModal
+    ref="modal"
     :title="`审核申请 - ${application.spec.displayName}`"
     :width="600"
     :mount-to-body="true"
+    :centered="false"
     @close="emit('close')"
   >
     <div class=":uno: space-y-4">
@@ -183,13 +187,11 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
         }"
         @submit="handleApprove"
       >
-        <div class=":uno: space-y-3">
-          <FormKit type="text" name="displayName" validation="required" label="网站名称" />
-          <FormKit type="url" name="url" validation="required" label="链接地址" />
-          <FormKit type="url" name="logo" label="Logo" />
-          <FormKit type="textarea" name="description" label="简介" auto-height />
-          <FormKit type="select" name="groupName" label="分配分组" :options="groupOptions" />
-        </div>
+        <FormKit type="text" name="displayName" validation="required" label="网站名称" />
+        <FormKit type="url" name="url" validation="required" label="链接地址" />
+        <FormKit type="url" name="logo" label="Logo" />
+        <FormKit type="textarea" name="description" label="简介" auto-height />
+        <FormKit type="select" name="groupName" label="分配分组" :options="groupOptions" />
       </FormKit>
 
       <!-- Email (read-only display) -->
@@ -234,7 +236,7 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
         <VButton
           v-if="application.spec.status === 'PENDING'"
           :loading="isApproving"
-          type="primary"
+          type="secondary"
           @click="$formkit.submit('link-application-form')"
         >
           通过
@@ -248,7 +250,7 @@ const statusType: Record<string, "default" | "primary" | "success" | "warning" |
           拒绝
         </VButton>
         <VButton type="default" @click="handleDelete">删除</VButton>
-        <VButton @click="emit('close')">取消</VButton>
+        <VButton @click="modal?.close()">取消</VButton>
       </VSpace>
     </template>
   </VModal>

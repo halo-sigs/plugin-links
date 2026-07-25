@@ -14,15 +14,17 @@ const commentName = computed(() => origin.value?.comment?.name);
 const commentQueryEnabled = computed(() => origin.value?.type === "COMMENT" && !!commentName.value);
 const { data: sourceComment, isFetching: isCommentLoading } = useQuery({
   queryKey: ["plugin:links:link-application-origin-comment", commentName],
-  enabled: commentQueryEnabled,
   queryFn: async () => {
-    const { data } = await coreApiClient.content.comment.listComment({
-      fieldSelector: [`metadata.name==${commentName.value}`],
-      page: 1,
-      size: 1,
+    if (!commentName.value) {
+      throw new Error("Comment name is not available");
+    }
+
+    const { data } = await coreApiClient.content.comment.getComment({
+      name: commentName.value,
     });
-    return data.items[0] ?? null;
+    return data;
   },
+  enabled: commentQueryEnabled,
   retry: false,
 });
 const subject = computed(() => linkApplicationSubjectMeta(sourceComment.value?.spec.subjectRef));

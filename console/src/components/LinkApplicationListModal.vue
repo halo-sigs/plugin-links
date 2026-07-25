@@ -3,13 +3,15 @@ import type { LinkApplication } from "@/api/generated";
 import { useDeleteLinkApplication, useLinkApplications } from "@/composables/use-link-application";
 import { Dialog, Toast, VButton, VEmpty, VModal, VSpace } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
-import { computed } from "vue";
+import { computed, useTemplateRef } from "vue";
 import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
 const emit = defineEmits<{
   (event: "close"): void;
   (event: "view-detail", application: LinkApplication): void;
 }>();
+
+const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const { data: applications, isLoading } = useLinkApplications("PENDING");
 
@@ -34,7 +36,7 @@ function handleDelete(app: LinkApplication) {
 </script>
 
 <template>
-  <VModal title="友链申请" :width="800" :mount-to-body="true" @close="emit('close')">
+  <VModal ref="modal" title="友链申请" :width="800" :mount-to-body="true" :centered="false" @close="emit('close')">
     <div class=":uno: mb-3 text-sm text-gray-500">
       当前有 <span class=":uno: text-gray-900 font-medium">{{ pendingCount }}</span> 条待审核申请
     </div>
@@ -86,5 +88,9 @@ function handleDelete(app: LinkApplication) {
         </tbody>
       </table>
     </div>
+
+    <template #footer>
+      <VButton @click="modal?.close()">关闭</VButton>
+    </template>
   </VModal>
 </template>

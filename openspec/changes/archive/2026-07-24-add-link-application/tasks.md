@@ -31,7 +31,7 @@
 ## 4. Frontend — Console UI Components
 
 - [x] 4.1 Create `LinkApplicationListModal.vue` — modal showing pending applications (url, displayName, creationTime)
-- [x] 4.2 Create `LinkApplicationDetailDrawer.vue` — drawer with:
+- [x] 4.2 Create `LinkApplicationDetailModal.vue` — drawer with:
   - Editable form fields (url, displayName, logo, description)
   - Group selection dropdown (populate from existing LinkGroups)
   - "Verify Backlink" button with result display

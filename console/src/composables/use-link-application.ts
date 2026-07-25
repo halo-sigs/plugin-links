@@ -1,8 +1,5 @@
 import { linksConsoleApiClient } from "@/api";
-import type {
-  ApproveRequest,
-  ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiApproveLinkApplicationRequest,
-} from "@/api/generated";
+import type { ApproveRequest } from "@/api/generated";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 
 export const QK_LINK_APPLICATIONS = "plugin:links:link-applications";
@@ -16,19 +13,17 @@ export function useLinkApplications(status?: string) {
       });
       return data.items || [];
     },
+    refetchInterval(data) {
+      const hasDeletingData = data?.some((item) => !!item.metadata.deletionTimestamp);
+      return hasDeletingData ? 1000 : false;
+    },
   });
 }
 
 export function useApproveLinkApplication() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      name,
-      request,
-    }: {
-      name: string;
-      request: ApproveRequest;
-    }) => {
+    mutationFn: async ({ name, request }: { name: string; request: ApproveRequest }) => {
       const { data } = await linksConsoleApiClient.application.approveLinkApplication({
         name,
         approveRequest: request,
@@ -44,8 +39,7 @@ export function useApproveLinkApplication() {
 export function useRejectLinkApplication() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) =>
-      linksConsoleApiClient.application.rejectLinkApplication({ name }),
+    mutationFn: (name: string) => linksConsoleApiClient.application.rejectLinkApplication({ name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QK_LINK_APPLICATIONS] });
     },
@@ -55,8 +49,7 @@ export function useRejectLinkApplication() {
 export function useDeleteLinkApplication() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) =>
-      linksConsoleApiClient.application.deleteLinkApplication({ name }),
+    mutationFn: (name: string) => linksConsoleApiClient.application.deleteLinkApplication({ name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QK_LINK_APPLICATIONS] });
     },

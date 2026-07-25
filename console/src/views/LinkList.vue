@@ -37,8 +37,8 @@ const LinkImportModal = defineAsyncComponent(
 const LinkApplicationListModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-application-list-modal" */ "@/components/LinkApplicationListModal.vue"),
 );
-const LinkApplicationDetailDrawer = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-application-detail-drawer" */ "@/components/LinkApplicationDetailDrawer.vue"),
+const LinkApplicationDetailModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-application-detail-drawer" */ "@/components/LinkApplicationDetailModal.vue"),
 );
 
 const { data, isLoading, isFetching, refetch } = useLinksFetch();
@@ -149,13 +149,14 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
     <VAlert
       v-if="pendingCount > 0"
       :title="`有 ${pendingCount} 条待审核的友链申请`"
-      type="warning"
+      type="default"
       :closable="false"
       class=":uno: mb-4"
-      @click="linkApplicationListModalVisible = true"
     >
       <template #description>
-        <span class=":uno: cursor-pointer hover:underline">点击此处查看并处理申请</span>
+        <button @click="linkApplicationListModalVisible = true" class=":uno: cursor-pointer hover:underline">
+          查看并处理申请
+        </button>
       </template>
     </VAlert>
 
@@ -222,7 +223,7 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
       }
     "
   />
-  <LinkApplicationDetailDrawer
+  <LinkApplicationDetailModal
     v-if="linkApplicationDetailVisible && selectedApplication"
     :application="selectedApplication"
     @close="linkApplicationDetailVisible = false"
