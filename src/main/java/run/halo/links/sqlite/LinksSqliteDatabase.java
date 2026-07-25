@@ -180,7 +180,6 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
         }
     }
 
-    @Override
     @Scheduled(fixedDelay = 60 * 60 * 1000L, initialDelay = 60 * 60 * 1000L)
     public synchronized void snapshotIfDue() {
         if (!available || !snapshotIsDue()) {
@@ -384,16 +383,18 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
             Path temp = dbPath.resolveSibling(dbPath.getFileName() + ".migration.tmp");
             NitriteToSqliteMigration.Result result =
                 NitriteToSqliteMigration.migrate(legacyDbPath, temp, clock);
+            boolean isolateLegacy = false;
             if (result == NitriteToSqliteMigration.Result.SOURCE_UNREADABLE) {
-                if (Files.exists(legacyDbPath)) {
-                    isolateLegacyDatabase();
-                }
+                isolateLegacy = Files.exists(legacyDbPath);
                 createEmptyMigrationDatabase(temp);
             } else if (result == NitriteToSqliteMigration.Result.MIGRATED_FROM_BACKUP
                 && Files.exists(legacyDbPath)) {
-                isolateLegacyDatabase();
+                isolateLegacy = true;
             }
             moveReplacing(temp, dbPath);
+            if (isolateLegacy) {
+                isolateLegacyDatabase();
+            }
             writeMigrationMarker();
             return true;
         }
@@ -555,12 +556,14 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
 
     private void cleanupTemporaryFiles() throws IOException {
         String dbName = dbPath.getFileName().toString();
+        String legacyImportName = legacyDbPath.getFileName() + ".migration-import.tmp";
         try (Stream<Path> stream = Files.list(dbPath.getParent())) {
             stream.filter(Files::isRegularFile)
                 .filter(path -> {
                     String name = path.getFileName().toString();
-                    return name.startsWith(dbName) && (name.endsWith(".tmp")
-                        || name.contains(".tmp-"));
+                    return name.equals(legacyImportName)
+                        || name.startsWith(dbName) && (name.endsWith(".tmp")
+                            || name.contains(".tmp-"));
                 })
                 .forEach(LinksSqliteDatabase::deleteQuietly);
         }

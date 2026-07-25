@@ -5,6 +5,4 @@ public interface LinkFeedStorageMaintenance {
     boolean isAvailable();
 
     void compactIfNeeded();
-
-    void snapshotIfDue();
 }

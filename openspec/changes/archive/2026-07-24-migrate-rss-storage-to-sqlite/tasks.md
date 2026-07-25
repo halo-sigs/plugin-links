@@ -1,8 +1,7 @@
 ## 1. SQLite Foundation
 
 - [x] 1.1 Add Xerial SQLite JDBC to the Gradle runtime artifact while retaining the existing
-  Nitrite libraries for the legacy migration reader, and verify the packaged JAR contains the
-  expected native libraries.
+  Nitrite libraries for the legacy migration reader.
 - [x] 1.2 Add database lifecycle tests for schema creation, `user_version`, WAL mode,
   `synchronous=FULL`, busy timeout, explicit transaction rollback, and serialized access.
 - [x] 1.3 Implement `LinksSqliteDatabase` with one guarded JDBC connection, versioned schema
@@ -123,6 +122,6 @@
   verify they have no WAL or shared-memory publication dependency.
 - [x] 9.3 Manage the plugin-classloader SQLite JDBC registration lifecycle and verify repeated
   database destruction and recreation.
-- [x] 9.4 Add a Gradle verification task for JDBC metadata and Linux glibc/musl, macOS, and Windows
-  x86_64/ARM64 native entries in the packaged plugin JAR.
+- [x] 9.4 Keep SQLite JDBC as a normal Gradle runtime dependency without duplicating the plugin
+  packaging mechanism with an archive-entry verification task.
 - [x] 9.5 Run focused tests, the full build, strict OpenSpec validation, and final diff checks.

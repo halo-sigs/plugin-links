@@ -3,6 +3,7 @@ package run.halo.links.sqlite;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -32,6 +33,19 @@ class LinksSqliteDatabaseTest {
             assertThat(pragma(database, "synchronous")).isEqualTo("2");
             assertThat(pragma(database, "busy_timeout")).isEqualTo("5000");
             assertThat(database.isAvailable()).isTrue();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldRemoveStaleNitriteImportFileOnStartup() throws Exception {
+        Path staleImport = tempDir.resolve("links.nitrite.migration-import.tmp");
+        Files.writeString(staleImport, "stale");
+
+        LinksSqliteDatabase database = database();
+        try {
+            assertThat(staleImport).doesNotExist();
         } finally {
             database.destroy();
         }

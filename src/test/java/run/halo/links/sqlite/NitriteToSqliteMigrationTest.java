@@ -339,6 +339,26 @@ class NitriteToSqliteMigrationTest {
         }
     }
 
+    @Test
+    void shouldLeaveUnreadableLegacyInPlaceWhenSqlitePromotionFails() throws IOException {
+        Path legacyPath = tempDir.resolve("links.nitrite");
+        createLegacyDatabase(legacyPath);
+        Path backup = tempDir.resolve("links.nitrite.bak-202607220100.json");
+        exportLegacyDatabase(legacyPath, backup);
+        Files.writeString(legacyPath, "not a Nitrite database");
+        Path dbPath = tempDir.resolve("links.sqlite");
+        Files.createDirectory(dbPath);
+        Files.writeString(dbPath.resolve("keep"), "force promotion failure");
+
+        LinksSqliteDatabase database = new LinksSqliteDatabase(dbPath);
+        try {
+            assertThat(database.isAvailable()).isFalse();
+            assertThat(legacyPath).exists();
+        } finally {
+            database.destroy();
+        }
+    }
+
     private List<Path> snapshotFiles() throws IOException {
         try (var files = Files.list(tempDir)) {
             return files.filter(path -> path.getFileName().toString()

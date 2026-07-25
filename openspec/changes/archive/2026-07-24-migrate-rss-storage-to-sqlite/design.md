@@ -163,16 +163,16 @@ The next plugin startup closes the failure loop through validation, snapshot rec
 database creation. Individual migration skips and snapshot failures are logged but do not create
 Console warnings; actual RSS unavailability remains explicit to Console API callers.
 
-### 7. Package and validate native SQLite support
+### 7. Package and qualify native SQLite support
 
 Use Xerial SQLite JDBC as a normal plugin runtime dependency and retain its native libraries in the
-plugin artifact. A build verification task checks the JDBC service metadata, driver class, and the
-packaged Linux glibc/musl, macOS, and Windows x86_64/ARM64 native entries. This structural check
-does not replace runtime qualification. Release validation still covers Linux glibc and musl on
-x86_64 and ARM64, plus macOS development, plugin restart, and hot reload. SQLite storage is
-supported only on a local filesystem with reliable locking. Native extraction must work when the
-system temporary directory is mounted `noexec`, using an explicitly controlled
-writable/executable location if the driver requires it.
+plugin artifact. The normal Gradle dependency and plugin packaging path own those contents; a
+separate task that rechecks individual archive entries would duplicate the packaging mechanism
+without qualifying native loading. Release validation still covers Linux glibc and musl on x86_64
+and ARM64, plus macOS development, plugin restart, and hot reload. SQLite storage is supported only
+on a local filesystem with reliable locking. Native extraction must work when the system temporary
+directory is mounted `noexec`, using an explicitly controlled writable/executable location if the
+driver requires it.
 
 ## Risks / Trade-offs
 
