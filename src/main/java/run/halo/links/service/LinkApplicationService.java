@@ -60,6 +60,22 @@ public class LinkApplicationService {
             return CreateResult.invalid("displayName", submission.displayName(),
                 "网站名称不能为空");
         }
+        if (StringUtils.isNotBlank(submission.logo())
+            && LinkUrlCanonicalizer.canonicalKey(submission.logo()).isEmpty()) {
+            return CreateResult.invalid("logo", submission.logo(), "Logo 地址格式错误");
+        }
+        if (StringUtils.isNotBlank(submission.backlink())
+            && LinkUrlCanonicalizer.canonicalKey(submission.backlink()).isEmpty()) {
+            return CreateResult.invalid("backlink", submission.backlink(), "反链地址格式错误");
+        }
+        if (submission.feedUrls() != null) {
+            for (var feedUrl : submission.feedUrls()) {
+                if (StringUtils.isNotBlank(feedUrl)
+                    && LinkUrlCanonicalizer.canonicalKey(feedUrl).isEmpty()) {
+                    return CreateResult.invalid("feedUrls", feedUrl, "订阅地址格式错误");
+                }
+            }
+        }
         return null;
     }
 
@@ -86,8 +102,7 @@ public class LinkApplicationService {
                 && incomingCommentName.equals(commentName(existingOrigin))) {
                 return true;
             }
-            var existingKey = LinkUrlCanonicalizer.canonicalKey(spec.getUrl());
-            if (existingKey.isEmpty() || !canonicalUrl.equals(existingKey.get())) {
+            if (!LinkApplicationUrlOccupancy.usesCanonicalUrl(application, canonicalUrl)) {
                 continue;
             }
             var status = spec.getStatus();

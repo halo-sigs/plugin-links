@@ -171,7 +171,7 @@ enabled.
 #### Scenario: Submission with optional fields
 - **WHEN** application and visitor submission are enabled
 - **AND** an anonymous user submits a form with `url`, `displayName`, `logo`, `description`, `email`,
-  `backlink`, and `feedUrls`
+  `backlink`, and `feedUrls`, where every provided URL uses HTTP or HTTPS
 - **THEN** the system stores all provided fields in the `LinkApplication`
 - **AND** redirects the browser to `/links?applied=success`
 
@@ -213,6 +213,11 @@ enabled.
 - **THEN** the system rejects the submission
 - **AND** redirects the browser to
   `/links?applied=error&field=url&value=<submitted-value>&message=URL格式错误`
+
+#### Scenario: Invalid optional URL format
+- **WHEN** an anonymous user submits a non-HTTP/HTTPS `logo`, `backlink`, or `feedUrls` value
+- **THEN** the system rejects the submission
+- **AND** identifies the invalid optional field in the redirect
 
 #### Scenario: Missing required fields
 - **WHEN** an anonymous user submits a form without `url` or `displayName`

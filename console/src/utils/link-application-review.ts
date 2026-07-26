@@ -1,4 +1,4 @@
-import type { ApprovalRequest, LinkApplication, LinkApplicationCleanupResult } from "@/api/generated";
+import type { ApprovalRequest, ApproveRequest, LinkApplication, LinkApplicationCleanupResult } from "@/api/generated";
 import axios from "axios";
 
 export interface LinkApplicationHistoryFilterInput {
@@ -69,6 +69,20 @@ export function linkApplicationReviewMode(application: LinkApplication): LinkApp
     default:
       return "readonly";
   }
+}
+
+export function buildLinkApplicationApprovalRequest(data: ApproveRequest): ApproveRequest {
+  return {
+    url: data.url?.trim(),
+    displayName: data.displayName?.trim(),
+    logo: data.logo ?? "",
+    description: data.description ?? "",
+    groupName: data.groupName || undefined,
+  };
+}
+
+export function canVerifyLinkApplicationBacklink(application: LinkApplication): boolean {
+  return !!application.spec.backlink && application.spec.status !== "APPROVING";
 }
 
 export function linkApplicationEffectiveFields(application: LinkApplication): ApprovalRequest {

@@ -97,11 +97,11 @@
 | ---- | ---- | ---- |
 | `url` | 是 | 申请网站的 HTTP/HTTPS 地址 |
 | `displayName` | 是 | 网站名称 |
-| `logo` | 否 | Logo 地址 |
+| `logo` | 否 | Logo 的 HTTP/HTTPS 地址 |
 | `description` | 否 | 网站描述 |
 | `email` | 否 | 联系邮箱 |
-| `backlink` | 否 | 反链页面地址 |
-| `feedUrls` | 否 | RSS/Atom 地址，一行一个 |
+| `backlink` | 否 | 反链页面的 HTTP/HTTPS 地址 |
+| `feedUrls` | 否 | RSS/Atom 的 HTTP/HTTPS 地址，一行一个 |
 | `_csrf` | 是 | 使用模板变量 `csrfToken` |
 
 HTML 示例：

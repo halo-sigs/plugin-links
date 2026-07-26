@@ -8,7 +8,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 /**
- * Serializes application creation by canonical URL within one plugin process.
+ * Serializes application creation and approval reservation by canonical URL within one plugin
+ * process.
  */
 @Component
 public class LinkApplicationCreationCoordinator {

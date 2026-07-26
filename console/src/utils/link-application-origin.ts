@@ -81,9 +81,6 @@ export function linkApplicationCommentRoute(application: LinkApplication): Route
   }
   return {
     name: "Comments",
-    query: {
-      keyword: commentName,
-    },
   };
 }
 

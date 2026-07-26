@@ -61,6 +61,7 @@ const groupCreationModalVisible = ref(false);
 const groupSortModalVisible = ref(false);
 const linkImportModalVisible = ref(false);
 const linkApplicationListModalVisible = ref(false);
+const linkApplicationInitialStatus = shallowRef("");
 const linkApplicationDetailVisible = ref(false);
 const selectedApplication = ref<LinkApplication | undefined>(undefined);
 const isVerifyingAllLinks = shallowRef(false);
@@ -68,6 +69,11 @@ const selectedStatusFilter = shallowRef<LinkVerificationStatusFilter>("all");
 
 const pendingCount = computed(() => pendingApplicationsPage.value?.total ?? 0);
 const recognitionUnavailable = computed(() => isCommentRecognitionUnavailable(aiStatus.value));
+
+function openLinkApplicationList(initialStatus = "") {
+  linkApplicationInitialStatus.value = initialStatus;
+  linkApplicationListModalVisible.value = true;
+}
 
 const statusFilterOptions: Array<{ label: string; value: LinkVerificationStatusFilter }> = [
   { label: "全部", value: "all" },
@@ -154,7 +160,7 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
       class=":uno: mb-4"
     >
       <template #description>
-        <button @click="linkApplicationListModalVisible = true" class=":uno: cursor-pointer hover:underline">
+        <button @click="openLinkApplicationList('PENDING')" class=":uno: cursor-pointer hover:underline">
           查看并处理申请
         </button>
       </template>
@@ -167,6 +173,7 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
         <VButton size="sm" @click="groupCreationModalVisible = true">新建分组</VButton>
         <VButton size="sm" @click="groupSortModalVisible = true">调整排序</VButton>
         <VButton size="sm" @click="linkImportModalVisible = true">批量导入</VButton>
+        <VButton size="sm" @click="openLinkApplicationList()">友链申请</VButton>
         <VButton size="sm" :loading="isVerifyingAllLinks" @click="handleVerifyAllLinks">
           <template #icon>
             <RiPulseLine />
@@ -215,6 +222,7 @@ function filterGroupsByStatus(groups: GroupWithLinks[], filter: LinkVerification
   <LinkImportModal v-if="linkImportModalVisible" @close="linkImportModalVisible = false" />
   <LinkApplicationListModal
     v-if="linkApplicationListModalVisible"
+    :initial-status="linkApplicationInitialStatus"
     @close="linkApplicationListModalVisible = false"
     @view-detail="
       (app: LinkApplication) => {

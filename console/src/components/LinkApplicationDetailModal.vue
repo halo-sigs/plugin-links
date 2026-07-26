@@ -9,6 +9,8 @@ import {
 } from "@/composables/use-link-application";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import {
+  buildLinkApplicationApprovalRequest,
+  canVerifyLinkApplicationBacklink,
   linkApplicationEffectiveFields,
   linkApplicationRejectDescription,
   linkApplicationReviewMode,
@@ -42,6 +44,7 @@ const { mutate: verifyApplication, data: verifyResult } = useVerifyBacklink();
 const reviewMode = computed(() => linkApplicationReviewMode(props.application));
 const statusMeta = computed(() => linkApplicationStatusMeta(props.application.spec.status));
 const frozenFields = computed(() => linkApplicationEffectiveFields(props.application));
+const backlinkVerificationAvailable = computed(() => canVerifyLinkApplicationBacklink(props.application));
 
 const modalTitle = computed(() =>
   reviewMode.value === "editable"
@@ -92,13 +95,7 @@ function handleApprove(data: ApproveRequest) {
   approveApplication(
     {
       name: props.application.metadata.name,
-      request: {
-        url: data.url.trim(),
-        displayName: data.displayName.trim(),
-        logo: data.logo || undefined,
-        description: data.description || undefined,
-        groupName: data.groupName || undefined,
-      },
+      request: buildLinkApplicationApprovalRequest(data),
     },
     {
       onSuccess: handleApproveSuccess,
@@ -254,7 +251,9 @@ function handleDelete() {
           >
             {{ application.spec.backlink }}
           </a>
-          <VButton size="xs" type="secondary" @click="handleVerify"> 验证反链 </VButton>
+          <VButton v-if="backlinkVerificationAvailable" size="xs" type="secondary" @click="handleVerify">
+            验证反链
+          </VButton>
         </div>
         <div
           v-if="verifyResult"

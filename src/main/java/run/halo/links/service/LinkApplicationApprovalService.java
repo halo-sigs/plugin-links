@@ -35,6 +35,7 @@ public class LinkApplicationApprovalService {
     private final ReactiveExtensionClient client;
     private final LinkVerificationService verificationService;
     private final LinkFeedService feedService;
+    private final LinkApplicationCreationCoordinator creationCoordinator;
 
     public Mono<Link> approve(String applicationName, ApprovalCommand command) {
         return client.fetch(LinkApplication.class, applicationName)
@@ -59,19 +60,21 @@ public class LinkApplicationApprovalService {
 
     private Mono<Link> reserve(LinkApplication application, ApprovalCommand command) {
         var frozen = normalize(application, command);
-        return validateBeforeReservation(application, frozen)
-            .then(Mono.defer(() -> {
-                var approval = new LinkApplication.Approval();
-                approval.setLinkName(application.getMetadata().getName());
-                approval.setRequest(frozen);
-                application.getSpec().setApproval(approval);
-                application.getSpec().setStatus(LinkApplication.Status.APPROVING);
-                return client.update(application)
-                    .onErrorResume(this::isConflict, error ->
-                        client.fetch(LinkApplication.class,
-                                application.getMetadata().getName())
-                            .switchIfEmpty(Mono.error(error)));
-            }))
+        String canonicalUrl = LinkUrlCanonicalizer.canonicalKey(frozen.getUrl()).orElseThrow();
+        return creationCoordinator.coordinate(canonicalUrl,
+                () -> validateBeforeReservation(application, frozen)
+                    .then(Mono.defer(() -> {
+                        var approval = new LinkApplication.Approval();
+                        approval.setLinkName(application.getMetadata().getName());
+                        approval.setRequest(frozen);
+                        application.getSpec().setApproval(approval);
+                        application.getSpec().setStatus(LinkApplication.Status.APPROVING);
+                        return client.update(application)
+                            .onErrorResume(this::isConflict, error ->
+                                client.fetch(LinkApplication.class,
+                                        application.getMetadata().getName())
+                                    .switchIfEmpty(Mono.error(error)));
+                    })))
             .flatMap(current -> current.getSpec().getStatus() == LinkApplication.Status.PENDING
                 ? Mono.error(conflict("Approval reservation did not change application state."))
                 : approve(current, command));
@@ -130,9 +133,8 @@ public class LinkApplicationApprovalService {
                     .filter(candidate -> !Objects.equals(candidate.getMetadata().getName(),
                         application.getMetadata().getName()))
                     .filter(candidate -> candidate.getSpec() != null)
-                    .filter(candidate -> LinkUrlCanonicalizer
-                        .canonicalKey(candidate.getSpec().getUrl())
-                        .filter(canonicalUrl::equals).isPresent())
+                    .filter(candidate -> LinkApplicationUrlOccupancy
+                        .usesCanonicalUrl(candidate, canonicalUrl))
                     .anyMatch(LinkApplicationApprovalService::blocksApproval);
                 if (formalDuplicate || applicationDuplicate) {
                     return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,

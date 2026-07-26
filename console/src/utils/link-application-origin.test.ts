@@ -53,9 +53,6 @@ describe("link application source presentation", () => {
 
     expect(linkApplicationCommentRoute(withComment)).toEqual({
       name: "Comments",
-      query: {
-        keyword: "comment-a",
-      },
     });
     expect(linkApplicationCommentRoute(withoutComment)).toBeUndefined();
   });

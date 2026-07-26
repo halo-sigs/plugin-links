@@ -41,7 +41,7 @@ const commentRoute = computed(() => linkApplicationCommentRoute(props.applicatio
         <dd v-if="isLoading" class=":uno: mt-1 text-gray-500">正在加载评论...</dd>
         <dd v-else-if="originComment" class=":uno: mt-1">
           <RouterLink v-if="commentRoute" :to="commentRoute" class=":uno: text-blue-600 hover:underline">
-            在评论管理中查找
+            打开评论管理
           </RouterLink>
           <span class=":uno: ml-2 break-all text-xs text-gray-400">{{ commentName }}</span>
         </dd>

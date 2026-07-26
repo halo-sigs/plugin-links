@@ -47,7 +47,8 @@ class LinkApplicationApprovalServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new LinkApplicationApprovalService(client, verificationService, feedService);
+        service = new LinkApplicationApprovalService(client, verificationService, feedService,
+            new LinkApplicationCreationCoordinator());
     }
 
     @Test
@@ -133,6 +134,34 @@ class LinkApplicationApprovalServiceTest {
                 new LinkApplicationApprovalService.ApprovalCommand(
                     "ftp://example.com", null, null, null, null)))
             .expectError(ResponseStatusException.class)
+            .verify();
+
+        assertThat(application.getSpec().getStatus()).isEqualTo(LinkApplication.Status.PENDING);
+        verify(client, never()).update(any(LinkApplication.class));
+        verify(client, never()).create(any(Link.class));
+    }
+
+    @Test
+    void shouldRejectUrlFrozenByAnotherApprovingApplication() {
+        var application = pending("application-b");
+        application.getSpec().setUrl("https://application-b.example.com");
+        var reserved = approving("application-a", "https://reserved.example.com");
+        reserved.getSpec().setUrl("https://application-a.example.com");
+        when(client.fetch(LinkApplication.class, "application-b"))
+            .thenReturn(Mono.just(application));
+        when(client.listAll(eq(Link.class), any(ListOptions.class), any(Sort.class)))
+            .thenReturn(Flux.empty());
+        when(client.listAll(eq(LinkApplication.class), any(ListOptions.class), any(Sort.class)))
+            .thenReturn(Flux.just(reserved));
+
+        StepVerifier.create(service.approve("application-b",
+                new LinkApplicationApprovalService.ApprovalCommand(
+                    "https://reserved.example.com/", null, null, null, null)))
+            .expectErrorSatisfies(error -> {
+                assertThat(error).isInstanceOf(ResponseStatusException.class);
+                assertThat(((ResponseStatusException) error).getStatusCode().value())
+                    .isEqualTo(409);
+            })
             .verify();
 
         assertThat(application.getSpec().getStatus()).isEqualTo(LinkApplication.Status.PENDING);

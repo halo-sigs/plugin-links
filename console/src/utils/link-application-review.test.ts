@@ -1,8 +1,10 @@
 import type { ApprovalRequest, LinkApplication } from "@/api/generated";
 import { describe, expect, it } from "@rstest/core";
 import {
+  buildLinkApplicationApprovalRequest,
   buildLinkApplicationCleanupParams,
   buildLinkApplicationQuery,
+  canVerifyLinkApplicationBacklink,
   linkApplicationCleanupDescription,
   linkApplicationCleanupSummary,
   linkApplicationEffectiveFields,
@@ -62,6 +64,37 @@ describe("linkApplicationReviewMode", () => {
     expect(linkApplicationReviewMode(application({ status: "APPROVING" }))).toBe("resume");
     expect(linkApplicationReviewMode(application({ status: "APPROVED" }))).toBe("readonly");
     expect(linkApplicationReviewMode(application({ status: "REJECTED" }))).toBe("readonly");
+  });
+});
+
+describe("buildLinkApplicationApprovalRequest", () => {
+  it("preserves explicit empty optional fields so approval can clear them", () => {
+    expect(
+      buildLinkApplicationApprovalRequest({
+        url: " https://example.com ",
+        displayName: " Example ",
+        logo: "",
+        description: "",
+        groupName: "",
+      }),
+    ).toEqual({
+      url: "https://example.com",
+      displayName: "Example",
+      logo: "",
+      description: "",
+      groupName: undefined,
+    });
+  });
+});
+
+describe("canVerifyLinkApplicationBacklink", () => {
+  it("does not expose backlink verification while approval is reserved", () => {
+    expect(
+      canVerifyLinkApplicationBacklink(application({ status: "PENDING", backlink: "https://example.com/links" })),
+    ).toBe(true);
+    expect(
+      canVerifyLinkApplicationBacklink(application({ status: "APPROVING", backlink: "https://example.com/links" })),
+    ).toBe(false);
   });
 });
 
@@ -168,6 +201,7 @@ function application(options: {
   status?: string;
   originType?: "FORM" | "COMMENT";
   approval?: { linkName: string; request: ApprovalRequest };
+  backlink?: string;
 }): LinkApplication {
   return {
     apiVersion: "core.halo.run/v1alpha1",
@@ -179,6 +213,7 @@ function application(options: {
       displayName: "Example",
       status: options.status ?? "PENDING",
       url: "https://example.com",
+      backlink: options.backlink,
       origin: options.originType ? { type: options.originType } : undefined,
       approval: options.approval,
     },

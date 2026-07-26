@@ -69,6 +69,40 @@ class LinkApplicationServiceTest {
     }
 
     @Test
+    void shouldRejectInvalidLogoUrl() {
+        var invalidLogo = submissionWithOptionalUrls("javascript:alert(1)", null, List.of());
+        StepVerifier.create(service.create(invalidLogo))
+            .assertNext(result -> {
+                assertThat(result.status()).isEqualTo(LinkApplicationService.CreateStatus.INVALID);
+                assertThat(result.field()).isEqualTo("logo");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldRejectInvalidBacklinkUrl() {
+        var invalidBacklink = submissionWithOptionalUrls(null, "javascript:alert(1)", List.of());
+        StepVerifier.create(service.create(invalidBacklink))
+            .assertNext(result -> {
+                assertThat(result.status()).isEqualTo(LinkApplicationService.CreateStatus.INVALID);
+                assertThat(result.field()).isEqualTo("backlink");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldRejectInvalidFeedUrl() {
+        var invalidFeed = submissionWithOptionalUrls(null, null,
+            List.of("https://feed.example.com/rss.xml", "file:///etc/passwd"));
+        StepVerifier.create(service.create(invalidFeed))
+            .assertNext(result -> {
+                assertThat(result.status()).isEqualTo(LinkApplicationService.CreateStatus.INVALID);
+                assertThat(result.field()).isEqualTo("feedUrls");
+            })
+            .verifyComplete();
+    }
+
+    @Test
     void shouldBlockCanonicalMatchWithFormalLink() {
         givenExisting(List.of(link("https://example.com/")), List.of());
 
@@ -87,6 +121,23 @@ class LinkApplicationServiceTest {
             verifyDuplicate(submission("https://example.com/",
                 LinkApplication.OriginType.FORM, null));
         }
+    }
+
+    @Test
+    void shouldBlockUrlFrozenByApprovingApplication() {
+        var approving = application("https://original.example.com",
+            LinkApplication.Status.APPROVING, LinkApplication.OriginType.FORM, null);
+        var approvalRequest = new LinkApplication.ApprovalRequest();
+        approvalRequest.setUrl("https://reserved.example.com");
+        approvalRequest.setDisplayName("Reserved");
+        var approval = new LinkApplication.Approval();
+        approval.setLinkName("reserved-link");
+        approval.setRequest(approvalRequest);
+        approving.getSpec().setApproval(approval);
+        givenExisting(List.of(), List.of(approving));
+
+        verifyDuplicate(submission("https://reserved.example.com/",
+            LinkApplication.OriginType.FORM, null));
     }
 
     @Test
@@ -229,6 +280,22 @@ class LinkApplicationServiceTest {
             null,
             null,
             List.of(),
+            origin
+        );
+    }
+
+    private static LinkApplicationService.Submission submissionWithOptionalUrls(String logo,
+        String backlink, List<String> feedUrls) {
+        var origin = new LinkApplication.Origin();
+        origin.setType(LinkApplication.OriginType.FORM);
+        return new LinkApplicationService.Submission(
+            "https://example.com",
+            "Example",
+            logo,
+            null,
+            null,
+            backlink,
+            feedUrls,
             origin
         );
     }
