@@ -44,7 +44,9 @@ const queryClient = useQueryClient();
 
 const { data: groups } = useLinkGroupFetch();
 
-const otherGroups = computed(() => groups.value?.filter((i) => i.metadata.name !== group.value?.metadata.name));
+const otherGroups = computed(
+  () => groups.value?.filter((i) => i.metadata?.name && i.metadata.name !== group.value?.metadata?.name) || [],
+);
 
 const creationModalVisible = ref(false);
 
@@ -163,6 +165,10 @@ function handleDeleteInBatch() {
 }
 
 function handleMoveToGroup(group: LinkGroupVo) {
+  const targetName = group.metadata?.name;
+  if (!targetName) {
+    return;
+  }
   Dialog.warning({
     title: "移动到分组",
     description: `确认将选中的链接移动到${group.spec?.displayName}分组吗？`,
@@ -175,7 +181,7 @@ function handleMoveToGroup(group: LinkGroupVo) {
           chunk.map((linkName) =>
             linksCoreApiClient.link.patchLink({
               name: linkName,
-              jsonPatchInner: [{ op: "add", path: "/spec/groupName", value: group.metadata.name }],
+              jsonPatchInner: [{ op: "add", path: "/spec/groupName", value: targetName }],
             }),
           ),
         );
@@ -241,8 +247,8 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
                 <VDropdownItem
                   @click="handleMoveToGroup(item)"
                   v-for="item in otherGroups"
-                  :key="item.metadata.name"
-                  :value="item.metadata.name"
+                  :key="item.metadata?.name"
+                  :value="item.metadata?.name"
                 >
                   {{ item.spec?.displayName }}
                 </VDropdownItem>

@@ -1,5 +1,7 @@
 package run.halo.links.endpoint;
 
+import org.springframework.util.ClassUtils;
+
 /**
  * Utility class for checking whether the ai-foundation plugin is available.
  */
@@ -14,11 +16,10 @@ public final class AiFoundationAvailability {
      * Returns {@code true} if the ai-foundation plugin classes are present on the classpath.
      */
     public static boolean isAvailable() {
-        try {
-            Class.forName(AI_MODEL_SERVICE_CLASS);
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return isAvailable(AiFoundationAvailability.class.getClassLoader());
+    }
+
+    static boolean isAvailable(ClassLoader classLoader) {
+        return ClassUtils.isPresent(AI_MODEL_SERVICE_CLASS, classLoader);
     }
 }

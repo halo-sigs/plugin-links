@@ -64,6 +64,78 @@ spec:
           name: publicEnabled
           value: false
           help: 部分主题可能需要显示 RSS 订阅信息，开启后匿名访问者和主题可以读取已抓取的 RSS 条目，请确认风险之后再决定是否开启
+    - group: application
+      label: 友链申请
+      formSchema:
+        - $formkit: checkbox
+          label: 启用友链申请
+          name: enabled
+          id: link_application_enabled
+          value: false
+          help: 总开关。关闭后访客提交和评论自动识别都不会创建新申请，已有申请仍可继续审核
+        - $formkit: group
+          if: "$get(link_application_enabled).value === true"
+          name: selfSubmission
+          label: 访客自助申请
+          children:
+            - $formkit: checkbox
+              label: 允许访客提交
+              name: enabled
+              value: true
+              help: 允许主题通过 /links/apply 提交表单，主题应根据 linkApplicationEnabled 决定是否展示申请入口
+        - $formkit: group
+          if: "$get(link_application_enabled).value === true"
+          name: commentRecognition
+          label: 从新评论中识别友链申请
+          children:
+            - $formkit: checkbox
+              label: 开启
+              name: enabled
+              id: comment_application_recognition_enabled
+              value: false
+              help: 仅处理开启后新创建且来源匹配的顶级评论，不会扫描历史评论。匹配评论的原始内容会发送给所选 AI 模型，隐藏或未审核评论也可能被处理
+            - $formkit: aiModelSelector
+              if: "$get(comment_application_recognition_enabled).value === true"
+              modelType: language
+              requiredFeatures:
+                - structured-output
+              clearable: false
+              name: modelName
+              key: recognitionModelName
+              label: 识别模型
+              placeholder: 请选择支持结构化输出的语言模型
+              validation: required
+            - $formkit: repeater
+              if: "$get(comment_application_recognition_enabled).value === true"
+              name: sources
+              label: 评论来源
+              value: []
+              validation: required
+              min: 1
+              children:
+                - $formkit: select
+                  name: type
+                  label: 页面类型
+                  validation: required
+                  options:
+                    - label: 链接页面
+                      value: LINKS
+                    - label: 文章
+                      value: POST
+                    - label: 页面
+                      value: SINGLE_PAGE
+                - $formkit: postSelect
+                  if: "$value.type === 'POST'"
+                  name: name
+                  label: 文章
+                  validation: required
+                  clearable: false
+                - $formkit: singlePageSelect
+                  if: "$value.type === 'SINGLE_PAGE'"
+                  name: name
+                  label: 页面
+                  validation: required
+                  clearable: false
     - group: ai
       label: AI
       formSchema:
@@ -85,6 +157,7 @@ spec:
               value: true
             - $formkit: aiModelSelector
               if: "$get(ai_comment_extraction_enabled).value === true"
+              label: AI 模型
               modelType: language
               clearable: true
               name: modelName

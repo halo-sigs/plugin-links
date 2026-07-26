@@ -51,7 +51,7 @@ function handleClick() {
 function handleContextMenu(event: MouseEvent) {
   if (!props.selectMode && !props.sortMode) {
     const moveItems: MenuItem[] = moveTargetGroups.value.map((group) => ({
-      label: group.spec?.displayName || group.metadata.name,
+      label: group.spec?.displayName || group.metadata?.name || "",
       onClick: () => handleMove(group),
     }));
 
@@ -94,7 +94,9 @@ function handleContextMenu(event: MouseEvent) {
 
 const displayName = computed(() => props.link.spec?.displayName || props.link.metadata.name);
 const linkUrl = computed(() => props.link.spec?.url || "");
-const moveTargetGroups = computed(() => props.groups?.filter((group) => group.metadata.name !== props.groupName) || []);
+const moveTargetGroups = computed(
+  () => props.groups?.filter((group) => group.metadata?.name && group.metadata.name !== props.groupName) || [],
+);
 
 const rssStatusTone = computed<LinkVerificationTone>(() => {
   if (hasPartialRssFailure(props.link)) {
@@ -214,7 +216,7 @@ function handleMove(group?: LinkGroupVo) {
     title: "移动链接",
     description: `确认将 ${displayName.value} 移动到${targetName}吗？`,
     confirmType: "danger",
-    onConfirm: () => moveLink(group?.metadata.name),
+    onConfirm: () => moveLink(group?.metadata?.name),
   });
 }
 

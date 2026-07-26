@@ -4,6 +4,7 @@ import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -18,6 +19,7 @@ import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.dto.LinkAiFeatureStatus;
 import run.halo.links.dto.LinkCommentSummaryDTO;
+import run.halo.links.service.ai.LinkAiService;
 
 /**
  * Console endpoint for AI-assisted link feature status and recent comments.
@@ -28,6 +30,8 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
 
     private final ReactiveExtensionClient client;
     private final LinkAiSettingsFetcher settingsFetcher;
+    private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
+    private final ObjectProvider<LinkAiService> aiServiceProvider;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
@@ -58,25 +62,62 @@ public class LinkAiStatusEndpoint implements CustomEndpoint {
     }
 
     Mono<ServerResponse> getAiStatus(ServerRequest request) {
-        return settingsFetcher.fetch()
-            .map(settings -> new LinkAiFeatureStatus(
-                settings.aiEnabled(),
-                AiFoundationAvailability.isAvailable(),
-                settings.commentExtractionEnabled(),
-                settings.commentExtractionModelName()
-            ))
+        return Mono.zip(settingsFetcher.fetch(), applicationSettingsFetcher.fetch())
+            .flatMap(settingsTuple -> {
+                var settings = settingsTuple.getT1();
+                var applicationSettings = settingsTuple.getT2();
+                var aiService = aiServiceProvider.getIfAvailable();
+                var serviceOperational = aiService == null
+                    ? Mono.just(false)
+                    : aiService.isOperational(null).onErrorReturn(false);
+                var extractionOperational = operational(
+                    aiService,
+                    settings.commentExtractionEnabled(),
+                    settings.commentExtractionModelName()
+                );
+                var recognitionOperational = operational(
+                    aiService,
+                    applicationSettings.commentRecognitionEnabled(),
+                    applicationSettings.commentRecognitionModelName()
+                );
+                return Mono.zip(serviceOperational, extractionOperational,
+                        recognitionOperational)
+                    .map(operational -> new LinkAiFeatureStatus(
+                        settings.aiEnabled(),
+                        AiFoundationAvailability.isAvailable(),
+                        operational.getT1(),
+                        settings.commentExtractionEnabled(),
+                        operational.getT2(),
+                        settings.commentExtractionModelName(),
+                        applicationSettings.commentRecognitionEnabled(),
+                        operational.getT3(),
+                        applicationSettings.commentRecognitionModelName()
+                    ));
+            })
             .flatMap(status -> ServerResponse.ok().bodyValue(status));
     }
 
     Mono<ServerResponse> listRecentComments(ServerRequest request) {
         return settingsFetcher.fetch()
             .flatMap(settings -> {
-                if (!settings.commentExtractionEnabled()
-                    || !AiFoundationAvailability.isAvailable()) {
+                var aiService = aiServiceProvider.getIfAvailable();
+                if (!settings.commentExtractionEnabled() || aiService == null) {
                     return ServerResponse.notFound().build();
                 }
-                return doListRecentComments();
+                return aiService.isOperational(settings.commentExtractionModelName())
+                    .flatMap(operational -> operational
+                        ? doListRecentComments()
+                        : ServerResponse.notFound().build());
             });
+    }
+
+    private static Mono<Boolean> operational(LinkAiService aiService, boolean enabled,
+        String modelName) {
+        if (!enabled || aiService == null) {
+            return Mono.just(false);
+        }
+        return aiService.isOperational(modelName)
+            .onErrorReturn(false);
     }
 
     private Mono<ServerResponse> doListRecentComments() {

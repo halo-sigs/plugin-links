@@ -42,10 +42,16 @@ watch(
 
 const groupOptions = computed(() => [
   { value: "", label: "未分组" },
-  ...(groups.value || []).map((group) => ({
-    value: group.metadata.name,
-    label: group.spec?.displayName || group.metadata.name,
-  })),
+  ...(groups.value || []).flatMap((group) => {
+    const name = group.metadata?.name;
+    if (!name) {
+      return [];
+    }
+    return {
+      value: name,
+      label: group.spec?.displayName || name,
+    };
+  }),
 ]);
 
 async function handleParse() {

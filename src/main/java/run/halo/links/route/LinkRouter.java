@@ -1,6 +1,7 @@
 package run.halo.links.route;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
+import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 import static run.halo.app.extension.index.query.Queries.equal;
 import static run.halo.app.extension.index.query.Queries.isNull;
@@ -13,17 +14,25 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.security.web.server.csrf.CsrfToken;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.server.HandlerFunction;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.thymeleaf.context.LazyContextVariable;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
+import run.halo.links.extension.LinkApplication;
+import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.finders.LinkFinder;
+import run.halo.links.security.LinkApplicationRateLimiter;
+import run.halo.links.service.LinkApplicationService;
 import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
@@ -40,10 +49,117 @@ public class LinkRouter {
     private final LinkPublicQueryService linkPublicQueryService;
     private final PluginContext pluginContext;
     private final ReactiveSettingFetcher settingFetcher;
+    private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
+    private final LinkApplicationService applicationService;
+    private final LinkApplicationRateLimiter rateLimiter;
 
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
-        return route(GET("/links"), listHandler());
+        return route(GET("/links"), listHandler())
+            .andRoute(POST("/links/apply").and(
+                contentType(MediaType.APPLICATION_FORM_URLENCODED)), applyHandler());
+    }
+
+    private static org.springframework.web.reactive.function.server.RequestPredicate contentType(
+        MediaType mediaType) {
+        return org.springframework.web.reactive.function.server.RequestPredicates.contentType(
+            mediaType);
+    }
+
+    private HandlerFunction<ServerResponse> applyHandler() {
+        return request -> applicationSettingsFetcher.fetch()
+            .flatMap(settings -> {
+                if (!settings.selfSubmissionEnabled()) {
+                    return redirectDisabled();
+                }
+                if (!rateLimiter.isAllowed(request)) {
+                    return redirectWithError("提交过于频繁，请稍后再试");
+                }
+                return request.formData()
+                .flatMap(formData -> {
+                    String url = getFormValue(formData, "url");
+                    String displayName = getFormValue(formData, "displayName");
+
+                    var origin = new LinkApplication.Origin();
+                    origin.setType(LinkApplication.OriginType.FORM);
+                    var submission = new LinkApplicationService.Submission(
+                        url,
+                        displayName,
+                        getFormValue(formData, "logo"),
+                        getFormValue(formData, "description"),
+                        getFormValue(formData, "email"),
+                        getFormValue(formData, "backlink"),
+                        parseFeedUrls(getFormValue(formData, "feedUrls")),
+                        origin
+                    );
+                    return applicationService.create(submission)
+                        .flatMap(result -> {
+                            if (result.status()
+                                == LinkApplicationService.CreateStatus.CREATED) {
+                                return redirectSuccess();
+                            }
+                            return redirectWithFieldError(result.field(), result.value(),
+                                result.message());
+                        });
+                });
+            });
+    }
+
+    private static String getFormValue(MultiValueMap<String, String> formData, String key) {
+        List<String> values = formData.get(key);
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        String value = values.get(0);
+        return StringUtils.isBlank(value) ? null : value.trim();
+    }
+
+    private static List<String> parseFeedUrls(String value) {
+        if (StringUtils.isBlank(value)) {
+            return List.of();
+        }
+        return List.of(value.split("\\r?\\n")).stream()
+            .map(String::trim)
+            .filter(StringUtils::isNotBlank)
+            .toList();
+    }
+
+    private static Mono<ServerResponse> redirectSuccess() {
+        return ServerResponse.seeOther(
+            UriComponentsBuilder.fromPath("/links")
+                .queryParam("applied", "success")
+                .build().toUri()
+        ).build();
+    }
+
+    private static Mono<ServerResponse> redirectWithFieldError(String field, String value,
+        String message) {
+        var builder = UriComponentsBuilder.fromPath("/links")
+            .queryParam("applied", "error")
+            .queryParam("field", field)
+            .queryParam("message", message);
+        if (StringUtils.isNotBlank(value)) {
+            builder.queryParam("value", value);
+        }
+        return ServerResponse.seeOther(builder.build().toUri()).build();
+    }
+
+    private static Mono<ServerResponse> redirectWithError(String message) {
+        return ServerResponse.seeOther(
+            UriComponentsBuilder.fromPath("/links")
+                .queryParam("applied", "error")
+                .queryParam("message", message)
+                .build().toUri()
+        ).build();
+    }
+
+    private static Mono<ServerResponse> redirectDisabled() {
+        return ServerResponse.seeOther(
+            UriComponentsBuilder.fromPath("/links")
+                .queryParam("applied", "disabled")
+                .queryParam("message", "友链申请功能暂未开放")
+                .build().toUri()
+        ).build();
     }
 
     private HandlerFunction<ServerResponse> listHandler() {
@@ -79,15 +195,31 @@ public class LinkRouter {
                 }
             };
 
-            Map<String, Object> model = new HashMap<>();
-            model.put("links", links);
-            model.put("simpleGroups", simpleGroups);
-            model.put("groups", groups);
-            model.put("group", group);
-            model.put("pluginName", pluginContext.getName());
-            model.put("linksTitle", linksTitle);
-            model.put(TEMPLATE_ID, "links");
-            return ServerResponse.ok().render("links", model);
+            @SuppressWarnings("unchecked")
+            Mono<CsrfToken> csrfTokenMono = request.exchange()
+                .getAttributeOrDefault(CsrfToken.class.getName(), Mono.empty());
+
+            var applicationEnabledMono = applicationSettingsFetcher.fetch()
+                .map(settings -> settings.selfSubmissionEnabled());
+
+            return Mono.zip(
+                    csrfTokenMono.map(CsrfToken::getToken).defaultIfEmpty(""),
+                    applicationEnabledMono
+                )
+                .map(tuple -> {
+                    Map<String, Object> model = new HashMap<>();
+                    model.put("links", links);
+                    model.put("simpleGroups", simpleGroups);
+                    model.put("groups", groups);
+                    model.put("group", group);
+                    model.put("pluginName", pluginContext.getName());
+                    model.put("linksTitle", linksTitle);
+                    model.put("csrfToken", tuple.getT1());
+                    model.put("linkApplicationEnabled", tuple.getT2());
+                    model.put(TEMPLATE_ID, "links");
+                    return model;
+                })
+                .flatMap(model -> ServerResponse.ok().render("links", model));
         };
     }
 

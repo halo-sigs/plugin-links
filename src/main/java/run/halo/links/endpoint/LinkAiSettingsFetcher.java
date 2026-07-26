@@ -16,7 +16,7 @@ public class LinkAiSettingsFetcher {
 
     private final ReactiveSettingFetcher settingFetcher;
 
-    Mono<LinkAiSettings> fetch() {
+    public Mono<LinkAiSettings> fetch() {
         return settingFetcher.fetch(SETTING_GROUP, LinkAiSettings.class)
             .defaultIfEmpty(LinkAiSettings.defaults())
             .map(LinkAiSettings::normalized)

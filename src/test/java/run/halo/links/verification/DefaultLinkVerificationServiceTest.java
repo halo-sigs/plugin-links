@@ -3,6 +3,7 @@ package run.halo.links.verification;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.web.server.ServerErrorException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -202,6 +204,51 @@ class DefaultLinkVerificationServiceTest {
             .verifyComplete();
 
         verify(fetcher, never()).fetchBacklinkPage(any());
+    }
+
+    @Test
+    void shouldRefetchAndRetryWhenLinkChangesDuringVerification() throws Exception {
+        service = immediateService();
+        Link initial = link("link-a", "https://friend.example.com", null);
+        initial.getMetadata().setVersion(0L);
+        Link reconciled = link("link-a", "https://friend.example.com", null);
+        reconciled.getMetadata().setVersion(2L);
+        Link raced = link("link-a", "https://friend.example.com", null);
+        raced.getMetadata().setVersion(3L);
+        raced.getSpec().setGroupName("friends");
+
+        when(client.fetch(Link.class, "link-a"))
+            .thenReturn(Mono.just(initial), Mono.just(reconciled), Mono.just(raced));
+        List<Long> updatedVersions = new ArrayList<>();
+        AtomicInteger updateCount = new AtomicInteger();
+        when(client.update(any(Link.class))).thenAnswer(invocation -> {
+            Link updated = invocation.getArgument(0);
+            updatedVersions.add(updated.getMetadata().getVersion());
+            int count = updateCount.incrementAndGet();
+            if (count == 1) {
+                updated.getMetadata().setVersion(1L);
+                return Mono.just(updated);
+            }
+            if (count == 2) {
+                return Mono.error(new OptimisticLockingFailureException("reconciled"));
+            }
+            updated.getMetadata().setVersion(4L);
+            return Mono.just(updated);
+        });
+        when(fetcher.fetchReachability("https://friend.example.com"))
+            .thenReturn(fetchResult("https://friend.example.com", 200, ""));
+
+        StepVerifier.create(service.verifyLink("link-a"))
+            .assertNext(updated -> {
+                assertThat(updated.getStatus().getVerification().getAccess().getState())
+                    .isEqualTo(Link.AccessState.ACCESSIBLE);
+                assertThat(updated.getSpec().getGroupName()).isEqualTo("friends");
+                assertThat(updated.getMetadata().getVersion()).isEqualTo(4L);
+            })
+            .verifyComplete();
+
+        assertThat(updatedVersions).containsExactly(0L, 2L, 3L);
+        verify(client, times(3)).fetch(Link.class, "link-a");
     }
 
     @Test

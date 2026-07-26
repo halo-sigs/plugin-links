@@ -1,7 +1,6 @@
 package run.halo.links.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,40 +15,27 @@ import org.springframework.mock.web.reactive.function.server.MockServerRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-import run.halo.aifoundation.AiModelService;
-import run.halo.aifoundation.chat.GenerateTextRequest;
-import run.halo.aifoundation.chat.GenerateTextResult;
-import run.halo.aifoundation.chat.LanguageModel;
-import run.halo.app.plugin.extensionpoint.ExtensionGetter;
 import run.halo.links.dto.LinkAiSettings;
 import run.halo.links.dto.LinkCommentExtractionResult;
 import run.halo.links.dto.LinkCommentExtractionRequest;
+import run.halo.links.service.ai.LinkAiService;
 
 @ExtendWith(MockitoExtension.class)
 class LinkAiExtractEndpointTest {
 
     @Mock
-    ExtensionGetter extensionGetter;
+    LinkAiService aiService;
 
     @Mock
     LinkAiSettingsFetcher settingsFetcher;
 
-    @Mock
-    AiModelService aiModelService;
-
-    @Mock
-    LanguageModel languageModel;
-
     @Test
     void shouldUseConfiguredLanguageModel() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(settings("model-a")));
-        when(extensionGetter.getEnabledExtension(AiModelService.class))
-            .thenReturn(Mono.just(aiModelService));
-        when(aiModelService.languageModel("model-a")).thenReturn(Mono.just(languageModel));
-        when(languageModel.generateText(any(GenerateTextRequest.class))).thenReturn(Mono.just(
-            generateTextResult()));
+        when(aiService.extract("站点：https://halo.run", "model-a"))
+            .thenReturn(Mono.just(extractionResult()));
 
-        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var endpoint = new LinkAiExtractEndpoint(aiService, settingsFetcher);
         var body = new LinkCommentExtractionRequest();
         body.setContent("站点：https://halo.run");
         var request = postRequest("/links/-/extract-from-comment", body);
@@ -59,14 +45,14 @@ class LinkAiExtractEndpointTest {
             .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
             .verifyComplete();
 
-        verify(aiModelService).languageModel("model-a");
+        verify(aiService).extract("站点：https://halo.run", "model-a");
     }
 
     @Test
     void shouldReturnNotFoundWhenCommentExtractionDisabled() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(disabledSettings()));
 
-        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var endpoint = new LinkAiExtractEndpoint(aiService, settingsFetcher);
         var body = new LinkCommentExtractionRequest();
         body.setContent("站点：https://halo.run");
         var request = postRequest("/links/-/extract-from-comment", body);
@@ -81,7 +67,7 @@ class LinkAiExtractEndpointTest {
     void shouldReturnBadRequestWhenContentIsBlank() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(settings(null)));
 
-        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var endpoint = new LinkAiExtractEndpoint(aiService, settingsFetcher);
         var body = new LinkCommentExtractionRequest();
         body.setContent("   ");
         var request = postRequest("/links/-/extract-from-comment", body);
@@ -93,15 +79,23 @@ class LinkAiExtractEndpointTest {
     }
 
     @Test
+    void shouldReturnBadRequestWhenBodyIsMissing() {
+        var endpoint = new LinkAiExtractEndpoint(aiService, settingsFetcher);
+        var request = postRequest("/links/-/extract-from-comment", null);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(400))
+            .verifyComplete();
+    }
+
+    @Test
     void shouldUseDefaultLanguageModelWhenModelNameIsNull() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(settings(null)));
-        when(extensionGetter.getEnabledExtension(AiModelService.class))
-            .thenReturn(Mono.just(aiModelService));
-        when(aiModelService.languageModel(null)).thenReturn(Mono.just(languageModel));
-        when(languageModel.generateText(any(GenerateTextRequest.class))).thenReturn(Mono.just(
-            generateTextResult()));
+        when(aiService.extract("站点：https://halo.run", null))
+            .thenReturn(Mono.just(extractionResult()));
 
-        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var endpoint = new LinkAiExtractEndpoint(aiService, settingsFetcher);
         var body = new LinkCommentExtractionRequest();
         body.setContent("站点：https://halo.run");
         var request = postRequest("/links/-/extract-from-comment", body);
@@ -111,16 +105,16 @@ class LinkAiExtractEndpointTest {
             .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
             .verifyComplete();
 
-        verify(aiModelService).languageModel(null);
+        verify(aiService).extract("站点：https://halo.run", null);
     }
 
     @Test
     void shouldReturnBadGatewayWhenAiServiceFails() {
         when(settingsFetcher.fetch()).thenReturn(Mono.just(settings(null)));
-        when(extensionGetter.getEnabledExtension(AiModelService.class))
+        when(aiService.extract("站点：https://halo.run", null))
             .thenReturn(Mono.error(new IllegalStateException("AI service down")));
 
-        var endpoint = new LinkAiExtractEndpoint(extensionGetter, settingsFetcher);
+        var endpoint = new LinkAiExtractEndpoint(aiService, settingsFetcher);
         var body = new LinkCommentExtractionRequest();
         body.setContent("站点：https://halo.run");
         var request = postRequest("/links/-/extract-from-comment", body);
@@ -148,25 +142,23 @@ class LinkAiExtractEndpointTest {
         return settings.normalized();
     }
 
-    private static GenerateTextResult generateTextResult() {
-        var result = new GenerateTextResult();
-        result.setOutput(new LinkCommentExtractionResult(
+    private static LinkCommentExtractionResult extractionResult() {
+        return new LinkCommentExtractionResult(
             "https://halo.run",
             "Halo",
             null,
             null,
             null
-        ));
-        return result;
+        );
     }
 
     private static MockServerRequest postRequest(String path, Object body) {
         var httpRequest = MockServerHttpRequest.post(path).build();
         var exchange = MockServerWebExchange.from(httpRequest);
-        return MockServerRequest.builder()
+        var builder = MockServerRequest.builder()
             .method(HttpMethod.POST)
             .uri(URI.create(path))
-            .exchange(exchange)
-            .body(Mono.just(body));
+            .exchange(exchange);
+        return body == null ? builder.body(Mono.empty()) : builder.body(Mono.just(body));
     }
 }

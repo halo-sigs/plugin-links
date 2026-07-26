@@ -3,6 +3,7 @@ import {
   ApiLinkHaloRunV1alpha1LinkGroupApi,
   ConsoleApiLinkHaloRunV1alpha1LinkAiApi,
   ConsoleApiLinkHaloRunV1alpha1LinkApi,
+  ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi,
   ConsoleApiLinkHaloRunV1alpha1LinkFeedApi,
   ConsoleApiLinkHaloRunV1alpha1LinkGroupApi,
   LinkGroupV1alpha1Api,
@@ -22,6 +23,7 @@ const linksConsoleApiClient = {
   link: new ConsoleApiLinkHaloRunV1alpha1LinkApi(undefined, "", axiosInstance),
   feed: new ConsoleApiLinkHaloRunV1alpha1LinkFeedApi(undefined, "", axiosInstance),
   group: new ConsoleApiLinkHaloRunV1alpha1LinkGroupApi(undefined, "", axiosInstance),
+  application: new ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi(undefined, "", axiosInstance),
 };
 
 const linkAiApiClient = {

@@ -78,4 +78,5 @@ public class LinkAiSettings {
             return enabled == null || Boolean.TRUE.equals(enabled);
         }
     }
+
 }
