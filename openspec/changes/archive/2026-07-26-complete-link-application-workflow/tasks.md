@@ -2,8 +2,8 @@
 
 - [x] 1.1 Extend `LinkApplication` with `APPROVING` and nested approval request/link identity data,
   preserving compatibility with historical resources
-- [x] 1.2 Add or update LinkApplication indexes needed for status, origin, creation-time filtering,
-  and newest-first pagination
+- [x] 1.2 Add or update LinkApplication indexes needed for status and origin filtering, plus
+  newest-first pagination
 - [x] 1.3 Add normalized `application` settings with a disabled master switch, enabled visitor child
   switch, and disabled Comment-recognition child settings
 - [x] 1.4 Move Comment-recognition model and source controls from the AI settings group into the
@@ -46,7 +46,7 @@
 ## 4. History, Source Context, Cleanup, and RBAC
 
 - [x] 4.1 Replace the unpaged application list with real page/size/total results and server filters
-  for status, origin type, and creation time
+  for status and origin type
 - [x] 4.2 Add the application-scoped origin-Comment endpoint returning only name, raw content,
   subject reference, and creation time
 - [x] 4.3 Add server-side cleanup using the current list filters across all pages, deleting
@@ -65,8 +65,8 @@
   changes
 - [x] 5.2 Update handwritten consumers for Halo 2.25.2 optional metadata and clean generated changes
   so type checking and full-PR whitespace checks pass
-- [x] 5.3 Replace the pending-only modal with paginated application history and status, source, and
-  creation-time filters while keeping the pending total card
+- [x] 5.3 Replace the pending-only modal with paginated application history and status/source
+  filters while keeping the pending total card
 - [x] 5.4 Add APPROVING presentation and a continue-approval action that cannot edit the frozen
   request
 - [x] 5.5 Use the scoped origin-Comment endpoint and distinguish deleted source content from
@@ -94,10 +94,10 @@
 - [x] 7.1 Run targeted backend tests for settings, recognition, creation coordination, rate limiting,
   approval, history, cleanup, source context, RBAC, verification, and RSS orchestration
 - [x] 7.2 Run frontend unit tests, `pnpm type-check`, and formatting checks
-- [ ] 7.3 Run `./gradlew build`, `git diff --check origin/main...HEAD`, and strict OpenSpec validation
-- [ ] 7.4 Run a real-browser E2E for disabled FORM, enabled CSRF-protected FORM, history review,
+- [x] 7.3 Run `./gradlew build`, `git diff --check origin/main...HEAD`, and strict OpenSpec validation
+- [x] 7.4 Run a real-browser E2E for disabled FORM, enabled CSRF-protected FORM, history review,
   approval and recovery, backend automation, rejection, and filtered cleanup
-- [ ] 7.5 Run real-model E2E with the application master switch disabled and enabled, including
+- [x] 7.5 Run real-model E2E with the application master switch disabled and enabled, including
   matching/non-matching sources, hidden or unapproved Comment disclosure assumptions, and no
   historical replay
 - [ ] 7.6 Verify the final pushed PR head receives fresh remote CI instead of relying on checks from

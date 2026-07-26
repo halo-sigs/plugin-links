@@ -82,7 +82,7 @@ themes.
 
 ### Requirement: Administrators can browse application history
 The system SHALL provide a real paginated application history sorted by newest creation time and
-filterable by status, origin type, and creation time.
+filterable by status and origin type.
 
 #### Scenario: Administrator opens application history
 - **WHEN** an administrator opens the application list
@@ -90,7 +90,7 @@ filterable by status, origin type, and creation time.
 - **AND** displays the server-reported page, size, and total
 
 #### Scenario: Administrator filters application history
-- **WHEN** an administrator filters by status, origin type, or creation time
+- **WHEN** an administrator filters by status or origin type
 - **THEN** the backend applies all selected filters before pagination
 - **AND** returns only matching applications
 
@@ -348,8 +348,7 @@ applications matching the current server-side history filter.
 - **AND** preserves the application for safe approval recovery
 
 #### Scenario: Clean current filtered result
-- **WHEN** an administrator confirms cleanup for the current status, origin, and creation-time
-  filters
+- **WHEN** an administrator confirms cleanup for the current status and origin filters
 - **THEN** the backend reapplies those filters and processes every match across all pages
 - **AND** deletes matching `PENDING`, `APPROVED`, and `REJECTED` applications
 - **AND** skips matching `APPROVING` applications

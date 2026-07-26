@@ -90,8 +90,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
          * Delete every deletable application matching the list filters.
          * @param {string} [status] Application status.
          * @param {string} [originType] Application origin type.
-         * @param {string} [createdAfter] Inclusive ISO-8601 creation-time lower bound.
-         * @param {string} [createdBefore] Inclusive ISO-8601 creation-time upper bound.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
@@ -100,7 +98,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        cleanupLinkApplications: async (status?: string, originType?: string, createdAfter?: string, createdBefore?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        cleanupLinkApplications: async (status?: string, originType?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/linkapplications/-/cleanup`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -127,18 +125,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
 
             if (originType !== undefined) {
                 localVarQueryParameter['originType'] = originType;
-            }
-
-            if (createdAfter !== undefined) {
-                localVarQueryParameter['createdAfter'] = (createdAfter as any instanceof Date) ?
-                    (createdAfter as any).toISOString() :
-                    createdAfter;
-            }
-
-            if (createdBefore !== undefined) {
-                localVarQueryParameter['createdBefore'] = (createdBefore as any instanceof Date) ?
-                    (createdBefore as any).toISOString() :
-                    createdBefore;
             }
 
             if (page !== undefined) {
@@ -299,8 +285,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
          * List paginated link application history.
          * @param {string} [status] Application status.
          * @param {string} [originType] Application origin type.
-         * @param {string} [createdAfter] Inclusive ISO-8601 creation-time lower bound.
-         * @param {string} [createdBefore] Inclusive ISO-8601 creation-time upper bound.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
@@ -309,7 +293,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listLinkApplications: async (status?: string, originType?: string, createdAfter?: string, createdBefore?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        listLinkApplications: async (status?: string, originType?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/linkapplications`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -336,18 +320,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
 
             if (originType !== undefined) {
                 localVarQueryParameter['originType'] = originType;
-            }
-
-            if (createdAfter !== undefined) {
-                localVarQueryParameter['createdAfter'] = (createdAfter as any instanceof Date) ?
-                    (createdAfter as any).toISOString() :
-                    createdAfter;
-            }
-
-            if (createdBefore !== undefined) {
-                localVarQueryParameter['createdBefore'] = (createdBefore as any instanceof Date) ?
-                    (createdBefore as any).toISOString() :
-                    createdBefore;
             }
 
             if (page !== undefined) {
@@ -490,8 +462,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp = function(config
          * Delete every deletable application matching the list filters.
          * @param {string} [status] Application status.
          * @param {string} [originType] Application origin type.
-         * @param {string} [createdAfter] Inclusive ISO-8601 creation-time lower bound.
-         * @param {string} [createdBefore] Inclusive ISO-8601 creation-time upper bound.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
@@ -500,8 +470,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp = function(config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async cleanupLinkApplications(status?: string, originType?: string, createdAfter?: string, createdBefore?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkApplicationCleanupResult>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.cleanupLinkApplications(status, originType, createdAfter, createdBefore, page, size, labelSelector, fieldSelector, sort, options);
+        async cleanupLinkApplications(status?: string, originType?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkApplicationCleanupResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.cleanupLinkApplications(status, originType, page, size, labelSelector, fieldSelector, sort, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi.cleanupLinkApplications']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -546,8 +516,6 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp = function(config
          * List paginated link application history.
          * @param {string} [status] Application status.
          * @param {string} [originType] Application origin type.
-         * @param {string} [createdAfter] Inclusive ISO-8601 creation-time lower bound.
-         * @param {string} [createdBefore] Inclusive ISO-8601 creation-time upper bound.
          * @param {number} [page] Page number. Default is 0.
          * @param {number} [size] Size number. Default is 0.
          * @param {Array<string>} [labelSelector] Label selector. e.g.: hidden!&#x3D;true
@@ -556,8 +524,8 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp = function(config
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listLinkApplications(status?: string, originType?: string, createdAfter?: string, createdBefore?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkApplicationList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listLinkApplications(status, originType, createdAfter, createdBefore, page, size, labelSelector, fieldSelector, sort, options);
+        async listLinkApplications(status?: string, originType?: string, page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkApplicationList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listLinkApplications(status, originType, page, size, labelSelector, fieldSelector, sort, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi.listLinkApplications']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -612,7 +580,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFactory = function (
          * @throws {RequiredError}
          */
         cleanupLinkApplications(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiCleanupLinkApplicationsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkApplicationCleanupResult> {
-            return localVarFp.cleanupLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.createdAfter, requestParameters.createdBefore, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
+            return localVarFp.cleanupLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
         },
         /**
          * Delete a link application unless approval is in progress.
@@ -648,7 +616,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFactory = function (
          * @throws {RequiredError}
          */
         listLinkApplications(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiListLinkApplicationsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkApplicationList> {
-            return localVarFp.listLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.createdAfter, requestParameters.createdBefore, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
+            return localVarFp.listLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(axios, basePath));
         },
         /**
          * Reject a pending link application.
@@ -691,7 +659,6 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiApproveLinkAppli
      */
     readonly approveRequest?: ApproveRequest
 }
-
 /**
  * Request parameters for cleanupLinkApplications operation in ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi.
  * @export
@@ -711,20 +678,6 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiCleanupLinkAppli
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiCleanupLinkApplications
      */
     readonly originType?: string
-
-    /**
-     * Inclusive ISO-8601 creation-time lower bound.
-     * @type {string}
-     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiCleanupLinkApplications
-     */
-    readonly createdAfter?: string
-
-    /**
-     * Inclusive ISO-8601 creation-time upper bound.
-     * @type {string}
-     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiCleanupLinkApplications
-     */
-    readonly createdBefore?: string
 
     /**
      * Page number. Default is 0.
@@ -825,20 +778,6 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiListLinkApplicat
     readonly originType?: string
 
     /**
-     * Inclusive ISO-8601 creation-time lower bound.
-     * @type {string}
-     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiListLinkApplications
-     */
-    readonly createdAfter?: string
-
-    /**
-     * Inclusive ISO-8601 creation-time upper bound.
-     * @type {string}
-     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiListLinkApplications
-     */
-    readonly createdBefore?: string
-
-    /**
      * Page number. Default is 0.
      * @type {number}
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiListLinkApplications
@@ -928,7 +867,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi extends BaseAPI {
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi
      */
     public cleanupLinkApplications(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiCleanupLinkApplicationsRequest = {}, options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp(this.configuration).cleanupLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.createdAfter, requestParameters.createdBefore, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
+        return ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp(this.configuration).cleanupLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -972,7 +911,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi extends BaseAPI {
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi
      */
     public listLinkApplications(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiListLinkApplicationsRequest = {}, options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp(this.configuration).listLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.createdAfter, requestParameters.createdBefore, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
+        return ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp(this.configuration).listLinkApplications(requestParameters.status, requestParameters.originType, requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

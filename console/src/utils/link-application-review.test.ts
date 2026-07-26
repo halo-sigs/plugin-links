@@ -19,8 +19,6 @@ describe("buildLinkApplicationQuery", () => {
       size: 20,
       status: undefined,
       originType: undefined,
-      createdAfter: undefined,
-      createdBefore: undefined,
     });
   });
 
@@ -29,20 +27,6 @@ describe("buildLinkApplicationQuery", () => {
     expect(query.status).toBe("PENDING");
     expect(query.originType).toBe("COMMENT");
   });
-
-  it("converts local date bounds to ISO instants covering whole days", () => {
-    const query = buildLinkApplicationQuery(
-      { createdAfterDate: "2026-07-01", createdBeforeDate: "2026-07-10" },
-      { page: 1, size: 20 },
-    );
-    expect(query.createdAfter).toBe(new Date("2026-07-01T00:00:00").toISOString());
-    expect(query.createdBefore).toBe(new Date("2026-07-10T23:59:59.999").toISOString());
-  });
-
-  it("drops unparseable date bounds", () => {
-    const query = buildLinkApplicationQuery({ createdAfterDate: "not-a-date" }, { page: 1, size: 20 });
-    expect(query.createdAfter).toBeUndefined();
-  });
 });
 
 describe("buildLinkApplicationCleanupParams", () => {
@@ -50,13 +34,10 @@ describe("buildLinkApplicationCleanupParams", () => {
     const params = buildLinkApplicationCleanupParams({
       status: "REJECTED",
       originType: "FORM",
-      createdBeforeDate: "2026-07-10",
     });
     expect(params).toEqual({
       status: "REJECTED",
       originType: "FORM",
-      createdAfter: undefined,
-      createdBefore: new Date("2026-07-10T23:59:59.999").toISOString(),
     });
   });
 });

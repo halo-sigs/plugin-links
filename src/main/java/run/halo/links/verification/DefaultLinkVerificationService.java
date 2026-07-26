@@ -18,12 +18,14 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.infra.ExternalUrlSupplier;
@@ -36,6 +38,7 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
 
     private static final int VERIFICATION_CONCURRENCY = 1;
     private static final int VERIFICATION_QUEUE_CAPACITY = 1024;
+    private static final int STATUS_UPDATE_RETRIES = 2;
 
     private final ReactiveExtensionClient client;
     private final ExternalUrlSupplier externalUrlSupplier;
@@ -96,34 +99,52 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
 
     Mono<Link> verifyLink(String linkName, LinkVerificationMode mode) {
         LinkVerificationMode normalizedMode = normalizedMode(mode);
-        return client.fetch(Link.class, linkName)
-            .flatMap(link -> {
-                Link.BacklinkStatus previousBacklink = currentBacklinkStatus(link);
-                link.getStatus().setVerification(checkingStatus(link, previousBacklink,
-                    normalizedMode));
-                return client.update(link);
-            })
-            .flatMap(link -> {
-                Link.BacklinkStatus previousBacklink = currentBacklinkStatus(link);
-                return Mono.fromCallable(() -> verifyBlocking(link, previousBacklink,
+        return startVerification(linkName, normalizedMode)
+            .flatMap(context ->
+                Mono.fromCallable(() -> verifyBlocking(context.link(), context.previousBacklink(),
                         normalizedMode))
                     .subscribeOn(scheduler)
-                    .map(status -> {
-                        link.getStatus().setVerification(status);
-                        return link;
-                    })
-                    .flatMap(client::update)
+                    .flatMap(status -> updateVerificationStatus(linkName, status))
                     .doOnNext(updatedLink -> log.info("[plugin-links] Link verification completed "
                             + "for {}: access={}, backlink={}", linkName,
                         accessState(updatedLink), backlinkState(updatedLink)))
                     .onErrorResume(error -> {
                         log.warn("[plugin-links] Unexpected failure while verifying link {}",
                             linkName, error);
-                        link.getStatus().setVerification(unexpectedFailureStatus(link, error,
-                            previousBacklink, normalizedMode));
-                        return client.update(link);
-                    });
-            });
+                        return updateVerificationStatus(linkName,
+                            unexpectedFailureStatus(context.link(), error,
+                                context.previousBacklink(), normalizedMode));
+                    }));
+    }
+
+    private Mono<VerificationContext> startVerification(String linkName,
+        LinkVerificationMode mode) {
+        return Mono.defer(() -> client.fetch(Link.class, linkName)
+                .flatMap(link -> {
+                    Link.BacklinkStatus previousBacklink = currentBacklinkStatus(link);
+                    link.getStatus().setVerification(checkingStatus(link, previousBacklink, mode));
+                    return client.update(link)
+                        .map(updated -> new VerificationContext(updated, previousBacklink));
+                }))
+            .retryWhen(statusUpdateRetry(linkName));
+    }
+
+    private Mono<Link> updateVerificationStatus(String linkName,
+        Link.VerificationStatus status) {
+        return Mono.defer(() -> client.fetch(Link.class, linkName)
+                .flatMap(link -> {
+                    link.getStatus().setVerification(status);
+                    return client.update(link);
+                }))
+            .retryWhen(statusUpdateRetry(linkName));
+    }
+
+    private Retry statusUpdateRetry(String linkName) {
+        return Retry.max(STATUS_UPDATE_RETRIES)
+            .filter(OptimisticLockingFailureException.class::isInstance)
+            .doBeforeRetry(signal ->
+                log.debug("[plugin-links] Retrying verification status update for {}", linkName))
+            .onRetryExhaustedThrow((spec, signal) -> signal.failure());
     }
 
     private Flux<ResolvedLink> resolveLinks(LinkVerificationRequest request) {
@@ -480,5 +501,8 @@ public class DefaultLinkVerificationService implements LinkVerificationService {
         static ResolvedLink skipped(String name) {
             return new ResolvedLink(name, null);
         }
+    }
+
+    private record VerificationContext(Link link, Link.BacklinkStatus previousBacklink) {
     }
 }

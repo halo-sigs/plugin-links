@@ -141,9 +141,9 @@ algorithm in the endpoint.
 ### 5. Use one paginated query contract for history and cleanup
 
 Replace the fake unpaged application `ListResult` with a real paginated query, sorted newest first.
-The query supports page, size, status, origin type, and creation-time filters. Console defaults to
-20 items and exposes `PENDING`, `APPROVING`, `APPROVED`, and `REJECTED` history views. The pending
-card uses the server-reported total.
+The query supports page, size, status, and origin type filters. Console defaults to 20 items and
+exposes `PENDING`, `APPROVING`, `APPROVED`, and `REJECTED` history views. The pending card uses the
+server-reported total.
 
 A collection cleanup operation receives the same filter contract and applies it again on the
 server. It deletes every matching application across all pages except `APPROVING`, then returns

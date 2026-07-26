@@ -35,20 +35,16 @@ const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const statusFilter = ref(props.initialStatus);
 const originTypeFilter = ref("");
-const createdAfterDate = ref("");
-const createdBeforeDate = ref("");
 const page = ref(1);
 const size = ref(20);
 
-watch([statusFilter, originTypeFilter, createdAfterDate, createdBeforeDate], () => {
+watch([statusFilter, originTypeFilter], () => {
   page.value = 1;
 });
 
 const filterInput = computed(() => ({
   status: statusFilter.value,
   originType: originTypeFilter.value,
-  createdAfterDate: createdAfterDate.value,
-  createdBeforeDate: createdBeforeDate.value,
 }));
 
 const queryParams = computed(() =>
@@ -124,97 +120,86 @@ function handleCleanup() {
 
 <template>
   <VModal ref="modal" title="友链申请" :width="900" :mount-to-body="true" :centered="false" @close="emit('close')">
-    <div class=":uno: mb-3 flex flex-wrap items-center gap-2">
-      <FilterDropdown v-model="statusFilter" label="状态" :items="statusFilterOptions" />
-      <FilterDropdown v-model="originTypeFilter" label="来源" :items="originTypeFilterOptions" />
-      <input
-        v-model="createdAfterDate"
-        type="date"
-        aria-label="申请时间起始"
-        class=":uno: h-8 border border-gray-300 rounded px-2 text-sm text-gray-700"
-      />
-      <span class=":uno: text-sm text-gray-400">至</span>
-      <input
-        v-model="createdBeforeDate"
-        type="date"
-        aria-label="申请时间截止"
-        class=":uno: h-8 border border-gray-300 rounded px-2 text-sm text-gray-700"
-      />
-      <div class=":uno: ml-auto">
-        <VButton size="sm" type="danger" ghost :disabled="!total" :loading="isCleaningUp" @click="handleCleanup">
-          清理
-        </VButton>
+    <div>
+      <div class=":uno: mb-3 flex flex-wrap items-center gap-2">
+        <FilterDropdown v-model="statusFilter" label="状态" :items="statusFilterOptions" />
+        <FilterDropdown v-model="originTypeFilter" label="来源" :items="originTypeFilterOptions" />
+        <div class=":uno: ml-auto">
+          <VButton size="sm" type="danger" ghost :disabled="!total" :loading="isCleaningUp" @click="handleCleanup">
+            清理
+          </VButton>
+        </div>
       </div>
-    </div>
 
-    <div class=":uno: mb-3 text-sm text-gray-500">共 {{ total }} 条记录</div>
+      <div class=":uno: mb-3 text-sm text-gray-500">共 {{ total }} 条记录</div>
 
-    <VLoading v-if="isLoading" />
+      <VLoading v-if="isLoading" />
 
-    <VEmpty v-else-if="!applications.length" title="暂无符合条件的申请" />
+      <VEmpty v-else-if="!applications.length" title="暂无符合条件的申请" />
 
-    <div v-else class=":uno: overflow-x-auto">
-      <table class=":uno: min-w-full divide-y divide-gray-200">
-        <thead class=":uno: bg-gray-50">
-          <tr>
-            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
-              网站名称
-            </th>
-            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
-              链接地址
-            </th>
-            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">状态</th>
-            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">来源</th>
-            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
-              申请时间
-            </th>
-            <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">操作</th>
-          </tr>
-        </thead>
-        <tbody class=":uno: bg-white divide-y divide-gray-200">
-          <tr v-for="app in applications" :key="app.metadata.name">
-            <td class=":uno: px-4 py-2 text-sm text-gray-900">{{ app.spec.displayName }}</td>
-            <td class=":uno: px-4 py-2 text-sm">
-              <a :href="app.spec.url" target="_blank" class=":uno: text-blue-600 hover:underline">
-                {{ app.spec.url }}
-              </a>
-            </td>
-            <td class=":uno: px-4 py-2 text-sm">
-              <VTag :type="linkApplicationStatusMeta(app.spec.status).tagType" size="sm">
-                {{ linkApplicationStatusMeta(app.spec.status).label }}
-              </VTag>
-            </td>
-            <td class=":uno: px-4 py-2 text-sm">
-              <LinkApplicationSourceBadge :application="app" />
-            </td>
-            <td class=":uno: px-4 py-2 text-sm text-gray-500">
-              {{ app.metadata.creationTimestamp ? utils.date.format(app.metadata.creationTimestamp) : "-" }}
-            </td>
-            <td class=":uno: px-4 py-2 text-sm">
-              <VSpace>
-                <VButton
-                  v-if="app.spec.status === 'APPROVING'"
-                  size="xs"
-                  type="secondary"
-                  @click="emit('view-detail', app)"
-                >
-                  继续审批
-                </VButton>
-                <template v-else>
-                  <VButton size="xs" type="secondary" @click="emit('view-detail', app)">
-                    {{ app.spec.status === "PENDING" ? "审核" : "查看" }}
+      <div v-else class=":uno: overflow-x-auto">
+        <table class=":uno: min-w-full divide-y divide-gray-200">
+          <thead class=":uno: bg-gray-50">
+            <tr>
+              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+                网站名称
+              </th>
+              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+                链接地址
+              </th>
+              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">状态</th>
+              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">来源</th>
+              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
+                申请时间
+              </th>
+              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">操作</th>
+            </tr>
+          </thead>
+          <tbody class=":uno: bg-white divide-y divide-gray-200">
+            <tr v-for="app in applications" :key="app.metadata.name">
+              <td class=":uno: px-4 py-2 text-sm text-gray-900">{{ app.spec.displayName }}</td>
+              <td class=":uno: px-4 py-2 text-sm">
+                <a :href="app.spec.url" target="_blank" class=":uno: text-blue-600 hover:underline">
+                  {{ app.spec.url }}
+                </a>
+              </td>
+              <td class=":uno: px-4 py-2 text-sm">
+                <VTag :type="linkApplicationStatusMeta(app.spec.status).tagType" size="sm">
+                  {{ linkApplicationStatusMeta(app.spec.status).label }}
+                </VTag>
+              </td>
+              <td class=":uno: px-4 py-2 text-sm">
+                <LinkApplicationSourceBadge :application="app" />
+              </td>
+              <td class=":uno: px-4 py-2 text-sm text-gray-500">
+                {{ app.metadata.creationTimestamp ? utils.date.format(app.metadata.creationTimestamp) : "-" }}
+              </td>
+              <td class=":uno: px-4 py-2 text-sm">
+                <VSpace>
+                  <VButton
+                    v-if="app.spec.status === 'APPROVING'"
+                    size="xs"
+                    type="secondary"
+                    @click="emit('view-detail', app)"
+                  >
+                    继续审批
                   </VButton>
-                  <VButton size="xs" type="danger" @click="handleDelete(app)"> 删除 </VButton>
-                </template>
-              </VSpace>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+                  <template v-else>
+                    <VButton size="xs" type="secondary" @click="emit('view-detail', app)">
+                      {{ app.spec.status === "PENDING" ? "审核" : "查看" }}
+                    </VButton>
+                    <VButton size="xs" type="danger" @click="handleDelete(app)"> 删除 </VButton>
+                  </template>
+                </VSpace>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-    <div v-if="total" class=":uno: mt-4 flex justify-end">
-      <VPagination v-model:page="page" v-model:size="size" :total="total" :size-options="[10, 20, 50, 100]" />
+      <div v-if="total" class=":uno: mt-4 flex justify-end">
+        <VPagination v-model:page="page" v-model:size="size" :total="total" :size-options="[10, 20, 50, 100]" />
+      </div>
     </div>
 
     <template #footer>

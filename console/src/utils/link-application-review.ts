@@ -6,10 +6,6 @@ export interface LinkApplicationHistoryFilterInput {
   status?: string;
   /** Empty string means no origin filter. */
   originType?: string;
-  /** Local date in YYYY-MM-DD form, inclusive. */
-  createdAfterDate?: string;
-  /** Local date in YYYY-MM-DD form, inclusive. */
-  createdBeforeDate?: string;
 }
 
 export interface LinkApplicationQuery {
@@ -17,24 +13,6 @@ export interface LinkApplicationQuery {
   size: number;
   status?: string;
   originType?: string;
-  createdAfter?: string;
-  createdBefore?: string;
-}
-
-function startOfDayIso(date: string | undefined): string | undefined {
-  if (!date) {
-    return undefined;
-  }
-  const parsed = new Date(`${date}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-}
-
-function endOfDayIso(date: string | undefined): string | undefined {
-  if (!date) {
-    return undefined;
-  }
-  const parsed = new Date(`${date}T23:59:59.999`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 }
 
 function normalizeFilterValue(value: string | undefined): string | undefined {
@@ -50,8 +28,6 @@ export function buildLinkApplicationQuery(
     size: pagination.size,
     status: normalizeFilterValue(filter.status),
     originType: normalizeFilterValue(filter.originType),
-    createdAfter: startOfDayIso(filter.createdAfterDate),
-    createdBefore: endOfDayIso(filter.createdBeforeDate),
   };
 }
 
@@ -59,8 +35,6 @@ export function buildLinkApplicationCleanupParams(filter: LinkApplicationHistory
   return {
     status: normalizeFilterValue(filter.status),
     originType: normalizeFilterValue(filter.originType),
-    createdAfter: startOfDayIso(filter.createdAfterDate),
-    createdBefore: endOfDayIso(filter.createdBeforeDate),
   };
 }
 

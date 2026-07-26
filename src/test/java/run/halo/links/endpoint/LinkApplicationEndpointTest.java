@@ -74,14 +74,6 @@ class LinkApplicationEndpointTest {
     }
 
     @Test
-    void shouldRejectInvalidCreationTimeFilter() {
-        webClient.get()
-            .uri("/linkapplications?createdAfter=yesterday")
-            .exchange()
-            .expectStatus().isBadRequest();
-    }
-
-    @Test
     void shouldReturnOnlyScopedOriginCommentFields() {
         var application = application("application-a", LinkApplication.Status.PENDING);
         var origin = new LinkApplication.Origin();

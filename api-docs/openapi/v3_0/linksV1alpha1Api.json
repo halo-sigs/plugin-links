@@ -232,22 +232,6 @@
             "type" : "string"
           }
         }, {
-          "description" : "Inclusive ISO-8601 creation-time lower bound.",
-          "in" : "query",
-          "name" : "createdAfter",
-          "schema" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }, {
-          "description" : "Inclusive ISO-8601 creation-time upper bound.",
-          "in" : "query",
-          "name" : "createdBefore",
-          "schema" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }, {
           "description" : "Page number. Default is 0.",
           "in" : "query",
           "name" : "page",
@@ -326,22 +310,6 @@
           "name" : "originType",
           "schema" : {
             "type" : "string"
-          }
-        }, {
-          "description" : "Inclusive ISO-8601 creation-time lower bound.",
-          "in" : "query",
-          "name" : "createdAfter",
-          "schema" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }, {
-          "description" : "Inclusive ISO-8601 creation-time upper bound.",
-          "in" : "query",
-          "name" : "createdBefore",
-          "schema" : {
-            "type" : "string",
-            "format" : "date-time"
           }
         }, {
           "description" : "Page number. Default is 0.",
