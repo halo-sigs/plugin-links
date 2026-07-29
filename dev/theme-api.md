@@ -88,8 +88,18 @@
 插件设置中的“友链申请”总开关默认关闭。总开关和“允许访客提交”子开关同时开启时，
 `linkApplicationEnabled` 为 `true`，主题才应展示申请入口。
 
+访客申请功能尚未发布，因此下面的验证码保护表单就是首个公开主题契约，不存在旧表单、
+兼容分支或无验证码回退。主题只要展示申请表单，就必须加载内置图形验证码并提交
+`captchaCode`。
+
+验证码图片端点为同源的 `GET /links/captcha`。开启访客申请时，它返回固定
+`160 x 48` PNG，并通过路径为 `/links`、有效期五分钟、`HttpOnly`、`SameSite=Lax`
+的 Cookie 关联一次性挑战；HTTPS 请求还会设置 `Secure`。图片响应禁止缓存。每次成功
+加载或刷新图片都会覆盖 Cookie 并使上一张图片失效，提交尝试无论成功与否也会使当前
+挑战和 Cookie 失效。
+
 提交端点为同源、CSRF 保护的 `POST /links/apply`，仅接受
-`application/x-www-form-urlencoded`。当前没有 JSON 申请 API。
+`application/x-www-form-urlencoded`。当前没有 JSON 申请 API，也不需要 JavaScript。
 
 字段如下：
 
@@ -102,6 +112,7 @@
 | `email` | 否 | 联系邮箱 |
 | `backlink` | 否 | 反链页面的 HTTP/HTTPS 地址 |
 | `feedUrls` | 否 | RSS/Atom 的 HTTP/HTTPS 地址，一行一个 |
+| `captchaCode` | 是 | 当前图片中的五位英文字母或数字，不区分大小写 |
 | `_csrf` | 是 | 使用模板变量 `csrfToken` |
 
 HTML 示例：
@@ -121,9 +132,42 @@ HTML 示例：
     <input name="email" type="email">
     <input name="backlink">
     <textarea name="feedUrls" placeholder="每行一个订阅地址"></textarea>
+    <p id="captcha-help">请输入图片中的五位字符。看不清时可刷新页面换一张。</p>
+    <img
+        src="/links/captcha"
+        alt="友链申请图形验证码"
+        width="160"
+        height="48"
+        aria-describedby="captcha-help"
+    >
+    <input
+        name="captchaCode"
+        required
+        minlength="5"
+        maxlength="5"
+        autocomplete="off"
+        aria-describedby="captcha-help"
+    >
     <button type="submit">申请友链</button>
 </form>
 ```
+
+图片直接加载即可设置关联 Cookie，所以以上表单在禁用 JavaScript 时仍可完整提交。
+如需提供不丢失表单内容的刷新操作，可增加键盘可操作的按钮：
+
+```html
+<button type="button" id="refresh-link-captcha">换一张验证码</button>
+
+<script>
+  const image = document.querySelector('img[src^="/links/captcha"]')
+  document.querySelector('#refresh-link-captcha').addEventListener('click', () => {
+    image.src = `/links/captcha?refresh=${Date.now()}`
+  })
+</script>
+```
+
+每次刷新都会使旧图片失效，多标签页也会相互覆盖同一 Cookie。本版本仅提供图形验证码，
+没有音频或其他非视觉挑战；主题应保留说明文字和键盘可操作的刷新按钮。
 
 同源 JavaScript 示例：
 
@@ -132,10 +176,12 @@ const body = new URLSearchParams({
   _csrf: document.querySelector('meta[name="csrf-token"]').content,
   url: 'https://example.com',
   displayName: 'Example',
+  captchaCode: document.querySelector('[name="captchaCode"]').value,
 })
 
 await fetch('/links/apply', {
   method: 'POST',
+  credentials: 'same-origin',
   headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
   body,
 })
@@ -146,6 +192,9 @@ await fetch('/links/apply', {
 - 成功：`applied=success`
 - 验证或限流失败：`applied=error&message=...`；字段错误还包含 `field`，并在有原值时包含
   `value`，主题可据此回填
+- 验证码缺失、格式错误、答案错误、过期或重放统一返回
+  `applied=error&field=captchaCode&message=验证码错误或已过期，请重新输入`，且不会返回
+  `value` 或其他已提交字段；主题应重新加载图片
 - 功能关闭：`applied=disabled&message=友链申请功能暂未开放`
 
 ---

@@ -14,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.security.web.server.csrf.CsrfToken;
 import org.springframework.util.MultiValueMap;
@@ -32,6 +35,7 @@ import run.halo.links.extension.LinkApplication;
 import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.finders.LinkFinder;
 import run.halo.links.security.LinkApplicationRateLimiter;
+import run.halo.links.security.captcha.LinkApplicationCaptchaService;
 import run.halo.links.service.LinkApplicationService;
 import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkGroupVo;
@@ -52,10 +56,12 @@ public class LinkRouter {
     private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
     private final LinkApplicationService applicationService;
     private final LinkApplicationRateLimiter rateLimiter;
+    private final LinkApplicationCaptchaService captchaService;
 
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
         return route(GET("/links"), listHandler())
+            .andRoute(GET("/links/captcha"), captchaHandler())
             .andRoute(POST("/links/apply").and(
                 contentType(MediaType.APPLICATION_FORM_URLENCODED)), applyHandler());
     }
@@ -72,11 +78,17 @@ public class LinkRouter {
                 if (!settings.selfSubmissionEnabled()) {
                     return redirectDisabled();
                 }
-                if (!rateLimiter.isAllowed(request)) {
-                    return redirectWithError("提交过于频繁，请稍后再试");
-                }
                 return request.formData()
                 .flatMap(formData -> {
+                    var verification = captchaService.verify(request,
+                        getFormValue(formData, "captchaCode"));
+                    if (!verification.valid()) {
+                        return withCookie(redirectCaptchaError(), verification.expiredCookie());
+                    }
+                    if (!rateLimiter.isAllowed(request)) {
+                        return withCookie(redirectWithError("提交过于频繁，请稍后再试"),
+                            verification.expiredCookie());
+                    }
                     String url = getFormValue(formData, "url");
                     String displayName = getFormValue(formData, "displayName");
 
@@ -92,7 +104,7 @@ public class LinkRouter {
                         parseFeedUrls(getFormValue(formData, "feedUrls")),
                         origin
                     );
-                    return applicationService.create(submission)
+                    var response = applicationService.create(submission)
                         .flatMap(result -> {
                             if (result.status()
                                 == LinkApplicationService.CreateStatus.CREATED) {
@@ -101,6 +113,30 @@ public class LinkRouter {
                             return redirectWithFieldError(result.field(), result.value(),
                                 result.message());
                         });
+                    return withCookie(response, verification.expiredCookie());
+                });
+            });
+    }
+
+    private HandlerFunction<ServerResponse> captchaHandler() {
+        return request -> applicationSettingsFetcher.fetch()
+            .flatMap(settings -> {
+                if (!settings.selfSubmissionEnabled()) {
+                    return ServerResponse.notFound().build();
+                }
+                return captchaService.issue(request).flatMap(result -> switch (result.status()) {
+                    case ISSUED -> ServerResponse.ok()
+                        .contentType(MediaType.IMAGE_PNG)
+                        .header(HttpHeaders.CACHE_CONTROL,
+                            "no-store, no-cache, must-revalidate")
+                        .cookie(result.cookie())
+                        .bodyValue(result.png());
+                    case RATE_LIMITED -> ServerResponse.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .header(HttpHeaders.RETRY_AFTER,
+                            Long.toString(result.retryAfterSeconds()))
+                        .build();
+                    case UNAVAILABLE ->
+                        ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).build();
                 });
             });
     }
@@ -151,6 +187,23 @@ public class LinkRouter {
                 .queryParam("message", message)
                 .build().toUri()
         ).build();
+    }
+
+    private static Mono<ServerResponse> redirectCaptchaError() {
+        return ServerResponse.seeOther(
+            UriComponentsBuilder.fromPath("/links")
+                .queryParam("applied", "error")
+                .queryParam("field", "captchaCode")
+                .queryParam("message", "验证码错误或已过期，请重新输入")
+                .build().toUri()
+        ).build();
+    }
+
+    private static Mono<ServerResponse> withCookie(Mono<ServerResponse> response,
+        ResponseCookie cookie) {
+        return response.flatMap(existing -> ServerResponse.from(existing)
+            .cookie(cookie)
+            .build());
     }
 
     private static Mono<ServerResponse> redirectDisabled() {
