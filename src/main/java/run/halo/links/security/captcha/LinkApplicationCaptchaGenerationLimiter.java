@@ -47,7 +47,8 @@ public class LinkApplicationCaptchaGenerationLimiter {
             windows.put(remoteAddress, new Window(current.startedAt(), current.count() + 1));
             return Admission.allowedAdmission();
         }
-        long retryAfter = Duration.between(now, current.startedAt().plus(WINDOW)).toSeconds();
+        Duration remaining = Duration.between(now, current.startedAt().plus(WINDOW));
+        long retryAfter = remaining.getSeconds() + (remaining.getNano() == 0 ? 0 : 1);
         return Admission.rejected(Math.max(1, retryAfter));
     }
 

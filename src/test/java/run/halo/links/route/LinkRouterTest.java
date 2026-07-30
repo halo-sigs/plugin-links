@@ -270,6 +270,25 @@ class LinkRouterTest {
     }
 
     @Test
+    void shouldExpireCaptchaCookieWhenApplicationCreationFails() {
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(enabledSettings()));
+        when(captchaService.verify(any(), any())).thenReturn(validCaptcha());
+        when(rateLimiter.isAllowed(any())).thenReturn(true);
+        when(applicationService.create(any()))
+            .thenReturn(Mono.error(new IllegalStateException("create failed")));
+        var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
+
+        client.post()
+            .uri("/links/apply")
+            .body(BodyInserters.fromFormData("url", "https://example.com")
+                .with("displayName", "Example")
+                .with("captchaCode", "ABCDE"))
+            .exchange()
+            .expectStatus().is5xxServerError()
+            .expectHeader().valueMatches(HttpHeaders.SET_COOKIE, ".*Max-Age=0.*");
+    }
+
+    @Test
     void shouldKeepRealCsrfFilterAheadOfAnonymousCaptchaAndApplicationHandling() {
         when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(enabledSettings()));
         when(captchaService.issue(any())).thenReturn(Mono.just(

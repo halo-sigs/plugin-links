@@ -17,7 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.security.web.server.csrf.CsrfToken;
 import org.springframework.util.MultiValueMap;
@@ -82,12 +81,12 @@ public class LinkRouter {
                 .flatMap(formData -> {
                     var verification = captchaService.verify(request,
                         getFormValue(formData, "captchaCode"));
+                    request.exchange().getResponse().addCookie(verification.expiredCookie());
                     if (!verification.valid()) {
-                        return withCookie(redirectCaptchaError(), verification.expiredCookie());
+                        return redirectCaptchaError();
                     }
                     if (!rateLimiter.isAllowed(request)) {
-                        return withCookie(redirectWithError("提交过于频繁，请稍后再试"),
-                            verification.expiredCookie());
+                        return redirectWithError("提交过于频繁，请稍后再试");
                     }
                     String url = getFormValue(formData, "url");
                     String displayName = getFormValue(formData, "displayName");
@@ -104,7 +103,7 @@ public class LinkRouter {
                         parseFeedUrls(getFormValue(formData, "feedUrls")),
                         origin
                     );
-                    var response = applicationService.create(submission)
+                    return applicationService.create(submission)
                         .flatMap(result -> {
                             if (result.status()
                                 == LinkApplicationService.CreateStatus.CREATED) {
@@ -113,7 +112,6 @@ public class LinkRouter {
                             return redirectWithFieldError(result.field(), result.value(),
                                 result.message());
                         });
-                    return withCookie(response, verification.expiredCookie());
                 });
             });
     }
@@ -197,13 +195,6 @@ public class LinkRouter {
                 .queryParam("message", "验证码错误或已过期，请重新输入")
                 .build().toUri()
         ).build();
-    }
-
-    private static Mono<ServerResponse> withCookie(Mono<ServerResponse> response,
-        ResponseCookie cookie) {
-        return response.flatMap(existing -> ServerResponse.from(existing)
-            .cookie(cookie)
-            .build());
     }
 
     private static Mono<ServerResponse> redirectDisabled() {

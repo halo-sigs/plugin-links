@@ -31,7 +31,9 @@ public class LinkApplicationCaptchaRenderGate {
             }
             return Mono.fromCallable(rendering)
                 .subscribeOn(scheduler)
-                .doFinally(signalType -> slots.release());
+                .doFinally(signalType -> slots.release())
+                // Keep the permit until the callable exits, even if the client cancels.
+                .cache();
         });
     }
 

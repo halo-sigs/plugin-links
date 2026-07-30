@@ -34,6 +34,20 @@ class LinkApplicationCaptchaGenerationLimiterTest {
     }
 
     @Test
+    void shouldRoundRetryAfterUpToTheRemainingWholeSecond() {
+        var clock = new MutableClock(Instant.parse("2026-07-29T00:00:00Z"));
+        var limiter = new LinkApplicationCaptchaGenerationLimiter(clock, 10_000);
+        var request = ServerRequestFixtures.request("192.0.2.10");
+
+        for (int index = 0; index < 10; index++) {
+            assertThat(limiter.admit(request).allowed()).isTrue();
+        }
+        clock.advance(Duration.ofSeconds(30).plusMillis(200));
+
+        assertThat(limiter.admit(request).retryAfterSeconds()).isEqualTo(30);
+    }
+
+    @Test
     void shouldCleanExpiredEntriesAndEvictOldestTrackingEntryAtCapacity() {
         var clock = new MutableClock(Instant.parse("2026-07-29T00:00:00Z"));
         var limiter = new LinkApplicationCaptchaGenerationLimiter(clock, 2);
