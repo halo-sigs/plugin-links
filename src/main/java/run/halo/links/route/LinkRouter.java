@@ -63,8 +63,8 @@ public class LinkRouter {
     @Bean
     RouterFunction<ServerResponse> linkTemplateRoute() {
         return route(GET("/links"), listHandler())
-            .andRoute(GET("/links/captcha"), captchaHandler())
-            .andRoute(POST("/links/apply"), applyHandler());
+            .andRoute(GET("/links/apply/captcha"), captchaHandler())
+            .andRoute(POST("/links/apply/submit"), applyHandler());
     }
 
     private HandlerFunction<ServerResponse> applyHandler() {

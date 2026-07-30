@@ -127,7 +127,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example"))
             .exchange()
@@ -158,7 +158,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         var response = client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://secret.example")
                 .with("displayName", "Secret"))
@@ -182,7 +182,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .header(HttpHeaders.ACCEPT, "text/html, application/json")
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example"))
@@ -208,7 +208,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         var response = client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .header(HttpHeaders.ACCEPT, accept)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example"))
@@ -229,7 +229,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.TEXT_PLAIN)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example"))
@@ -249,7 +249,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("{}")
@@ -276,7 +276,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.TEXT_HTML)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("{}")
@@ -297,7 +297,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.TEXT_HTML)
             .exchange()
             .expectStatus().isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
@@ -313,7 +313,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "not-a-url"))
             .exchange()
             .expectStatus().is3xxRedirection()
@@ -332,7 +332,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         var response = client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "not-a-url"))
             .exchange();
@@ -364,7 +364,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.get()
-            .uri("https://example.test/links/captcha")
+            .uri("https://example.test/links/apply/captcha")
             .exchange()
             .expectStatus().isOk()
             .expectHeader().contentType("image/png")
@@ -387,7 +387,7 @@ class LinkRouterTest {
             .thenReturn(Mono.just(LinkApplicationSettings.defaults()));
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
-        client.get().uri("/links/captcha").exchange().expectStatus().isNotFound();
+        client.get().uri("/links/apply/captcha").exchange().expectStatus().isNotFound();
 
         verify(captchaService, never()).issue(any());
     }
@@ -402,11 +402,29 @@ class LinkRouterTest {
                 LinkApplicationCaptchaService.IssueStatus.UNAVAILABLE, null, null, 0)));
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
-        client.get().uri("/links/captcha").exchange()
+        client.get().uri("/links/apply/captcha").exchange()
             .expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
             .expectHeader().valueEquals(HttpHeaders.RETRY_AFTER, "42");
-        client.get().uri("/links/captcha").exchange()
+        client.get().uri("/links/apply/captcha").exchange()
             .expectStatus().isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void shouldNotRouteLegacyApplicationEndpoints() {
+        var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
+
+        client.post()
+            .uri("/links/apply")
+            .body(BodyInserters.fromFormData("url", "https://example.com"))
+            .exchange()
+            .expectStatus().isNotFound();
+        client.get()
+            .uri("/links/captcha")
+            .exchange()
+            .expectStatus().isNotFound();
+
+        verify(applicationSettingsFetcher, never()).fetch();
+        verify(captchaService, never()).issue(any());
     }
 
     @Test
@@ -417,7 +435,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://secret.example")
                 .with("displayName", "Secret")
                 .with("captchaCode", "WRONG"))
@@ -443,7 +461,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://secret.example")
                 .with("displayName", "Secret")
@@ -478,7 +496,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
@@ -507,7 +525,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://secret.example")
                 .with("displayName", "Secret")
@@ -536,7 +554,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://secret.example")
                 .with("displayName", "Secret")
                 .with("captchaCode", "ABCDE"))
@@ -562,7 +580,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "not-a-url")
                 .with("displayName", "Example")
                 .with("captchaCode", "ABCDE"))
@@ -582,7 +600,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
                 .with("captchaCode", "ABCDE"))
@@ -605,7 +623,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
@@ -637,7 +655,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
                 .with("captchaCode", "ABCDE"))
@@ -667,7 +685,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         var response = client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
@@ -688,7 +706,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
                 .with("captchaCode", "ABCDE"))
@@ -709,7 +727,7 @@ class LinkRouterTest {
         var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
 
         var response = client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
@@ -744,10 +762,10 @@ class LinkRouterTest {
             .webFilter(csrfFilter)
             .build();
 
-        client.get().uri("/links/captcha").exchange().expectStatus().isOk();
+        client.get().uri("/links/apply/captcha").exchange().expectStatus().isOk();
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
@@ -760,7 +778,7 @@ class LinkRouterTest {
         verify(captchaService, never()).verify(any(), any());
 
         client.post()
-            .uri("/links/apply")
+            .uri("/links/apply/submit")
             .body(BodyInserters.fromFormData("url", "https://example.com")
                 .with("displayName", "Example")
                 .with("captchaCode", "ABCDE")

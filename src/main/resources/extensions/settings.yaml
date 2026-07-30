@@ -82,7 +82,7 @@ spec:
               label: 允许访客提交
               name: enabled
               value: true
-              help: 允许主题通过 /links/apply 提交表单，主题应根据 linkApplicationEnabled 决定是否展示申请入口
+              help: 允许主题通过 /links/apply/submit 提交表单，主题应根据 linkApplicationEnabled 决定是否展示申请入口
         - $formkit: group
           if: "$get(link_application_enabled).value === true"
           name: security

@@ -8,7 +8,7 @@ approved into formal Links, rejected, inspected, and deleted.
 The system SHALL require origin information on every LinkApplication resource.
 
 #### Scenario: Form application records origin
-- **WHEN** an anonymous visitor successfully submits `/links/apply`
+- **WHEN** an anonymous visitor successfully submits `/links/apply/submit`
 - **THEN** the created LinkApplication has origin type `FORM`
 
 #### Scenario: Comment application records recognition origin
@@ -28,7 +28,7 @@ whenever visitor submission is effective.
 
 #### Scenario: Master switch disables visitor submissions
 - **WHEN** the application master switch is disabled
-- **AND** a visitor posts a valid form to `/links/apply`
+- **AND** a visitor posts a valid form to `/links/apply/submit`
 - **THEN** the system does not create a LinkApplication
 - **AND** redirects to `/links?applied=disabled&message=友链申请功能暂未开放`
 
@@ -51,7 +51,7 @@ whenever visitor submission is effective.
 #### Scenario: Visitor submission automatically requires CAPTCHA
 - **WHEN** the master switch and visitor-submission child switch are enabled
 - **THEN** the image CAPTCHA endpoint is available
-- **AND** every request through `/links/apply` requires a valid CAPTCHA
+- **AND** every request through `/links/apply/submit` requires a valid CAPTCHA
 - **AND** no independent CAPTCHA setting or compatibility fallback is exposed
 
 #### Scenario: CAPTCHA does not govern other creation channels
@@ -189,9 +189,9 @@ HTML form contract and negotiated asynchronous JSON response contract required b
 
 #### Scenario: Theme renders a protected form
 - **WHEN** a theme renders the application form
-- **THEN** the documented example loads its image from `GET /links/captcha`
+- **THEN** the documented example loads its image from `GET /links/apply/captcha`
 - **AND** includes the `_csrf` hidden field, required `captchaCode`, and supported application fields
-- **AND** submits `application/x-www-form-urlencoded` to `/links/apply`
+- **AND** submits `application/x-www-form-urlencoded` to `/links/apply/submit`
 
 #### Scenario: Theme works without JavaScript
 - **WHEN** a theme uses a plain HTML form and image
@@ -346,7 +346,7 @@ values or generic fallback text for user-visible source information.
 
 ### Requirement: Anonymous users can submit link applications
 The system SHALL allow visitors to submit link applications via an HTML form POST to
-`/links/apply` only while both the application master switch and visitor-submission switch are
+`/links/apply/submit` only while both the application master switch and visitor-submission switch are
 enabled and only after the request passes CSRF, CAPTCHA, and submission-rate checks. Redirect
 outcomes in this requirement apply when the request does not explicitly prefer JSON; the negotiated
 JSON equivalents are defined by the visitor JSON result requirements.
@@ -354,12 +354,12 @@ JSON equivalents are defined by the visitor JSON result requirements.
 #### Scenario: Successful submission
 - **WHEN** application and visitor submission are enabled
 - **AND** a visitor submits a form with `url`, `displayName`, `_csrf`, and a valid `captchaCode` to
-  `/links/apply`
+  `/links/apply/submit`
 - **THEN** the system creates a `LinkApplication` with status `PENDING` and origin type `FORM`
 - **AND** redirects the browser to `/links?applied=success`
 
 #### Scenario: Authenticated visitor uses the public form
-- **WHEN** an authenticated visitor submits through `/links/apply`
+- **WHEN** an authenticated visitor submits through `/links/apply/submit`
 - **THEN** the request requires the same valid CAPTCHA as an anonymous submission
 
 #### Scenario: Submission with optional fields
@@ -448,7 +448,7 @@ JSON equivalents are defined by the visitor JSON result requirements.
 
 ### Requirement: Visitor submissions report pending capacity outcomes
 The system SHALL preserve visitor security checks and duplicate behavior before reporting pending
-capacity outcomes from `/links/apply`. Redirect outcomes in this requirement apply when the request
+capacity outcomes from `/links/apply/submit`. Redirect outcomes in this requirement apply when the request
 does not explicitly prefer JSON; the negotiated JSON equivalents are defined by the visitor JSON
 result requirements.
 
@@ -684,7 +684,7 @@ The system SHALL generate the visitor-application CAPTCHA inside plugin-links wi
 provider or administrator CAPTCHA configuration.
 
 #### Scenario: CAPTCHA image is generated
-- **WHEN** an admitted request reaches `GET /links/captcha` while visitor submission is enabled
+- **WHEN** an admitted request reaches `GET /links/apply/captcha` while visitor submission is enabled
 - **THEN** the system returns a `160 x 48` PNG containing five alphanumeric characters
 - **AND** excludes ambiguous characters
 - **AND** derives the answer and visual variation from a cryptographically secure random source
@@ -702,7 +702,7 @@ provider or administrator CAPTCHA configuration.
 
 #### Scenario: Visitor submission is disabled
 - **WHEN** either the application master switch or visitor-submission switch is disabled
-- **AND** a client requests `GET /links/captcha`
+- **AND** a client requests `GET /links/apply/captcha`
 - **THEN** the endpoint returns `404`
 - **AND** does not create challenge state
 
@@ -815,7 +815,7 @@ redirects, and routine logs.
 - **AND** does not log challenge secrets, submitted form data, or raw client IPs
 
 ### Requirement: Visitor submission responses are content negotiated
-The system SHALL select the response representation for `POST /links/apply` from the request's
+The system SHALL select the response representation for `POST /links/apply/submit` from the request's
 acceptable response media types while preserving `application/x-www-form-urlencoded` as the only
 supported request body.
 
@@ -843,14 +843,14 @@ supported request body.
 - **THEN** the system returns the existing `303` redirect representation
 
 #### Scenario: Client accepts no supported response representation
-- **WHEN** a client submits to `/links/apply` but accepts neither HTML nor JSON
+- **WHEN** a client submits to `/links/apply/submit` but accepts neither HTML nor JSON
 - **THEN** the system returns `406 Not Acceptable`
 - **AND** does not promise a plugin JSON envelope
 - **AND** does not process an application submission
 
 #### Scenario: JSON client sends an unsupported request media type
 - **WHEN** a client explicitly prefers JSON
-- **AND** submits to `/links/apply` with a request media type other than
+- **AND** submits to `/links/apply/submit` with a request media type other than
   `application/x-www-form-urlencoded`
 - **THEN** the system returns `415 Unsupported Media Type`
 - **AND** returns `status=error`, `code=UNSUPPORTED_MEDIA_TYPE`, and a display `message` in the JSON
@@ -859,14 +859,14 @@ supported request body.
 
 #### Scenario: HTML client sends an unsupported request media type
 - **WHEN** a client does not explicitly prefer JSON
-- **AND** submits to `/links/apply` with a request media type other than
+- **AND** submits to `/links/apply/submit` with a request media type other than
   `application/x-www-form-urlencoded`
 - **THEN** the system returns `415 Unsupported Media Type`
 - **AND** does not promise a plugin JSON envelope
 - **AND** does not process an application submission
 
 #### Scenario: Negotiated responses identify their selection input
-- **WHEN** `/links/apply` returns either the HTML redirect or JSON representation
+- **WHEN** `/links/apply/submit` returns either the HTML redirect or JSON representation
 - **THEN** the response includes `Vary: Accept`
 - **AND** a JSON response also includes `Cache-Control: no-store`
 
@@ -986,3 +986,15 @@ message, and optional field without changing application processing or side-effe
 - **WHEN** a theme receives `406`, a Halo platform response, a non-JSON response, or a network error
 - **THEN** the integration guidance requires a theme-owned generic fallback
 - **AND** does not instruct the theme to parse arbitrary error response text as a plugin result
+
+### Requirement: Obsolete visitor application action paths are removed
+The system SHALL expose visitor application submission and CAPTCHA generation only at their new
+action paths and SHALL NOT retain the previous paths as aliases or redirects.
+
+#### Scenario: Previous submission path is not exposed
+- **WHEN** a client sends `POST /links/apply`
+- **THEN** the plugin does not route the request to the visitor application submission handler
+
+#### Scenario: Previous CAPTCHA path is not exposed
+- **WHEN** a client sends `GET /links/captcha`
+- **THEN** the plugin does not route the request to the visitor CAPTCHA handler

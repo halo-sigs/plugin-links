@@ -20,7 +20,7 @@ public final class ServerRequestFixtures {
 
     public static ServerRequest request(String scheme, String remoteAddress,
         Map<String, String> cookies, Map<String, String> headers) {
-        var builder = MockServerHttpRequest.get(scheme + "://example.test/links/captcha")
+        var builder = MockServerHttpRequest.get(scheme + "://example.test/links/apply/captcha")
             .remoteAddress(new InetSocketAddress(remoteAddress, 8080));
         cookies.forEach((name, value) -> builder.cookie(new HttpCookie(name, value)));
         headers.forEach(builder::header);

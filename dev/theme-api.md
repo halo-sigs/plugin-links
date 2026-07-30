@@ -90,17 +90,17 @@
 
 待审核申请达到管理员配置的容量时，`linkApplicationEnabled` 仍为 `true`，验证码图片
 端点也保持可用。容量可能随审核进度动态释放，主题无需读取或展示容量值，提交结果以
-`POST /links/apply` 的实际响应为准。
+`POST /links/apply/submit` 的实际响应为准。
 
 主题展示申请表单时，必须加载内置图形验证码，并随表单提交 `captchaCode`。
 
-验证码图片端点为同源的 `GET /links/captcha`。开启访客申请时，它返回固定
+验证码图片端点为同源的 `GET /links/apply/captcha`。开启访客申请时，它返回固定
 `160 x 48` PNG，并通过路径为 `/links`、有效期五分钟、`HttpOnly`、`SameSite=Lax`
 的 Cookie 关联一次性挑战；HTTPS 请求还会设置 `Secure`。图片响应禁止缓存。每次成功
 加载或刷新图片都会覆盖 Cookie 并使上一张图片失效，提交尝试无论成功与否也会使当前
 挑战和 Cookie 失效。
 
-提交端点为同源、CSRF 保护的 `POST /links/apply`，仅接受
+提交端点为同源、CSRF 保护的 `POST /links/apply/submit`，仅接受
 `application/x-www-form-urlencoded`。它不接受 JSON 请求体；主题可以使用普通 HTML
 表单完成提交，也可以在同一端点上通过内容协商获取 JSON 结果。
 
@@ -125,7 +125,7 @@ HTML 示例：
     id="link-application-form"
     th:if="${linkApplicationEnabled}"
     method="post"
-    th:action="@{/links/apply}"
+    th:action="@{/links/apply/submit}"
 >
     <input type="hidden" name="_csrf" th:value="${csrfToken}">
     <input name="url" required th:value="${param.field == 'url' ? param.value : ''}">
@@ -139,7 +139,7 @@ HTML 示例：
     <p id="captcha-help">请输入图片中的五位字符。看不清时可刷新页面换一张。</p>
     <img
         id="link-application-captcha"
-        src="/links/captcha"
+        src="/links/apply/captcha"
         alt="友链申请图形验证码"
         width="160"
         height="48"
@@ -167,7 +167,7 @@ HTML 示例：
 <script>
   const image = document.querySelector('#link-application-captcha')
   document.querySelector('#refresh-link-captcha').addEventListener('click', () => {
-    image.src = `/links/captcha?refresh=${Date.now()}`
+    image.src = `/links/apply/captcha?refresh=${Date.now()}`
   })
 </script>
 ```
@@ -249,7 +249,7 @@ const captchaConsumedCodes = new Set([
 ])
 
 function refreshCaptcha() {
-  captchaImage.src = `/links/captcha?refresh=${Date.now()}`
+  captchaImage.src = `/links/apply/captcha?refresh=${Date.now()}`
 }
 
 form.addEventListener('submit', async (event) => {
