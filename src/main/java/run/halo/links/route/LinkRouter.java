@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Sort;
@@ -42,6 +43,7 @@ import run.halo.links.vo.LinkVo;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class LinkRouter {
 
     private static final Duration BLOCKING_TIMEOUT = Duration.ofSeconds(10);
@@ -104,14 +106,19 @@ public class LinkRouter {
                         origin
                     );
                     return applicationService.create(submission)
-                        .flatMap(result -> {
-                            if (result.status()
-                                == LinkApplicationService.CreateStatus.CREATED) {
-                                return redirectSuccess();
-                            }
-                            return redirectWithFieldError(result.field(), result.value(),
-                                result.message());
-                        });
+                        .flatMap(result -> switch (result.status()) {
+                            case CREATED -> redirectSuccess();
+                            case CAPACITY_REACHED ->
+                                redirectWithError("待审核申请数量已达上限，请稍后再试");
+                            case DUPLICATE, INVALID ->
+                                redirectWithFieldError(result.field(), result.value(),
+                                    result.message());
+                        })
+                        .doOnError(error -> log.error(
+                            "[plugin-links] Failed to create link application: errorType={}",
+                            error.getClass().getName()))
+                        .onErrorResume(error ->
+                            redirectWithError("暂时无法提交，请稍后再试"));
                 });
             });
     }

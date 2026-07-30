@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ import run.halo.links.endpoint.AiFoundationAvailableCondition;
 import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.route.LinkBaseSettings;
+import run.halo.links.service.LinkApplicationCapacityService;
 import run.halo.links.service.LinkApplicationService;
 import run.halo.links.service.LinkUrlCanonicalizer;
 import run.halo.links.service.ai.LinkAiService;
@@ -36,6 +38,7 @@ import run.halo.links.service.ai.LinkAiService;
 @Component
 @RequiredArgsConstructor
 @Conditional(AiFoundationAvailableCondition.class)
+@Slf4j
 public class CommentApplicationRecognitionProcessor {
 
     private static final String BASE_SETTING_GROUP = "base";
@@ -43,6 +46,7 @@ public class CommentApplicationRecognitionProcessor {
     private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
     private final LinkAiService aiService;
     private final LinkApplicationService applicationService;
+    private final LinkApplicationCapacityService capacityService;
     private final ReactiveExtensionClient extensionClient;
     private final ReactiveSettingFetcher settingFetcher;
     private final PluginContext pluginContext;
@@ -65,15 +69,29 @@ public class CommentApplicationRecognitionProcessor {
                     return Mono.just(ProcessOutcome.SKIPPED);
                 }
                 var modelName = settings.commentRecognitionModelName();
-                return aiService.isOperational(modelName)
-                    .onErrorReturn(false)
-                    .flatMap(operational -> {
-                        if (!operational) {
-                            return Mono.just(ProcessOutcome.SKIPPED);
+                return capacityService.isAvailable()
+                    .onErrorResume(error -> {
+                        log.error("[plugin-links] Failed to evaluate pending application capacity "
+                                + "for Comment recognition: errorType={}",
+                            error.getClass().getName());
+                        return Mono.empty();
+                    })
+                    .flatMap(available -> {
+                        if (!available) {
+                            return Mono.just(ProcessOutcome.CAPACITY_REACHED);
                         }
-                        return subjectTitle(source.get())
-                            .flatMap(title -> analyze(comment, source.get(), title, modelName));
-                    });
+                        return aiService.isOperational(modelName)
+                            .onErrorReturn(false)
+                            .flatMap(operational -> {
+                                if (!operational) {
+                                    return Mono.just(ProcessOutcome.SKIPPED);
+                                }
+                                return subjectTitle(source.get())
+                                    .flatMap(title ->
+                                        analyze(comment, source.get(), title, modelName));
+                            });
+                    })
+                    .switchIfEmpty(Mono.just(ProcessOutcome.SKIPPED));
             });
     }
 
@@ -137,6 +155,7 @@ public class CommentApplicationRecognitionProcessor {
                 case CREATED -> ProcessOutcome.CREATED;
                 case DUPLICATE -> ProcessOutcome.DUPLICATE;
                 case INVALID -> ProcessOutcome.INVALID;
+                case CAPACITY_REACHED -> ProcessOutcome.CAPACITY_REACHED;
             });
     }
 
@@ -236,6 +255,7 @@ public class CommentApplicationRecognitionProcessor {
         NEGATIVE,
         INVALID,
         DUPLICATE,
+        CAPACITY_REACHED,
         CREATED
     }
 }

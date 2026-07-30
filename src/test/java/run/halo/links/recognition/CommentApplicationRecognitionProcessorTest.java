@@ -2,6 +2,8 @@ package run.halo.links.recognition;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,6 +23,7 @@ import run.halo.app.core.extension.content.Comment;
 import run.halo.app.core.extension.content.Post;
 import run.halo.app.core.extension.content.SinglePage;
 import run.halo.app.extension.GroupVersionKind;
+import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.Ref;
@@ -32,6 +35,7 @@ import run.halo.links.dto.LinkCommentRecognitionResult;
 import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.route.LinkBaseSettings;
+import run.halo.links.service.LinkApplicationCapacityService;
 import run.halo.links.service.LinkApplicationService;
 import run.halo.links.service.ai.LinkAiService;
 
@@ -60,10 +64,13 @@ class CommentApplicationRecognitionProcessorTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(extensionClient.countBy(eq(LinkApplication.class),
+            any(ListOptions.class))).thenReturn(Mono.just(0L));
         processor = new CommentApplicationRecognitionProcessor(
             applicationSettingsFetcher,
             aiService,
             applicationService,
+            new LinkApplicationCapacityService(extensionClient, applicationSettingsFetcher),
             extensionClient,
             settingFetcher,
             pluginContext
@@ -185,6 +192,70 @@ class CommentApplicationRecognitionProcessorTest {
         verify(aiService, never()).isOperational(any());
         verify(aiService, never()).recognize(any(), any());
         verify(applicationService, never()).create(any());
+    }
+
+    @Test
+    void shouldSkipModelInvocationWhenPendingCapacityIsFull() {
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
+        when(extensionClient.countBy(eq(LinkApplication.class), any(ListOptions.class)))
+            .thenReturn(Mono.just(100L));
+        var comment = comment("comment-a", Ref.of("post-a",
+            GroupVersionKind.fromExtension(Post.class)));
+
+        StepVerifier.create(processor.process(comment))
+            .expectNext(CommentApplicationRecognitionProcessor.ProcessOutcome.CAPACITY_REACHED)
+            .verifyComplete();
+
+        verify(aiService, never()).isOperational(any());
+        verify(aiService, never()).recognize(any(), any());
+        verify(applicationService, never()).create(any());
+    }
+
+    @Test
+    void shouldFailClosedWhenCapacityPrecheckIsUnavailable() {
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
+        when(extensionClient.countBy(eq(LinkApplication.class), any(ListOptions.class)))
+            .thenReturn(Mono.error(new IllegalStateException("count unavailable")));
+        var comment = comment("comment-a", Ref.of("post-a",
+            GroupVersionKind.fromExtension(Post.class)));
+
+        StepVerifier.create(processor.process(comment))
+            .expectNext(CommentApplicationRecognitionProcessor.ProcessOutcome.SKIPPED)
+            .verifyComplete();
+
+        verify(aiService, never()).isOperational(any());
+        verify(aiService, never()).recognize(any(), any());
+        verify(applicationService, never()).create(any());
+    }
+
+    @Test
+    void shouldReportCapacityConsumedDuringRecognition() {
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(
+            settings(source(LinkApplicationSettings.SourceType.POST, "post-a"))));
+        when(aiService.isOperational("model-a")).thenReturn(Mono.just(true));
+        var post = new Post();
+        post.setSpec(new Post.PostSpec());
+        when(extensionClient.fetch(Post.class, "post-a")).thenReturn(Mono.just(post));
+        when(aiService.recognize(any(), any())).thenReturn(Mono.just(
+            new LinkCommentRecognitionResult(true, "https://example.com", "Example",
+                null, null, null, List.of())
+        ));
+        when(applicationService.create(any())).thenReturn(Mono.just(
+            new LinkApplicationService.CreateResult(
+                LinkApplicationService.CreateStatus.CAPACITY_REACHED,
+                null, null, null, null
+            )
+        ));
+
+        StepVerifier.create(processor.process(comment("comment-a", Ref.of("post-a",
+                GroupVersionKind.fromExtension(Post.class)))))
+            .expectNext(CommentApplicationRecognitionProcessor.ProcessOutcome.CAPACITY_REACHED)
+            .verifyComplete();
+
+        verify(aiService).recognize(any(), eq("model-a"));
+        verify(applicationService).create(any());
     }
 
     @Test

@@ -1,6 +1,8 @@
 package run.halo.links.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -11,9 +13,13 @@ import lombok.Data;
 @Schema(description = "Link application settings.")
 public class LinkApplicationSettings {
 
+    public static final int DEFAULT_PENDING_CAPACITY = 100;
+
     private Boolean enabled;
 
     private SelfSubmission selfSubmission;
+
+    private Security security;
 
     private CommentRecognition commentRecognition;
 
@@ -23,6 +29,7 @@ public class LinkApplicationSettings {
         var settings = new LinkApplicationSettings();
         settings.setEnabled(false);
         settings.setSelfSubmission(SelfSubmission.defaults());
+        settings.setSecurity(Security.defaults());
         settings.setCommentRecognition(CommentRecognition.defaults());
         settings.setNotification(Notification.defaults());
         return settings;
@@ -34,6 +41,9 @@ public class LinkApplicationSettings {
         settings.setSelfSubmission(selfSubmission == null
             ? SelfSubmission.defaults()
             : selfSubmission.normalized());
+        settings.setSecurity(security == null
+            ? Security.defaults()
+            : security.normalized());
         settings.setCommentRecognition(commentRecognition == null
             ? CommentRecognition.defaults()
             : commentRecognition.normalized());
@@ -51,6 +61,12 @@ public class LinkApplicationSettings {
         return applicationEnabled()
             && selfSubmission != null
             && selfSubmission.enabled();
+    }
+
+    public BigInteger pendingCapacity() {
+        return security == null
+            ? BigInteger.valueOf(DEFAULT_PENDING_CAPACITY)
+            : security.pendingCapacity();
     }
 
     public boolean commentRecognitionEnabled() {
@@ -105,6 +121,45 @@ public class LinkApplicationSettings {
 
         boolean enabled() {
             return enabled == null || Boolean.TRUE.equals(enabled);
+        }
+    }
+
+    @Data
+    public static class Security {
+
+        private BigDecimal pendingCapacity;
+
+        static Security defaults() {
+            var settings = new Security();
+            settings.setPendingCapacity(BigDecimal.valueOf(DEFAULT_PENDING_CAPACITY));
+            return settings;
+        }
+
+        Security normalized() {
+            var settings = new Security();
+            settings.setPendingCapacity(new BigDecimal(validatedPendingCapacity()));
+            return settings;
+        }
+
+        BigInteger pendingCapacity() {
+            return validatedPendingCapacity();
+        }
+
+        private BigInteger validatedPendingCapacity() {
+            var value = pendingCapacity == null
+                ? BigDecimal.valueOf(DEFAULT_PENDING_CAPACITY)
+                : pendingCapacity;
+            try {
+                var integer = value.toBigIntegerExact();
+                if (integer.signum() < 1) {
+                    throw new IllegalArgumentException(
+                        "Pending application capacity must be a positive integer");
+                }
+                return integer;
+            } catch (ArithmeticException error) {
+                throw new IllegalArgumentException(
+                    "Pending application capacity must be a positive integer", error);
+            }
         }
     }
 

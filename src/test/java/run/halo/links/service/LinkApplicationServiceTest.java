@@ -7,6 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +24,9 @@ import reactor.test.StepVerifier;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.plugin.ReactiveSettingFetcher;
+import run.halo.links.dto.LinkApplicationSettings;
+import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.notification.LinkApplicationNotificationPublisher;
@@ -34,13 +40,21 @@ class LinkApplicationServiceTest {
     @Mock
     LinkApplicationNotificationPublisher notificationPublisher;
 
+    @Mock
+    ReactiveSettingFetcher settingFetcher;
+
     LinkApplicationService service;
 
     @BeforeEach
     void setUp() {
         lenient().when(notificationPublisher.publish(any())).thenReturn(Mono.empty());
+        lenient().when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(enabledSettings(100)));
         service = new LinkApplicationService(client,
-            new LinkApplicationCreationCoordinator(), notificationPublisher);
+            new LinkApplicationCreationCoordinator(),
+            new LinkApplicationCapacityService(client,
+                new LinkApplicationSettingsFetcher(settingFetcher)),
+            notificationPublisher);
     }
 
     @Test
@@ -229,6 +243,105 @@ class LinkApplicationServiceTest {
     }
 
     @Test
+    void shouldRejectWhenPendingCapacityIsFull() {
+        givenCapacity(1);
+        givenExisting(List.of(), List.of(application("https://existing.example",
+            LinkApplication.Status.PENDING, LinkApplication.OriginType.COMMENT, "comment-a")));
+
+        StepVerifier.create(service.create(submission("https://new.example",
+                LinkApplication.OriginType.FORM, null)))
+            .assertNext(result -> assertThat(result.status())
+                .isEqualTo(LinkApplicationService.CreateStatus.CAPACITY_REACHED))
+            .verifyComplete();
+
+        verify(client, never()).create(any(LinkApplication.class));
+        verify(notificationPublisher, never()).publish(any());
+    }
+
+    @Test
+    void shouldReturnDuplicateBeforeCapacityReached() {
+        givenExisting(List.of(), List.of(application("https://example.com",
+            LinkApplication.Status.PENDING, LinkApplication.OriginType.FORM, null)));
+
+        verifyDuplicate(submission("https://example.com/",
+            LinkApplication.OriginType.COMMENT, "comment-a"));
+        verify(client, never()).create(any(LinkApplication.class));
+    }
+
+    @Test
+    void shouldCreateWhenExistingApplicationsDoNotConsumeCapacity() {
+        givenCapacity(1);
+        when(client.create(any(LinkApplication.class)))
+            .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+        for (var status : List.of(
+            LinkApplication.Status.APPROVING,
+            LinkApplication.Status.APPROVED,
+            LinkApplication.Status.REJECTED
+        )) {
+            givenExisting(List.of(), List.of(application("https://existing.example",
+                status, LinkApplication.OriginType.COMMENT, "comment-" + status)));
+
+            StepVerifier.create(service.create(submission("https://" + status + ".example",
+                    LinkApplication.OriginType.FORM, null)))
+                .assertNext(result -> assertThat(result.status())
+                    .isEqualTo(LinkApplicationService.CreateStatus.CREATED))
+                .verifyComplete();
+        }
+    }
+
+    @Test
+    void shouldPropagateCapacityEvaluationFailure() {
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(Link.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenReturn(Flux.empty());
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(LinkApplication.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenReturn(Flux.error(new IllegalStateException("applications unavailable")));
+
+        StepVerifier.create(service.create(submission("https://example.com",
+                LinkApplication.OriginType.FORM, null)))
+            .expectErrorMessage("applications unavailable")
+            .verify();
+
+        verify(client, never()).create(any(LinkApplication.class));
+        verify(notificationPublisher, never()).publish(any());
+    }
+
+    @Test
+    void shouldReleaseCreationGateAfterFailure() {
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(Link.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenReturn(Flux.empty());
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(LinkApplication.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenReturn(
+            Flux.error(new IllegalStateException("applications unavailable")),
+            Flux.empty()
+        );
+        when(client.create(any(LinkApplication.class)))
+            .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(service.create(submission("https://first.example",
+                LinkApplication.OriginType.FORM, null)))
+            .expectErrorMessage("applications unavailable")
+            .verify();
+        StepVerifier.create(service.create(submission("https://second.example",
+                LinkApplication.OriginType.FORM, null)))
+            .assertNext(result -> assertThat(result.status())
+                .isEqualTo(LinkApplicationService.CreateStatus.CREATED))
+            .verifyComplete();
+    }
+
+    @Test
     void shouldCoordinateConcurrentFormAndCommentCreation() {
         var stored = new CopyOnWriteArrayList<LinkApplication>();
         when(client.listAll(
@@ -261,6 +374,48 @@ class LinkApplicationServiceTest {
             .verifyComplete();
     }
 
+    @Test
+    void shouldKeepDifferentUrlConcurrencyWithinPendingCapacity() {
+        givenCapacity(2);
+        var stored = new CopyOnWriteArrayList<LinkApplication>();
+        stored.add(application("https://existing.example", LinkApplication.Status.PENDING,
+            LinkApplication.OriginType.FORM, null));
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(Link.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenReturn(Flux.empty());
+        when(client.listAll(
+            org.mockito.ArgumentMatchers.eq(LinkApplication.class),
+            any(ListOptions.class),
+            any(Sort.class)
+        )).thenAnswer(ignored -> Flux.defer(() -> {
+            var snapshot = new ArrayList<>(stored);
+            return Mono.delay(Duration.ofMillis(50))
+                .thenMany(Flux.fromIterable(snapshot));
+        }));
+        when(client.create(any(LinkApplication.class))).thenAnswer(invocation -> {
+            LinkApplication application = invocation.getArgument(0);
+            stored.add(application);
+            return Mono.just(application);
+        });
+
+        var first = service.create(submission("https://first.example",
+            LinkApplication.OriginType.FORM, null));
+        var second = service.create(submission("https://second.example",
+            LinkApplication.OriginType.COMMENT, "comment-b"));
+
+        StepVerifier.create(Flux.merge(first, second)
+                .map(LinkApplicationService.CreateResult::status)
+                .collectList())
+            .assertNext(statuses -> assertThat(statuses)
+                .containsExactlyInAnyOrder(
+                    LinkApplicationService.CreateStatus.CREATED,
+                    LinkApplicationService.CreateStatus.CAPACITY_REACHED))
+            .verifyComplete();
+        assertThat(stored).hasSize(2);
+    }
+
     private void verifyDuplicate(LinkApplicationService.Submission submission) {
         StepVerifier.create(service.create(submission))
             .assertNext(result -> assertThat(result.status())
@@ -279,6 +434,20 @@ class LinkApplicationServiceTest {
             any(ListOptions.class),
             any(Sort.class)
         )).thenReturn(Flux.fromIterable(applications));
+    }
+
+    private void givenCapacity(int capacity) {
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(enabledSettings(capacity)));
+    }
+
+    private static LinkApplicationSettings enabledSettings(int capacity) {
+        var settings = new LinkApplicationSettings();
+        settings.setEnabled(true);
+        var security = new LinkApplicationSettings.Security();
+        security.setPendingCapacity(BigDecimal.valueOf(capacity));
+        settings.setSecurity(security);
+        return settings;
     }
 
     private static LinkApplicationService.Submission submission(String url,

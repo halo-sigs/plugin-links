@@ -88,6 +88,10 @@
 插件设置中的“友链申请”总开关默认关闭。总开关和“允许访客提交”子开关同时开启时，
 `linkApplicationEnabled` 为 `true`，主题才应展示申请入口。
 
+待审核申请达到管理员配置的容量时，`linkApplicationEnabled` 仍为 `true`，验证码图片
+端点也保持可用。容量可能随审核进度动态释放，主题无需读取或展示容量值，提交结果以
+`POST /links/apply` 的重定向为准。
+
 主题展示申请表单时，必须加载内置图形验证码，并随表单提交 `captchaCode`。
 
 验证码图片端点为同源的 `GET /links/captcha`。开启访客申请时，它返回固定
@@ -194,6 +198,12 @@ await fetch('/links/apply', {
 - 验证码缺失、格式错误、答案错误、过期或重放统一返回
   `applied=error&field=captchaCode&message=验证码错误或已过期，请重新输入`，且不会返回
   `value` 或其他已提交字段；主题应重新加载图片
+- 待审核申请达到容量：
+  `applied=error&message=待审核申请数量已达上限，请稍后再试`
+- 容量设置或待审核数量暂时无法读取：
+  `applied=error&message=暂时无法提交，请稍后再试`
+- 两种容量错误都不包含 `field`、`value` 或实际容量；已经验证的 CAPTCHA 和提交频率
+  额度仍会被消耗
 - 功能关闭：`applied=disabled&message=友链申请功能暂未开放`
 
 ---
