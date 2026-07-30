@@ -88,9 +88,7 @@
 插件设置中的“友链申请”总开关默认关闭。总开关和“允许访客提交”子开关同时开启时，
 `linkApplicationEnabled` 为 `true`，主题才应展示申请入口。
 
-访客申请功能尚未发布，因此下面的验证码保护表单就是首个公开主题契约，不存在旧表单、
-兼容分支或无验证码回退。主题只要展示申请表单，就必须加载内置图形验证码并提交
-`captchaCode`。
+主题展示申请表单时，必须加载内置图形验证码，并随表单提交 `captchaCode`。
 
 验证码图片端点为同源的 `GET /links/captcha`。开启访客申请时，它返回固定
 `160 x 48` PNG，并通过路径为 `/links`、有效期五分钟、`HttpOnly`、`SameSite=Lax`
@@ -99,7 +97,8 @@
 挑战和 Cookie 失效。
 
 提交端点为同源、CSRF 保护的 `POST /links/apply`，仅接受
-`application/x-www-form-urlencoded`。当前没有 JSON 申请 API，也不需要 JavaScript。
+`application/x-www-form-urlencoded`。插件不提供 JSON 申请 API，主题可以使用普通
+HTML 表单完成提交，无需依赖 JavaScript。
 
 字段如下：
 
@@ -166,8 +165,8 @@ HTML 示例：
 </script>
 ```
 
-每次刷新都会使旧图片失效，多标签页也会相互覆盖同一 Cookie。本版本仅提供图形验证码，
-没有音频或其他非视觉挑战；主题应保留说明文字和键盘可操作的刷新按钮。
+每次刷新都会使旧图片失效，多标签页也会相互覆盖同一 Cookie。验证码仅提供图形挑战，
+不提供音频或其他非视觉挑战；主题应保留说明文字和键盘可操作的刷新按钮。
 
 同源 JavaScript 示例：
 
