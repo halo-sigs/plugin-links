@@ -1,0 +1,72 @@
+apiVersion: notification.halo.run/v1alpha1
+kind: ReasonType
+metadata:
+  name: plugin-links-new-link-application
+  annotations:
+    rbac.authorization.halo.run/ui-permissions: |
+      ["plugin:links:manage"]
+spec:
+  displayName: "新的友链申请"
+  description: "所选管理员会在新的友链申请创建成功后收到通知。"
+  properties:
+    - name: displayName
+      type: string
+      description: "The submitted website display name."
+    - name: websiteUrl
+      type: string
+      description: "The submitted website URL."
+    - name: originLabel
+      type: string
+      description: "The localized application origin: 访客自助申请 or 评论识别."
+    - name: manageUrl
+      type: string
+      description: "The absolute URL of the Links Console page."
+---
+apiVersion: notification.halo.run/v1alpha1
+kind: NotificationTemplate
+metadata:
+  name: plugin-links-new-link-application
+spec:
+  reasonSelector:
+    reasonType: plugin-links-new-link-application
+    language: default
+  template:
+    title: "收到新的友链申请：[(${displayName})]"
+    rawBody: |
+      [(${subscriber.displayName})] 你好：
+
+        收到新的友链申请：[(${displayName})]
+        网站地址：[(${websiteUrl})]
+        申请来源：[(${originLabel})]
+
+        前往审核：[(${manageUrl})]
+    htmlBody: |
+      <div class="notification-content">
+        <div class="head">
+          <p th:text="|${subscriber.displayName} 你好：|"></p>
+        </div>
+        <div class="body">
+          <p>
+            收到新的友链申请：
+            <span th:text="${displayName}"></span>
+          </p>
+          <ul>
+            <li>
+              网站地址：
+              <a
+                th:href="${websiteUrl}"
+                th:text="${websiteUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+              ></a>
+            </li>
+            <li>
+              申请来源：
+              <span th:text="${originLabel}"></span>
+            </li>
+          </ul>
+          <p>
+            <a th:href="${manageUrl}">前往审核</a>
+          </p>
+        </div>
+      </div>

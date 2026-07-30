@@ -1,17 +1,21 @@
 package run.halo.links;
 
-import run.halo.app.extension.index.IndexSpecs;
-
+import java.time.Duration;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 import run.halo.app.extension.Scheme;
 import run.halo.app.extension.SchemeManager;
+import run.halo.app.extension.index.IndexSpecs;
 import run.halo.app.plugin.BasePlugin;
 import run.halo.app.plugin.PluginContext;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.extension.LinkGroup;
+import run.halo.links.notification.LinkApplicationNotificationSubscriptionManager;
 
 /**
  * @author guqing
@@ -19,13 +23,31 @@ import run.halo.links.extension.LinkGroup;
  */
 @Component
 @EnableScheduling
+@Slf4j
 public class LinkPlugin extends BasePlugin {
+
+    private static final Duration NOTIFICATION_LIFECYCLE_TIMEOUT = Duration.ofSeconds(10);
 
     private final SchemeManager schemeManager;
 
-    public LinkPlugin(PluginContext pluginContext, SchemeManager schemeManager) {
+    private final LinkApplicationNotificationSubscriptionManager notificationSubscriptionManager;
+
+    private final Duration notificationLifecycleTimeout;
+
+    @Autowired
+    public LinkPlugin(PluginContext pluginContext, SchemeManager schemeManager,
+        LinkApplicationNotificationSubscriptionManager notificationSubscriptionManager) {
+        this(pluginContext, schemeManager, notificationSubscriptionManager,
+            NOTIFICATION_LIFECYCLE_TIMEOUT);
+    }
+
+    LinkPlugin(PluginContext pluginContext, SchemeManager schemeManager,
+        LinkApplicationNotificationSubscriptionManager notificationSubscriptionManager,
+        Duration notificationLifecycleTimeout) {
         super(pluginContext);
         this.schemeManager = schemeManager;
+        this.notificationSubscriptionManager = notificationSubscriptionManager;
+        this.notificationLifecycleTimeout = notificationLifecycleTimeout;
     }
 
     @Override
@@ -89,12 +111,28 @@ public class LinkPlugin extends BasePlugin {
                 })
             );
         });
+        runNotificationLifecycle(
+            notificationSubscriptionManager.reconcile().then(),
+            "restore notification subscriptions"
+        );
     }
 
     @Override
     public void stop() {
+        runNotificationLifecycle(
+            notificationSubscriptionManager.cleanup(),
+            "clean up notification subscriptions"
+        );
         schemeManager.unregister(Scheme.buildFromType(Link.class));
         schemeManager.unregister(Scheme.buildFromType(LinkGroup.class));
         schemeManager.unregister(Scheme.buildFromType(LinkApplication.class));
+    }
+
+    private void runNotificationLifecycle(Mono<Void> operation, String description) {
+        try {
+            operation.block(notificationLifecycleTimeout);
+        } catch (RuntimeException error) {
+            log.warn("[plugin-links] Failed to {}", description, error);
+        }
     }
 }

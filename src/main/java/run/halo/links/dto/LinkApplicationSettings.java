@@ -2,6 +2,7 @@ package run.halo.links.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import lombok.Data;
@@ -16,11 +17,14 @@ public class LinkApplicationSettings {
 
     private CommentRecognition commentRecognition;
 
+    private Notification notification;
+
     public static LinkApplicationSettings defaults() {
         var settings = new LinkApplicationSettings();
         settings.setEnabled(false);
         settings.setSelfSubmission(SelfSubmission.defaults());
         settings.setCommentRecognition(CommentRecognition.defaults());
+        settings.setNotification(Notification.defaults());
         return settings;
     }
 
@@ -33,6 +37,9 @@ public class LinkApplicationSettings {
         settings.setCommentRecognition(commentRecognition == null
             ? CommentRecognition.defaults()
             : commentRecognition.normalized());
+        settings.setNotification(notification == null
+            ? Notification.defaults()
+            : notification.normalized());
         return settings;
     }
 
@@ -64,6 +71,19 @@ public class LinkApplicationSettings {
         return commentRecognition == null || commentRecognition.getSources() == null
             ? List.of()
             : commentRecognition.getSources();
+    }
+
+    public boolean notificationEnabled() {
+        return applicationEnabled()
+            && notification != null
+            && notification.enabled()
+            && !notificationRecipients().isEmpty();
+    }
+
+    public List<String> notificationRecipients() {
+        return notification == null || notification.getRecipients() == null
+            ? List.of()
+            : notification.getRecipients();
     }
 
     @Data
@@ -118,6 +138,32 @@ public class LinkApplicationSettings {
     }
 
     @Data
+    public static class Notification {
+
+        private Boolean enabled;
+
+        private List<String> recipients;
+
+        static Notification defaults() {
+            var settings = new Notification();
+            settings.setEnabled(false);
+            settings.setRecipients(List.of());
+            return settings;
+        }
+
+        Notification normalized() {
+            var settings = new Notification();
+            settings.setEnabled(Boolean.TRUE.equals(enabled));
+            settings.setRecipients(normalizeRecipients(recipients));
+            return settings;
+        }
+
+        boolean enabled() {
+            return Boolean.TRUE.equals(enabled);
+        }
+    }
+
+    @Data
     @Schema(description = "A Comment subject eligible for application recognition.")
     public static class RecognitionSource {
 
@@ -153,6 +199,20 @@ public class LinkApplicationSettings {
                 normalizedSource);
         }
         return List.copyOf(normalized.values());
+    }
+
+    private static List<String> normalizeRecipients(List<String> recipients) {
+        if (recipients == null || recipients.isEmpty()) {
+            return List.of();
+        }
+        var normalized = new LinkedHashSet<String>();
+        for (var recipient : recipients) {
+            var username = normalizeText(recipient);
+            if (username != null) {
+                normalized.add(username);
+            }
+        }
+        return List.copyOf(normalized);
     }
 
     private static String normalizeText(String value) {

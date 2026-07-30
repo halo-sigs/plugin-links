@@ -136,6 +136,27 @@ spec:
                   label: 页面
                   validation: required
                   clearable: false
+        - $formkit: group
+          if: "$get(link_application_enabled).value === true"
+          name: notification
+          label: 申请通知
+          children:
+            - $formkit: checkbox
+              label: 开启通知
+              name: enabled
+              id: link_application_notification_enabled
+              value: false
+              help: 新的友链申请创建成功后，通过 Halo 通知机制提醒所选管理员
+            - $formkit: userSelect
+              if: "$get(link_application_notification_enabled).value === true"
+              name: recipients
+              label: 接收通知的管理员
+              value: []
+              multiple: true
+              validation: required
+              help: >-
+                请选择拥有链接管理权限的管理员，插件不会自动校验权限。插件会按此列表维护通知订阅；
+                邮件中的取消订阅不会修改此列表，如需停止接收，请移除用户或由用户在个人通知偏好中关闭此类型。
     - group: ai
       label: AI
       formSchema:
