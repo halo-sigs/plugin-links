@@ -131,6 +131,63 @@ class LinkApplicationSettingsFetcherTest {
             .verifyComplete();
     }
 
+    @Test
+    void shouldDefaultPendingCapacityToOneHundred() {
+        var raw = new LinkApplicationSettings();
+        raw.setEnabled(true);
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(raw));
+
+        StepVerifier.create(new LinkApplicationSettingsFetcher(settingFetcher).fetch())
+            .assertNext(settings -> {
+                assertThat(settings.applicationEnabled()).isTrue();
+                assertThat(settings.pendingCapacity()).isEqualTo(100);
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldKeepPositivePendingCapacity() {
+        var raw = new LinkApplicationSettings();
+        raw.setEnabled(true);
+        var security = new LinkApplicationSettings.Security();
+        security.setPendingCapacity(250);
+        raw.setSecurity(security);
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(raw));
+
+        StepVerifier.create(new LinkApplicationSettingsFetcher(settingFetcher).fetch())
+            .assertNext(settings -> {
+                assertThat(settings.applicationEnabled()).isTrue();
+                assertThat(settings.pendingCapacity()).isEqualTo(250);
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFailClosedForNonPositivePendingCapacity() {
+        var zero = new LinkApplicationSettings();
+        zero.setEnabled(true);
+        var zeroSecurity = new LinkApplicationSettings.Security();
+        zeroSecurity.setPendingCapacity(0);
+        zero.setSecurity(zeroSecurity);
+        var negative = new LinkApplicationSettings();
+        negative.setEnabled(true);
+        var negativeSecurity = new LinkApplicationSettings.Security();
+        negativeSecurity.setPendingCapacity(-1);
+        negative.setSecurity(negativeSecurity);
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(zero), Mono.just(negative));
+        var fetcher = new LinkApplicationSettingsFetcher(settingFetcher);
+
+        StepVerifier.create(fetcher.fetch())
+            .assertNext(settings -> assertThat(settings.applicationEnabled()).isFalse())
+            .verifyComplete();
+        StepVerifier.create(fetcher.fetch())
+            .assertNext(settings -> assertThat(settings.applicationEnabled()).isFalse())
+            .verifyComplete();
+    }
+
     private static LinkApplicationSettings.RecognitionSource source(
         LinkApplicationSettings.SourceType type, String name) {
         var source = new LinkApplicationSettings.RecognitionSource();

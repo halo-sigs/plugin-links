@@ -85,6 +85,17 @@ spec:
               help: 允许主题通过 /links/apply 提交表单，主题应根据 linkApplicationEnabled 决定是否展示申请入口
         - $formkit: group
           if: "$get(link_application_enabled).value === true"
+          name: security
+          label: 安全
+          children:
+            - $formkit: number
+              label: 待审核申请容量
+              name: pendingCapacity
+              validation: required|number|min:1
+              value: 100
+              help: 限制待审核友链申请的最大数量。达到上限后将暂停接收新申请，直到待审核数量下降。
+        - $formkit: group
+          if: "$get(link_application_enabled).value === true"
           name: commentRecognition
           label: 从新评论中识别友链申请
           children:

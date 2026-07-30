@@ -24,6 +24,7 @@ public class LinkApplicationService {
 
     private final ReactiveExtensionClient client;
     private final LinkApplicationCreationCoordinator creationCoordinator;
+    private final LinkApplicationCapacityService capacityService;
 
     private final LinkApplicationNotificationPublisher notificationPublisher;
 
@@ -33,8 +34,9 @@ public class LinkApplicationService {
             return Mono.just(validation);
         }
         var canonicalUrl = LinkUrlCanonicalizer.canonicalKey(submission.url()).orElseThrow();
-        return creationCoordinator.coordinate(canonicalUrl,
-            () -> createCoordinated(submission, canonicalUrl));
+        return creationCoordinator.coordinateCreation(() ->
+            creationCoordinator.coordinate(canonicalUrl,
+                () -> createCoordinated(submission, canonicalUrl)));
     }
 
     private Mono<CreateResult> createCoordinated(Submission submission, String canonicalUrl) {
@@ -48,15 +50,22 @@ public class LinkApplicationService {
                     || hasDuplicateApplication(existing.getT2(), submission, canonicalUrl)) {
                     return Mono.just(CreateResult.duplicate(submission.url().trim()));
                 }
-                var application = toApplication(submission);
-                return client.create(application)
-                    .flatMap(created -> notificationPublisher.publish(created)
-                        .doOnError(error -> log.warn(
-                            "[plugin-links] Failed to publish notification for application [{}]",
-                            created.getMetadata().getName(), error))
-                        .onErrorResume(error -> Mono.empty())
-                        .thenReturn(created))
-                    .map(CreateResult::created);
+                return capacityService.isAvailable(existing.getT2())
+                    .flatMap(available -> {
+                        if (!available) {
+                            return Mono.just(CreateResult.capacityReached());
+                        }
+                        var application = toApplication(submission);
+                        return client.create(application)
+                            .flatMap(created -> notificationPublisher.publish(created)
+                                .doOnError(error -> log.warn(
+                                    "[plugin-links] Failed to publish notification for "
+                                        + "application [{}]",
+                                    created.getMetadata().getName(), error))
+                                .onErrorResume(error -> Mono.empty())
+                                .thenReturn(created))
+                            .map(CreateResult::created);
+                    });
             });
     }
 
@@ -215,11 +224,16 @@ public class LinkApplicationService {
         static CreateResult invalid(String field, String value, String message) {
             return new CreateResult(CreateStatus.INVALID, null, field, value, message);
         }
+
+        static CreateResult capacityReached() {
+            return new CreateResult(CreateStatus.CAPACITY_REACHED, null, null, null, null);
+        }
     }
 
     public enum CreateStatus {
         CREATED,
         DUPLICATE,
-        INVALID
+        INVALID,
+        CAPACITY_REACHED
     }
 }

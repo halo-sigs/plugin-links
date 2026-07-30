@@ -2,6 +2,7 @@ package run.halo.links.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -47,5 +48,40 @@ class LinkApplicationCreationCoordinatorTest {
             .verify();
 
         assertThat(coordinator.trackedKeyCount()).isZero();
+    }
+
+    @Test
+    void shouldNotSkipActiveCreationWhenMiddleWaiterIsCancelled() {
+        var coordinator = new LinkApplicationCreationCoordinator();
+        var firstMayFinish = Sinks.<Void>empty();
+        var firstStarted = new AtomicBoolean();
+        var secondStarted = new AtomicBoolean();
+        var thirdStarted = new AtomicBoolean();
+        var thirdResult = Sinks.<String>one();
+
+        coordinator.coordinateCreation(() -> {
+            firstStarted.set(true);
+            return firstMayFinish.asMono().thenReturn("first");
+        }).subscribe();
+        assertThat(firstStarted).isTrue();
+
+        var secondSubscription = coordinator.coordinateCreation(() -> {
+            secondStarted.set(true);
+            return Mono.just("second");
+        }).subscribe();
+        assertThat(secondStarted).isFalse();
+        secondSubscription.dispose();
+
+        coordinator.coordinateCreation(() -> {
+            thirdStarted.set(true);
+            return Mono.just("third");
+        }).subscribe(thirdResult::tryEmitValue, thirdResult::tryEmitError);
+
+        assertThat(thirdStarted).isFalse();
+        firstMayFinish.tryEmitEmpty();
+
+        StepVerifier.create(thirdResult.asMono())
+            .expectNext("third")
+            .verifyComplete();
     }
 }

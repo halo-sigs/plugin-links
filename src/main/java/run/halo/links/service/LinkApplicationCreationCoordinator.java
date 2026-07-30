@@ -8,13 +8,40 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 /**
- * Serializes application creation and approval reservation by canonical URL within one plugin
- * process.
+ * Serializes application creation globally and URL occupancy work by canonical URL within one
+ * plugin process.
  */
 @Component
 public class LinkApplicationCreationCoordinator {
 
     private final Map<String, Entry> entries = new HashMap<>();
+    private final Entry creationEntry = new Entry();
+
+    public <T> Mono<T> coordinateCreation(Supplier<Mono<T>> work) {
+        return Mono.defer(() -> {
+            var completion = Sinks.<Void>empty();
+            Mono<Void> predecessor;
+            synchronized (creationEntry) {
+                predecessor = creationEntry.tail;
+                creationEntry.tail = predecessor
+                    .onErrorResume(error -> Mono.empty())
+                    .then(completion.asMono());
+                creationEntry.references++;
+            }
+            return predecessor
+                .onErrorResume(error -> Mono.empty())
+                .then(Mono.defer(work))
+                .doFinally(signalType -> {
+                    completion.tryEmitEmpty();
+                    synchronized (creationEntry) {
+                        creationEntry.references--;
+                        if (creationEntry.references == 0) {
+                            creationEntry.tail = Mono.empty();
+                        }
+                    }
+                });
+        });
+    }
 
     public <T> Mono<T> coordinate(String key, Supplier<Mono<T>> work) {
         return Mono.defer(() -> {
@@ -24,7 +51,9 @@ public class LinkApplicationCreationCoordinator {
             synchronized (entries) {
                 entry = entries.computeIfAbsent(key, ignored -> new Entry());
                 predecessor = entry.tail;
-                entry.tail = completion.asMono();
+                entry.tail = predecessor
+                    .onErrorResume(error -> Mono.empty())
+                    .then(completion.asMono());
                 entry.references++;
             }
             return predecessor

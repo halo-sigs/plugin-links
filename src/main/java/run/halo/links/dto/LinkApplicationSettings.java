@@ -11,9 +11,13 @@ import lombok.Data;
 @Schema(description = "Link application settings.")
 public class LinkApplicationSettings {
 
+    public static final int DEFAULT_PENDING_CAPACITY = 100;
+
     private Boolean enabled;
 
     private SelfSubmission selfSubmission;
+
+    private Security security;
 
     private CommentRecognition commentRecognition;
 
@@ -23,6 +27,7 @@ public class LinkApplicationSettings {
         var settings = new LinkApplicationSettings();
         settings.setEnabled(false);
         settings.setSelfSubmission(SelfSubmission.defaults());
+        settings.setSecurity(Security.defaults());
         settings.setCommentRecognition(CommentRecognition.defaults());
         settings.setNotification(Notification.defaults());
         return settings;
@@ -34,6 +39,9 @@ public class LinkApplicationSettings {
         settings.setSelfSubmission(selfSubmission == null
             ? SelfSubmission.defaults()
             : selfSubmission.normalized());
+        settings.setSecurity(security == null
+            ? Security.defaults()
+            : security.normalized());
         settings.setCommentRecognition(commentRecognition == null
             ? CommentRecognition.defaults()
             : commentRecognition.normalized());
@@ -51,6 +59,12 @@ public class LinkApplicationSettings {
         return applicationEnabled()
             && selfSubmission != null
             && selfSubmission.enabled();
+    }
+
+    public int pendingCapacity() {
+        return security == null
+            ? DEFAULT_PENDING_CAPACITY
+            : security.pendingCapacity();
     }
 
     public boolean commentRecognitionEnabled() {
@@ -105,6 +119,33 @@ public class LinkApplicationSettings {
 
         boolean enabled() {
             return enabled == null || Boolean.TRUE.equals(enabled);
+        }
+    }
+
+    @Data
+    public static class Security {
+
+        private Integer pendingCapacity;
+
+        static Security defaults() {
+            var settings = new Security();
+            settings.setPendingCapacity(DEFAULT_PENDING_CAPACITY);
+            return settings;
+        }
+
+        Security normalized() {
+            var settings = new Security();
+            if (pendingCapacity != null && pendingCapacity < 1) {
+                throw new IllegalArgumentException("Pending application capacity must be positive");
+            }
+            settings.setPendingCapacity(pendingCapacity == null
+                ? DEFAULT_PENDING_CAPACITY
+                : pendingCapacity);
+            return settings;
+        }
+
+        int pendingCapacity() {
+            return pendingCapacity == null ? DEFAULT_PENDING_CAPACITY : pendingCapacity;
         }
     }
 

@@ -270,7 +270,37 @@ class LinkRouterTest {
     }
 
     @Test
-    void shouldExpireCaptchaCookieWhenApplicationCreationFails() {
+    void shouldRedirectWhenPendingCapacityIsFull() {
+        when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(enabledSettings()));
+        when(captchaService.verify(any(), any())).thenReturn(validCaptcha());
+        when(rateLimiter.isAllowed(any())).thenReturn(true);
+        when(applicationService.create(any())).thenReturn(Mono.just(
+            new LinkApplicationService.CreateResult(
+                LinkApplicationService.CreateStatus.CAPACITY_REACHED,
+                null, null, null, null
+            )
+        ));
+        var client = WebTestClient.bindToRouterFunction(router().linkTemplateRoute()).build();
+
+        client.post()
+            .uri("/links/apply")
+            .body(BodyInserters.fromFormData("url", "https://example.com")
+                .with("displayName", "Example")
+                .with("captchaCode", "ABCDE"))
+            .exchange()
+            .expectStatus().is3xxRedirection()
+            .expectHeader().valueEquals("Location",
+                "/links?applied=error&message=%E5%BE%85%E5%AE%A1%E6%A0%B8%E7%94%B3%E8%AF%B7%E6%95%B0%E9%87%8F%E5%B7%B2%E8%BE%BE%E4%B8%8A%E9%99%90%EF%BC%8C%E8%AF%B7%E7%A8%8D%E5%90%8E%E5%86%8D%E8%AF%95")
+            .expectHeader().valueMatches(HttpHeaders.SET_COOKIE, ".*Max-Age=0.*");
+
+        var order = inOrder(captchaService, rateLimiter, applicationService);
+        order.verify(captchaService).verify(any(), any());
+        order.verify(rateLimiter).isAllowed(any());
+        order.verify(applicationService).create(any());
+    }
+
+    @Test
+    void shouldRedirectWhenApplicationCreationIsUnavailable() {
         when(applicationSettingsFetcher.fetch()).thenReturn(Mono.just(enabledSettings()));
         when(captchaService.verify(any(), any())).thenReturn(validCaptcha());
         when(rateLimiter.isAllowed(any())).thenReturn(true);
@@ -284,7 +314,9 @@ class LinkRouterTest {
                 .with("displayName", "Example")
                 .with("captchaCode", "ABCDE"))
             .exchange()
-            .expectStatus().is5xxServerError()
+            .expectStatus().is3xxRedirection()
+            .expectHeader().valueEquals("Location",
+                "/links?applied=error&message=%E6%9A%82%E6%97%B6%E6%97%A0%E6%B3%95%E6%8F%90%E4%BA%A4%EF%BC%8C%E8%AF%B7%E7%A8%8D%E5%90%8E%E5%86%8D%E8%AF%95")
             .expectHeader().valueMatches(HttpHeaders.SET_COOKIE, ".*Max-Age=0.*");
     }
 
