@@ -6,6 +6,7 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
 import static run.halo.app.extension.index.query.Queries.equal;
 import static run.halo.app.extension.index.query.Queries.isNull;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -63,21 +64,37 @@ public class LinkRouter {
     RouterFunction<ServerResponse> linkTemplateRoute() {
         return route(GET("/links"), listHandler())
             .andRoute(GET("/links/captcha"), captchaHandler())
-            .andRoute(POST("/links/apply").and(
-                contentType(MediaType.APPLICATION_FORM_URLENCODED)), applyHandler());
-    }
-
-    private static org.springframework.web.reactive.function.server.RequestPredicate contentType(
-        MediaType mediaType) {
-        return org.springframework.web.reactive.function.server.RequestPredicates.contentType(
-            mediaType);
+            .andRoute(POST("/links/apply"), applyHandler());
     }
 
     private HandlerFunction<ServerResponse> applyHandler() {
-        return request -> applicationSettingsFetcher.fetch()
+        return request -> {
+            var responseMode = selectResponseMode(request);
+            if (responseMode == ResponseMode.NOT_ACCEPTABLE) {
+                return ServerResponse.status(HttpStatus.NOT_ACCEPTABLE)
+                    .header(HttpHeaders.VARY, HttpHeaders.ACCEPT)
+                    .build();
+            }
+            boolean jsonPreferred = responseMode == ResponseMode.JSON;
+            boolean formUrlEncoded = request.headers().contentType()
+                .filter(MediaType.APPLICATION_FORM_URLENCODED::isCompatibleWith)
+                .isPresent();
+            if (!formUrlEncoded) {
+                return jsonPreferred
+                    ? jsonResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                        "UNSUPPORTED_MEDIA_TYPE", null,
+                        "仅支持 application/x-www-form-urlencoded 表单提交")
+                    : ServerResponse.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                        .header(HttpHeaders.VARY, HttpHeaders.ACCEPT)
+                        .build();
+            }
+            return applicationSettingsFetcher.fetch()
             .flatMap(settings -> {
                 if (!settings.selfSubmissionEnabled()) {
-                    return redirectDisabled();
+                    return jsonPreferred
+                        ? jsonResponse(HttpStatus.FORBIDDEN,
+                            "APPLICATION_DISABLED", null, "友链申请功能暂未开放")
+                        : redirectDisabled();
                 }
                 return request.formData()
                 .flatMap(formData -> {
@@ -85,10 +102,17 @@ public class LinkRouter {
                         getFormValue(formData, "captchaCode"));
                     request.exchange().getResponse().addCookie(verification.expiredCookie());
                     if (!verification.valid()) {
-                        return redirectCaptchaError();
+                        return jsonPreferred
+                            ? jsonResponse(HttpStatus.UNPROCESSABLE_CONTENT,
+                                "INVALID_CAPTCHA", "captchaCode",
+                                "验证码错误或已过期，请重新输入")
+                            : redirectCaptchaError();
                     }
-                    if (!rateLimiter.isAllowed(request)) {
-                        return redirectWithError("提交过于频繁，请稍后再试");
+                    var admission = rateLimiter.admit(request);
+                    if (!admission.allowed()) {
+                        return jsonPreferred
+                            ? jsonRateLimited(admission.retryAfterSeconds())
+                            : redirectWithError("提交过于频繁，请稍后再试");
                     }
                     String url = getFormValue(formData, "url");
                     String displayName = getFormValue(formData, "displayName");
@@ -107,20 +131,72 @@ public class LinkRouter {
                     );
                     return applicationService.create(submission)
                         .flatMap(result -> switch (result.status()) {
-                            case CREATED -> redirectSuccess();
-                            case CAPACITY_REACHED ->
-                                redirectWithError("待审核申请数量已达上限，请稍后再试");
-                            case DUPLICATE, INVALID ->
-                                redirectWithFieldError(result.field(), result.value(),
+                            case CREATED -> jsonPreferred
+                                ? jsonCreated()
+                                : redirectSuccess();
+                            case CAPACITY_REACHED -> jsonPreferred
+                                ? jsonResponse(HttpStatus.CONFLICT,
+                                    "CAPACITY_REACHED", null,
+                                    "待审核申请数量已达上限，请稍后再试")
+                                : redirectWithError("待审核申请数量已达上限，请稍后再试");
+                            case DUPLICATE -> jsonPreferred
+                                ? jsonResponse(HttpStatus.CONFLICT,
+                                    "DUPLICATE_APPLICATION", result.field(), result.message())
+                                : redirectWithFieldError(
+                                    result.field(), result.value(), result.message());
+                            case INVALID -> jsonPreferred
+                                ? jsonResponse(HttpStatus.UNPROCESSABLE_CONTENT,
+                                    "VALIDATION_FAILED", result.field(), result.message())
+                                : redirectWithFieldError(result.field(), result.value(),
                                     result.message());
                         })
                         .doOnError(error -> log.error(
                             "[plugin-links] Failed to create link application: errorType={}",
                             error.getClass().getName()))
-                        .onErrorResume(error ->
-                            redirectWithError("暂时无法提交，请稍后再试"));
+                        .onErrorResume(error -> jsonPreferred
+                            ? jsonResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                                "APPLICATION_UNAVAILABLE", null,
+                                "暂时无法提交，请稍后再试")
+                            : redirectWithError("暂时无法提交，请稍后再试"));
                 });
             });
+        };
+    }
+
+    private static ResponseMode selectResponseMode(ServerRequest request) {
+        var accepted = request.headers().accept();
+        if (accepted.isEmpty()) {
+            return ResponseMode.HTML;
+        }
+        double jsonQuality = acceptedQuality(accepted, MediaType.APPLICATION_JSON);
+        double htmlQuality = acceptedQuality(accepted, MediaType.TEXT_HTML);
+        if (jsonQuality > 0 && jsonQuality > htmlQuality) {
+            return ResponseMode.JSON;
+        }
+        if (htmlQuality > 0) {
+            return ResponseMode.HTML;
+        }
+        return ResponseMode.NOT_ACCEPTABLE;
+    }
+
+    private static double acceptedQuality(List<MediaType> accepted, MediaType produced) {
+        int bestSpecificity = -1;
+        double bestQuality = 0;
+        for (var candidate : accepted) {
+            if (!candidate.isCompatibleWith(produced)) {
+                continue;
+            }
+            int specificity = candidate.isWildcardType()
+                ? 0
+                : candidate.isWildcardSubtype() ? 1 : 2;
+            if (specificity > bestSpecificity) {
+                bestSpecificity = specificity;
+                bestQuality = candidate.getQualityValue();
+            } else if (specificity == bestSpecificity) {
+                bestQuality = Math.max(bestQuality, candidate.getQualityValue());
+            }
+        }
+        return bestQuality;
     }
 
     private HandlerFunction<ServerResponse> captchaHandler() {
@@ -170,7 +246,34 @@ public class LinkRouter {
             UriComponentsBuilder.fromPath("/links")
                 .queryParam("applied", "success")
                 .build().toUri()
-        ).build();
+        ).header(HttpHeaders.VARY, HttpHeaders.ACCEPT).build();
+    }
+
+    private static Mono<ServerResponse> jsonCreated() {
+        return jsonResponse(HttpStatus.CREATED, "success",
+            "APPLICATION_CREATED", null, "申请提交成功", null);
+    }
+
+    private static Mono<ServerResponse> jsonRateLimited(long retryAfterSeconds) {
+        return jsonResponse(HttpStatus.TOO_MANY_REQUESTS, "error",
+            "RATE_LIMITED", null, "提交过于频繁，请稍后再试", retryAfterSeconds);
+    }
+
+    private static Mono<ServerResponse> jsonResponse(HttpStatus status, String code, String field,
+        String message) {
+        return jsonResponse(status, "error", code, field, message, null);
+    }
+
+    private static Mono<ServerResponse> jsonResponse(HttpStatus httpStatus, String status,
+        String code, String field, String message, Long retryAfterSeconds) {
+        var builder = ServerResponse.status(httpStatus)
+            .contentType(MediaType.APPLICATION_JSON)
+            .header(HttpHeaders.VARY, HttpHeaders.ACCEPT)
+            .header(HttpHeaders.CACHE_CONTROL, "no-store");
+        if (retryAfterSeconds != null) {
+            builder.header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfterSeconds));
+        }
+        return builder.bodyValue(new ApplicationJsonResponse(status, code, field, message));
     }
 
     private static Mono<ServerResponse> redirectWithFieldError(String field, String value,
@@ -182,7 +285,9 @@ public class LinkRouter {
         if (StringUtils.isNotBlank(value)) {
             builder.queryParam("value", value);
         }
-        return ServerResponse.seeOther(builder.build().toUri()).build();
+        return ServerResponse.seeOther(builder.build().toUri())
+            .header(HttpHeaders.VARY, HttpHeaders.ACCEPT)
+            .build();
     }
 
     private static Mono<ServerResponse> redirectWithError(String message) {
@@ -191,7 +296,7 @@ public class LinkRouter {
                 .queryParam("applied", "error")
                 .queryParam("message", message)
                 .build().toUri()
-        ).build();
+        ).header(HttpHeaders.VARY, HttpHeaders.ACCEPT).build();
     }
 
     private static Mono<ServerResponse> redirectCaptchaError() {
@@ -201,7 +306,7 @@ public class LinkRouter {
                 .queryParam("field", "captchaCode")
                 .queryParam("message", "验证码错误或已过期，请重新输入")
                 .build().toUri()
-        ).build();
+        ).header(HttpHeaders.VARY, HttpHeaders.ACCEPT).build();
     }
 
     private static Mono<ServerResponse> redirectDisabled() {
@@ -210,7 +315,7 @@ public class LinkRouter {
                 .queryParam("applied", "disabled")
                 .queryParam("message", "友链申请功能暂未开放")
                 .build().toUri()
-        ).build();
+        ).header(HttpHeaders.VARY, HttpHeaders.ACCEPT).build();
     }
 
     private HandlerFunction<ServerResponse> listHandler() {
@@ -302,5 +407,20 @@ public class LinkRouter {
             Sort.Order.asc("metadata.creationTimestamp"),
             Sort.Order.asc("metadata.name")
         );
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record ApplicationJsonResponse(
+        String status,
+        String code,
+        String field,
+        String message
+    ) {
+    }
+
+    private enum ResponseMode {
+        HTML,
+        JSON,
+        NOT_ACCEPTABLE
     }
 }

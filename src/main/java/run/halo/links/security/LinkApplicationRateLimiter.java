@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 
@@ -35,9 +35,9 @@ public class LinkApplicationRateLimiter {
      * Checks if the request from the given IP is allowed.
      *
      * @param request the server request
-     * @return true if the request is within rate limits
+     * @return the admission decision and retry timing when rejected
      */
-    public boolean isAllowed(ServerRequest request) {
+    public Admission admit(ServerRequest request) {
         String ip = getClientIp(request);
         Instant now = clock.instant();
         if (!lastRequestByIp.containsKey(ip) && lastRequestByIp.size() >= MAX_TRACKED_IPS) {
@@ -46,16 +46,19 @@ public class LinkApplicationRateLimiter {
                 removeOldest();
             }
         }
-        var allowed = new AtomicBoolean();
+        var admission = new AtomicReference<Admission>();
         lastRequestByIp.compute(ip, (key, lastRequest) -> {
             if (lastRequest != null && now.isBefore(lastRequest.plus(RATE_LIMIT_DURATION))) {
-                allowed.set(false);
+                var remaining = Duration.between(now, lastRequest.plus(RATE_LIMIT_DURATION));
+                long retryAfterSeconds = remaining.getSeconds()
+                    + (remaining.getNano() == 0 ? 0 : 1);
+                admission.set(new Admission(false, retryAfterSeconds));
                 return lastRequest;
             }
-            allowed.set(true);
+            admission.set(new Admission(true, 0));
             return now;
         });
-        return allowed.get();
+        return admission.get();
     }
 
     int trackedIpCount() {
@@ -78,5 +81,8 @@ public class LinkApplicationRateLimiter {
             .map(InetSocketAddress::getAddress)
             .map(addr -> addr.getHostAddress())
             .orElse("unknown");
+    }
+
+    public record Admission(boolean allowed, long retryAfterSeconds) {
     }
 }

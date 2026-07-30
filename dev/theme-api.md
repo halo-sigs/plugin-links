@@ -90,7 +90,7 @@
 
 待审核申请达到管理员配置的容量时，`linkApplicationEnabled` 仍为 `true`，验证码图片
 端点也保持可用。容量可能随审核进度动态释放，主题无需读取或展示容量值，提交结果以
-`POST /links/apply` 的重定向为准。
+`POST /links/apply` 的实际响应为准。
 
 主题展示申请表单时，必须加载内置图形验证码，并随表单提交 `captchaCode`。
 
@@ -101,8 +101,8 @@
 挑战和 Cookie 失效。
 
 提交端点为同源、CSRF 保护的 `POST /links/apply`，仅接受
-`application/x-www-form-urlencoded`。插件不提供 JSON 申请 API，主题可以使用普通
-HTML 表单完成提交，无需依赖 JavaScript。
+`application/x-www-form-urlencoded`。它不接受 JSON 请求体；主题可以使用普通 HTML
+表单完成提交，也可以在同一端点上通过内容协商获取 JSON 结果。
 
 字段如下：
 
@@ -122,6 +122,7 @@ HTML 示例：
 
 ```html
 <form
+    id="link-application-form"
     th:if="${linkApplicationEnabled}"
     method="post"
     th:action="@{/links/apply}"
@@ -137,6 +138,7 @@ HTML 示例：
     <textarea name="feedUrls" placeholder="每行一个订阅地址"></textarea>
     <p id="captcha-help">请输入图片中的五位字符。看不清时可刷新页面换一张。</p>
     <img
+        id="link-application-captcha"
         src="/links/captcha"
         alt="友链申请图形验证码"
         width="160"
@@ -151,7 +153,8 @@ HTML 示例：
         autocomplete="off"
         aria-describedby="captcha-help"
     >
-    <button type="submit">申请友链</button>
+    <button id="link-application-submit" type="submit">申请友链</button>
+    <p id="link-application-result" role="status" aria-live="polite"></p>
 </form>
 ```
 
@@ -162,7 +165,7 @@ HTML 示例：
 <button type="button" id="refresh-link-captcha">换一张验证码</button>
 
 <script>
-  const image = document.querySelector('img[src^="/links/captcha"]')
+  const image = document.querySelector('#link-application-captcha')
   document.querySelector('#refresh-link-captcha').addEventListener('click', () => {
     image.src = `/links/captcha?refresh=${Date.now()}`
   })
@@ -172,25 +175,7 @@ HTML 示例：
 每次刷新都会使旧图片失效，多标签页也会相互覆盖同一 Cookie。验证码仅提供图形挑战，
 不提供音频或其他非视觉挑战；主题应保留说明文字和键盘可操作的刷新按钮。
 
-同源 JavaScript 示例：
-
-```js
-const body = new URLSearchParams({
-  _csrf: document.querySelector('meta[name="csrf-token"]').content,
-  url: 'https://example.com',
-  displayName: 'Example',
-  captchaCode: document.querySelector('[name="captchaCode"]').value,
-})
-
-await fetch('/links/apply', {
-  method: 'POST',
-  credentials: 'same-origin',
-  headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-  body,
-})
-```
-
-端点通过 `303` 重定向回 `/links`：
+不使用 JavaScript 时，端点继续返回 `303 See Other` 并重定向回 `/links`：
 
 - 成功：`applied=success`
 - 验证或限流失败：`applied=error&message=...`；字段错误还包含 `field`，并在有原值时包含
@@ -205,6 +190,136 @@ await fetch('/links/apply', {
 - 两种容量错误都不包含 `field`、`value` 或实际容量；已经验证的 CAPTCHA 和提交频率
   额度仍会被消耗
 - 功能关闭：`applied=disabled&message=友链申请功能暂未开放`
+
+### 异步提交
+
+请求头中的 `Accept` 明确让 `application/json` 比 `text/html` 具有更高优先级时，同一
+端点返回 JSON。未发送 `Accept`、发送 `*/*`、HTML 优先或两者优先级相同时，仍返回上述
+`303`；两种表示都不可接受时返回空的 `406 Not Acceptable`，且不会处理申请。
+
+JSON 响应使用以下结构，`field` 仅在错误与具体字段有关时出现：
+
+```json
+{
+  "status": "error",
+  "code": "VALIDATION_FAILED",
+  "field": "url",
+  "message": "URL格式错误"
+}
+```
+
+`code` 用于程序分支，`message` 是可直接展示的文字，不应作为程序判断条件。代码集合
+是稳定但可扩展的，主题必须为未知代码保留通用处理。
+
+| HTTP 状态 | `code` | `field` | 含义 |
+| --------- | ------ | ------- | ---- |
+| `201` | `APPLICATION_CREATED` | 无 | 申请已创建 |
+| `403` | `APPLICATION_DISABLED` | 无 | 访客申请未开启 |
+| `422` | `INVALID_CAPTCHA` | `captchaCode` | CAPTCHA 无效或过期 |
+| `422` | `VALIDATION_FAILED` | 具体字段 | 表单字段校验失败 |
+| `409` | `DUPLICATE_APPLICATION` | `url` | 链接已经申请 |
+| `429` | `RATE_LIMITED` | 无 | 提交过于频繁；响应同时包含准确的 `Retry-After` |
+| `409` | `CAPACITY_REACHED` | 无 | 待审核申请达到容量 |
+| `503` | `APPLICATION_UNAVAILABLE` | 无 | 暂时无法完成申请 |
+| `415` | `UNSUPPORTED_MEDIA_TYPE` | 无 | 请求体不是表单编码 |
+
+协商得到的 `303` 与 JSON 结果都包含 `Vary: Accept`；JSON 响应还包含
+`Cache-Control: no-store`。请求体不是表单编码时，仅明确选择 JSON 的客户端获得上述
+`415` JSON 结构，其他客户端获得不承诺插件结构的 `415`。JSON 结果不会返回提交值、
+申请对象或通用 `data` 字段。
+
+下面的完整示例直接序列化现有表单，因此 `_csrf` 的来源仍由主题模板决定；它不要求
+主题通过特定的 `meta` 或 `data-*` 属性传递 CSRF Token 或
+`linkApplicationEnabled`。主题应只在该表单已经渲染时加载这段脚本：
+
+```js
+const form = document.querySelector('#link-application-form')
+const submitButton = document.querySelector('#link-application-submit')
+const result = document.querySelector('#link-application-result')
+const captchaImage = document.querySelector('#link-application-captcha')
+const defaultButtonText = submitButton.textContent
+
+const captchaConsumedCodes = new Set([
+  'INVALID_CAPTCHA',
+  'VALIDATION_FAILED',
+  'DUPLICATE_APPLICATION',
+  'RATE_LIMITED',
+  'CAPACITY_REACHED',
+  'APPLICATION_UNAVAILABLE',
+])
+
+function refreshCaptcha() {
+  captchaImage.src = `/links/captcha?refresh=${Date.now()}`
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  submitButton.disabled = true
+  submitButton.textContent = '提交中…'
+  result.textContent = ''
+
+  try {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: new URLSearchParams(new FormData(form)),
+    })
+
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.toLowerCase().startsWith('application/json')) {
+      throw new Error('Non-JSON response')
+    }
+
+    const payload = await response.json()
+    const isEnvelope =
+      (payload.status === 'success' || payload.status === 'error') &&
+      typeof payload.code === 'string' &&
+      typeof payload.message === 'string'
+    if (!isEnvelope) {
+      throw new Error('Unexpected JSON response')
+    }
+
+    result.textContent = payload.message || '提交未完成，请稍后重试'
+
+    if (
+      response.status === 201 &&
+      payload.status === 'success' &&
+      payload.code === 'APPLICATION_CREATED'
+    ) {
+      form.reset()
+      refreshCaptcha()
+      return
+    }
+
+    if (payload.field) {
+      const field = form.elements.namedItem(payload.field)
+      if (field instanceof HTMLElement) {
+        field.focus()
+      }
+    }
+
+    if (captchaConsumedCodes.has(payload.code)) {
+      refreshCaptcha()
+    }
+  } catch {
+    result.textContent = '暂时无法提交，请稍后再试'
+  } finally {
+    submitButton.disabled = false
+    submitButton.textContent = defaultButtonText
+  }
+})
+```
+
+验证码错误以及验证码已经验证后的所有业务失败都会使当前挑战失效，示例因此刷新图片；
+成功后也会重置表单并取得新挑战。如果主题成功后关闭表单，则无需立即刷新。
+
+Halo Security 会在处理器之前校验 CSRF。无效或缺失的 Token 保持平台原生 `403`，不承诺
+上述插件 JSON 结构。`406`、平台错误、网络错误以及其他非 JSON 响应也在结构之外；
+异步主题应像示例一样显示自己的通用提示，不解析重定向 URL 或任意响应正文。
 
 ---
 

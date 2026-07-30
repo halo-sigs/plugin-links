@@ -4,7 +4,6 @@
 Define how visitor and Comment-origin friend-link applications are created, deduplicated, reviewed,
 approved into formal Links, rejected, inspected, and deleted.
 ## Requirements
-
 ### Requirement: Link applications record their origin
 The system SHALL require origin information on every LinkApplication resource.
 
@@ -180,7 +179,7 @@ LinkApplication creation attempts within one plugin instance.
 
 ### Requirement: Theme authors can integrate visitor applications
 The system SHALL document and expose the complete same-origin, CSRF-protected, CAPTCHA-protected
-HTML form contract required by Halo themes.
+HTML form contract and negotiated asynchronous JSON response contract required by Halo themes.
 
 #### Scenario: Theme evaluates form availability
 - **WHEN** the links template is rendered
@@ -198,6 +197,7 @@ HTML form contract required by Halo themes.
 - **WHEN** a theme uses a plain HTML form and image
 - **THEN** the challenge is associated through an HttpOnly cookie
 - **AND** the visitor can complete and submit the form without JavaScript
+- **AND** the existing `303` result contract remains unchanged
 
 #### Scenario: Theme refreshes the CAPTCHA
 - **WHEN** the page loads, a CAPTCHA error redirects back to `/links`, or optional theme JavaScript
@@ -207,16 +207,46 @@ HTML form contract required by Halo themes.
 
 #### Scenario: Theme submits with JavaScript
 - **WHEN** a theme implements the form with same-origin JavaScript
-- **THEN** the documentation provides a form-encoded example using the same CAPTCHA, CSRF, and
-  redirect contract
-- **AND** does not require a JSON application API
+- **THEN** the documentation provides a complete form-encoded example that explicitly requests
+  `application/json`
+- **AND** the example uses the same CAPTCHA and CSRF contract as an HTML form
+- **AND** the endpoint does not require a JSON request body
 
 #### Scenario: Theme handles result redirects
-- **WHEN** submission succeeds, fails CAPTCHA or field validation, is rate limited, is duplicated,
-  or is disabled
+- **WHEN** a non-JSON submission succeeds, fails CAPTCHA or field validation, is rate limited, is
+  duplicated, reaches capacity, is unavailable, or is disabled
 - **THEN** the documentation defines the corresponding `applied`, `field`, `value`, and `message`
   query parameters
 - **AND** explains that CAPTCHA failures do not return submitted field values
+
+#### Scenario: Theme handles JSON results
+- **WHEN** a JavaScript submission receives the plugin JSON envelope
+- **THEN** the documented example branches on stable `code`
+- **AND** renders `message` using a text-safe DOM API
+- **AND** associates a known `field` with its form control and otherwise uses a global message
+- **AND** handles an unknown code with a global fallback
+
+#### Scenario: Theme handles non-JSON asynchronous failures
+- **WHEN** an asynchronous submission receives a response that is not the plugin JSON envelope or
+  fails at the network layer
+- **THEN** the documented example presents a theme-owned generic failure
+- **AND** does not parse a redirect URL or arbitrary response text for a result
+
+#### Scenario: Theme prevents repeated asynchronous submission
+- **WHEN** a JavaScript submission is pending
+- **THEN** the documented example disables repeated submission until the request settles
+- **AND** the public endpoint does not require an idempotency key
+
+#### Scenario: Theme refreshes CAPTCHA after asynchronous business failure
+- **WHEN** JSON mode reports invalid CAPTCHA, rate limiting, duplication, field validation, pending
+  capacity, or operational unavailability
+- **THEN** the documented example loads a new CAPTCHA before another attempt
+- **AND** a successful result closes or resets the form
+
+#### Scenario: Theme chooses how to expose template state to JavaScript
+- **WHEN** theme JavaScript needs `csrfToken` or `linkApplicationEnabled`
+- **THEN** the documentation identifies the existing template variables
+- **AND** does not mandate a `meta`, `data-*`, hidden-input, inline-script, or new API strategy
 
 #### Scenario: Initial visitor application theme contract
 - **WHEN** a theme exposes the visitor application feature
@@ -317,7 +347,9 @@ values or generic fallback text for user-visible source information.
 ### Requirement: Anonymous users can submit link applications
 The system SHALL allow visitors to submit link applications via an HTML form POST to
 `/links/apply` only while both the application master switch and visitor-submission switch are
-enabled and only after the request passes CSRF, CAPTCHA, and submission-rate checks.
+enabled and only after the request passes CSRF, CAPTCHA, and submission-rate checks. Redirect
+outcomes in this requirement apply when the request does not explicitly prefer JSON; the negotiated
+JSON equivalents are defined by the visitor JSON result requirements.
 
 #### Scenario: Successful submission
 - **WHEN** application and visitor submission are enabled
@@ -416,7 +448,9 @@ enabled and only after the request passes CSRF, CAPTCHA, and submission-rate che
 
 ### Requirement: Visitor submissions report pending capacity outcomes
 The system SHALL preserve visitor security checks and duplicate behavior before reporting pending
-capacity outcomes from `/links/apply`.
+capacity outcomes from `/links/apply`. Redirect outcomes in this requirement apply when the request
+does not explicitly prefer JSON; the negotiated JSON equivalents are defined by the visitor JSON
+result requirements.
 
 #### Scenario: Visitor submission reaches full capacity
 - **WHEN** a visitor passes CAPTCHA and the IP submission limit with otherwise valid,
@@ -779,3 +813,176 @@ redirects, and routine logs.
 - **WHEN** capacity, rendering, or storage produces an operational failure
 - **THEN** the system may log aggregate diagnostic context
 - **AND** does not log challenge secrets, submitted form data, or raw client IPs
+
+### Requirement: Visitor submission responses are content negotiated
+The system SHALL select the response representation for `POST /links/apply` from the request's
+acceptable response media types while preserving `application/x-www-form-urlencoded` as the only
+supported request body.
+
+#### Scenario: JavaScript explicitly prefers JSON
+- **WHEN** a same-origin client submits a valid form request
+- **AND** `application/json` has a positive quality and is preferred over `text/html`
+- **THEN** the system returns the JSON representation of the submission result
+- **AND** does not redirect to `/links`
+
+#### Scenario: Client does not declare a response preference
+- **WHEN** a client submits a valid form request without an `Accept` header
+- **THEN** the system returns the existing `303` redirect representation
+
+#### Scenario: Client accepts any representation
+- **WHEN** a client submits a valid form request with `Accept: */*`
+- **THEN** the system returns the existing `303` redirect representation
+
+#### Scenario: Client prefers HTML
+- **WHEN** a client submits a valid form request and prefers `text/html` over `application/json`
+- **THEN** the system returns the existing `303` redirect representation
+
+#### Scenario: Client gives HTML and JSON equal preference
+- **WHEN** a client submits a valid form request and gives `text/html` and `application/json` equal
+  preference
+- **THEN** the system returns the existing `303` redirect representation
+
+#### Scenario: Client accepts no supported response representation
+- **WHEN** a client submits to `/links/apply` but accepts neither HTML nor JSON
+- **THEN** the system returns `406 Not Acceptable`
+- **AND** does not promise a plugin JSON envelope
+- **AND** does not process an application submission
+
+#### Scenario: JSON client sends an unsupported request media type
+- **WHEN** a client explicitly prefers JSON
+- **AND** submits to `/links/apply` with a request media type other than
+  `application/x-www-form-urlencoded`
+- **THEN** the system returns `415 Unsupported Media Type`
+- **AND** returns `status=error`, `code=UNSUPPORTED_MEDIA_TYPE`, and a display `message` in the JSON
+  envelope
+- **AND** does not process an application submission
+
+#### Scenario: HTML client sends an unsupported request media type
+- **WHEN** a client does not explicitly prefer JSON
+- **AND** submits to `/links/apply` with a request media type other than
+  `application/x-www-form-urlencoded`
+- **THEN** the system returns `415 Unsupported Media Type`
+- **AND** does not promise a plugin JSON envelope
+- **AND** does not process an application submission
+
+#### Scenario: Negotiated responses identify their selection input
+- **WHEN** `/links/apply` returns either the HTML redirect or JSON representation
+- **THEN** the response includes `Vary: Accept`
+- **AND** a JSON response also includes `Cache-Control: no-store`
+
+### Requirement: Visitor JSON results use a stable envelope
+The system SHALL return plugin-owned JSON results with a stable status, code, display message, and
+an optional form field without reflecting submitted values or exposing application resources.
+
+#### Scenario: Successful JSON envelope
+- **WHEN** a visitor application succeeds in JSON mode
+- **THEN** the body contains `status=success`, `code=APPLICATION_CREATED`, and
+  `message=申请提交成功`
+- **AND** the body omits `field`
+
+#### Scenario: Field-specific JSON envelope
+- **WHEN** a JSON result applies to a form field
+- **THEN** the body contains `status=error`, the stable result `code`, the original form-field name
+  in `field`, and a display `message`
+
+#### Scenario: Global JSON error envelope
+- **WHEN** a JSON result does not apply to one form field
+- **THEN** the body contains `status=error`, the stable result `code`, and a display `message`
+- **AND** the body omits `field` instead of returning a null field
+
+#### Scenario: JSON results do not reflect or expose application data
+- **WHEN** the system returns any JSON submission result
+- **THEN** the body does not contain a submitted `value`
+- **AND** does not contain a generic `data` member
+- **AND** does not expose a LinkApplication metadata name or resource representation
+
+#### Scenario: Result codes evolve compatibly
+- **WHEN** a result code has been published in the theme API
+- **THEN** later compatible versions do not remove it or change its meaning
+- **AND** later versions may add new result codes
+- **AND** the documentation requires themes to show a global fallback for unknown codes or fields
+
+#### Scenario: Display messages are not program identifiers
+- **WHEN** a theme handles a JSON result
+- **THEN** it uses `code` rather than the Chinese `message` for program branching
+- **AND** it can present `message` directly as display text
+
+### Requirement: Visitor JSON results use outcome-specific HTTP semantics
+The system SHALL map every plugin-owned visitor submission outcome to its defined HTTP status, code,
+message, and optional field without changing application processing or side-effect ordering.
+
+#### Scenario: JSON application is created
+- **WHEN** a JSON-negotiated submission creates a `PENDING` LinkApplication
+- **THEN** the system returns `201 Created`
+- **AND** returns `status=success` and `code=APPLICATION_CREATED`
+
+#### Scenario: JSON submission is disabled
+- **WHEN** effective application settings disable visitor submission
+- **AND** the client explicitly prefers JSON
+- **THEN** the system returns `403 Forbidden`
+- **AND** returns `status=error` and `code=APPLICATION_DISABLED`
+- **AND** preserves the existing fail-closed settings behavior
+
+#### Scenario: JSON CAPTCHA validation fails
+- **WHEN** a JSON-negotiated submission has a missing, malformed, incorrect, expired, or replayed
+  CAPTCHA
+- **THEN** the system returns `422 Unprocessable Content`
+- **AND** returns `status=error`, `code=INVALID_CAPTCHA`, and `field=captchaCode`
+- **AND** does not reflect any submitted value
+
+#### Scenario: JSON field validation fails
+- **WHEN** a JSON-negotiated submission fails required-field or URL validation
+- **THEN** the system returns `422 Unprocessable Content`
+- **AND** returns `status=error`, `code=VALIDATION_FAILED`, and the failing form-field name
+
+#### Scenario: JSON submission is duplicated
+- **WHEN** a JSON-negotiated submission is rejected by existing duplicate rules
+- **THEN** the system returns `409 Conflict`
+- **AND** returns `status=error`, `code=DUPLICATE_APPLICATION`, and `field=url`
+
+#### Scenario: JSON submission is rate limited
+- **WHEN** a JSON-negotiated submission exceeds the existing per-IP submission limit
+- **THEN** the system returns `429 Too Many Requests`
+- **AND** returns `status=error` and `code=RATE_LIMITED`
+- **AND** includes `Retry-After` with the accurate positive whole seconds until the IP can retry
+
+#### Scenario: HTML submission is rate limited
+- **WHEN** a submission that does not explicitly prefer JSON exceeds the per-IP submission limit
+- **THEN** the system preserves the existing `303` redirect
+- **AND** does not add a `Retry-After` header that could be interpreted as delaying the redirected
+  request
+
+#### Scenario: JSON submission reaches pending capacity
+- **WHEN** a JSON-negotiated submission passes existing security, duplicate, and validation checks
+- **AND** pending capacity is exhausted
+- **THEN** the system returns `409 Conflict`
+- **AND** returns `status=error` and `code=CAPACITY_REACHED`
+- **AND** does not expose the configured capacity
+
+#### Scenario: JSON submission is operationally unavailable
+- **WHEN** creation, persistence, or authoritative capacity evaluation fails after visitor abuse
+  controls pass
+- **AND** the client explicitly prefers JSON
+- **THEN** the system returns `503 Service Unavailable`
+- **AND** returns `status=error` and `code=APPLICATION_UNAVAILABLE`
+
+#### Scenario: Notification failure follows persistence
+- **WHEN** a JSON-negotiated submission persists a LinkApplication
+- **AND** publishing its notification fails
+- **THEN** the system still returns the successful `201 APPLICATION_CREATED` result
+
+#### Scenario: JSON representation preserves processing order
+- **WHEN** a client explicitly prefers JSON
+- **THEN** settings, CSRF, CAPTCHA, rate limiting, validation, duplicate detection, capacity,
+  persistence, and notification handling retain their existing ordering and side effects
+- **AND** response negotiation does not create an alternate business workflow
+
+#### Scenario: Platform security failure is outside the JSON envelope
+- **WHEN** Halo Security rejects a submission before the route, including for invalid CSRF
+- **THEN** Halo retains its native response representation
+- **AND** the plugin does not promise its JSON envelope for that response
+
+#### Scenario: Asynchronous client receives a non-envelope failure
+- **WHEN** a theme receives `406`, a Halo platform response, a non-JSON response, or a network error
+- **THEN** the integration guidance requires a theme-owned generic fallback
+- **AND** does not instruct the theme to parse arbitrary error response text as a plugin result
