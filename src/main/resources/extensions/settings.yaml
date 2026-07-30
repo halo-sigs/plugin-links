@@ -91,7 +91,8 @@ spec:
             - $formkit: number
               label: 待审核申请容量
               name: pendingCapacity
-              validation: required|number|min:1
+              step: 1
+              validation: 'required|number|min:1|matches:/^[1-9][0-9]*$/'
               value: 100
               help: 限制待审核友链申请的最大数量。达到上限后将暂停接收新申请，直到待审核数量下降。
         - $formkit: group

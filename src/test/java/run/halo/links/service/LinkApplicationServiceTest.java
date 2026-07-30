@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -444,7 +445,7 @@ class LinkApplicationServiceTest {
         var settings = new LinkApplicationSettings();
         settings.setEnabled(true);
         var security = new LinkApplicationSettings.Security();
-        security.setPendingCapacity(capacity);
+        security.setPendingCapacity(BigDecimal.valueOf(capacity));
         settings.setSecurity(security);
         return settings;
     }

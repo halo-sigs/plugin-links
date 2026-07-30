@@ -3,6 +3,8 @@ package run.halo.links.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.dto.LinkApplicationSettings;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class LinkApplicationSettingsFetcherTest {
@@ -141,7 +144,7 @@ class LinkApplicationSettingsFetcherTest {
         StepVerifier.create(new LinkApplicationSettingsFetcher(settingFetcher).fetch())
             .assertNext(settings -> {
                 assertThat(settings.applicationEnabled()).isTrue();
-                assertThat(settings.pendingCapacity()).isEqualTo(100);
+                assertThat(settings.pendingCapacity()).isEqualTo(BigInteger.valueOf(100));
             })
             .verifyComplete();
     }
@@ -151,7 +154,7 @@ class LinkApplicationSettingsFetcherTest {
         var raw = new LinkApplicationSettings();
         raw.setEnabled(true);
         var security = new LinkApplicationSettings.Security();
-        security.setPendingCapacity(250);
+        security.setPendingCapacity(BigDecimal.valueOf(250));
         raw.setSecurity(security);
         when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
             LinkApplicationSettings.class)).thenReturn(Mono.just(raw));
@@ -159,7 +162,7 @@ class LinkApplicationSettingsFetcherTest {
         StepVerifier.create(new LinkApplicationSettingsFetcher(settingFetcher).fetch())
             .assertNext(settings -> {
                 assertThat(settings.applicationEnabled()).isTrue();
-                assertThat(settings.pendingCapacity()).isEqualTo(250);
+                assertThat(settings.pendingCapacity()).isEqualTo(BigInteger.valueOf(250));
             })
             .verifyComplete();
     }
@@ -169,12 +172,12 @@ class LinkApplicationSettingsFetcherTest {
         var zero = new LinkApplicationSettings();
         zero.setEnabled(true);
         var zeroSecurity = new LinkApplicationSettings.Security();
-        zeroSecurity.setPendingCapacity(0);
+        zeroSecurity.setPendingCapacity(BigDecimal.ZERO);
         zero.setSecurity(zeroSecurity);
         var negative = new LinkApplicationSettings();
         negative.setEnabled(true);
         var negativeSecurity = new LinkApplicationSettings.Security();
-        negativeSecurity.setPendingCapacity(-1);
+        negativeSecurity.setPendingCapacity(BigDecimal.valueOf(-1));
         negative.setSecurity(negativeSecurity);
         when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
             LinkApplicationSettings.class)).thenReturn(Mono.just(zero), Mono.just(negative));
@@ -184,6 +187,28 @@ class LinkApplicationSettingsFetcherTest {
             .assertNext(settings -> assertThat(settings.applicationEnabled()).isFalse())
             .verifyComplete();
         StepVerifier.create(fetcher.fetch())
+            .assertNext(settings -> assertThat(settings.applicationEnabled()).isFalse())
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFailClosedForFractionalPendingCapacity() {
+        var mapper = JsonMapper.builder().build();
+        var raw = mapper.convertValue(
+            mapper.readTree("""
+                {
+                  "enabled": true,
+                  "security": {
+                    "pendingCapacity": 1.5
+                  }
+                }
+                """),
+            LinkApplicationSettings.class
+        );
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(raw));
+
+        StepVerifier.create(new LinkApplicationSettingsFetcher(settingFetcher).fetch())
             .assertNext(settings -> assertThat(settings.applicationEnabled()).isFalse())
             .verifyComplete();
     }

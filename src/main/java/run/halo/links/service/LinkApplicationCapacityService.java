@@ -2,6 +2,7 @@ package run.halo.links.service;
 
 import static run.halo.app.extension.index.query.Queries.equal;
 
+import java.math.BigInteger;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -25,12 +26,13 @@ public class LinkApplicationCapacityService {
     public Mono<Boolean> isAvailable() {
         return requireEnabledSettings()
             .flatMap(settings -> client.countBy(LinkApplication.class, pendingOptions())
-                .map(pendingCount -> pendingCount < settings.pendingCapacity()));
+                .map(pendingCount -> isBelowCapacity(pendingCount, settings.pendingCapacity())));
     }
 
     public Mono<Boolean> isAvailable(List<LinkApplication> applications) {
         return requireEnabledSettings()
-            .map(settings -> pendingCount(applications) < settings.pendingCapacity());
+            .map(settings ->
+                isBelowCapacity(pendingCount(applications), settings.pendingCapacity()));
     }
 
     private Mono<LinkApplicationSettings> requireEnabledSettings() {
@@ -46,6 +48,10 @@ public class LinkApplicationCapacityService {
             .filter(application ->
                 application.getSpec().getStatus() == LinkApplication.Status.PENDING)
             .count();
+    }
+
+    private static boolean isBelowCapacity(long pendingCount, BigInteger capacity) {
+        return BigInteger.valueOf(pendingCount).compareTo(capacity) < 0;
     }
 
     private static ListOptions pendingOptions() {

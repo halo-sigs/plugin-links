@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -119,7 +120,7 @@ class LinkApplicationCapacityServiceTest {
         var settings = new LinkApplicationSettings();
         settings.setEnabled(true);
         var security = new LinkApplicationSettings.Security();
-        security.setPendingCapacity(capacity);
+        security.setPendingCapacity(BigDecimal.valueOf(capacity));
         settings.setSecurity(security);
         return settings;
     }

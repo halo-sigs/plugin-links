@@ -1,6 +1,8 @@
 package run.halo.links.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,9 +63,9 @@ public class LinkApplicationSettings {
             && selfSubmission.enabled();
     }
 
-    public int pendingCapacity() {
+    public BigInteger pendingCapacity() {
         return security == null
-            ? DEFAULT_PENDING_CAPACITY
+            ? BigInteger.valueOf(DEFAULT_PENDING_CAPACITY)
             : security.pendingCapacity();
     }
 
@@ -125,27 +127,39 @@ public class LinkApplicationSettings {
     @Data
     public static class Security {
 
-        private Integer pendingCapacity;
+        private BigDecimal pendingCapacity;
 
         static Security defaults() {
             var settings = new Security();
-            settings.setPendingCapacity(DEFAULT_PENDING_CAPACITY);
+            settings.setPendingCapacity(BigDecimal.valueOf(DEFAULT_PENDING_CAPACITY));
             return settings;
         }
 
         Security normalized() {
             var settings = new Security();
-            if (pendingCapacity != null && pendingCapacity < 1) {
-                throw new IllegalArgumentException("Pending application capacity must be positive");
-            }
-            settings.setPendingCapacity(pendingCapacity == null
-                ? DEFAULT_PENDING_CAPACITY
-                : pendingCapacity);
+            settings.setPendingCapacity(new BigDecimal(validatedPendingCapacity()));
             return settings;
         }
 
-        int pendingCapacity() {
-            return pendingCapacity == null ? DEFAULT_PENDING_CAPACITY : pendingCapacity;
+        BigInteger pendingCapacity() {
+            return validatedPendingCapacity();
+        }
+
+        private BigInteger validatedPendingCapacity() {
+            var value = pendingCapacity == null
+                ? BigDecimal.valueOf(DEFAULT_PENDING_CAPACITY)
+                : pendingCapacity;
+            try {
+                var integer = value.toBigIntegerExact();
+                if (integer.signum() < 1) {
+                    throw new IllegalArgumentException(
+                        "Pending application capacity must be a positive integer");
+                }
+                return integer;
+            } catch (ArithmeticException error) {
+                throw new IllegalArgumentException(
+                    "Pending application capacity must be a positive integer", error);
+            }
         }
     }
 

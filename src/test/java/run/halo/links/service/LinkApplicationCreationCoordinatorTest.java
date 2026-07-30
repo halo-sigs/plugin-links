@@ -84,4 +84,39 @@ class LinkApplicationCreationCoordinatorTest {
             .expectNext("third")
             .verifyComplete();
     }
+
+    @Test
+    void shouldNotSkipActiveKeyWhenMiddleWaiterIsCancelled() {
+        var coordinator = new LinkApplicationCreationCoordinator();
+        var firstMayFinish = Sinks.<Void>empty();
+        var firstStarted = new AtomicBoolean();
+        var secondStarted = new AtomicBoolean();
+        var thirdStarted = new AtomicBoolean();
+        var thirdResult = Sinks.<String>one();
+
+        coordinator.coordinate("key", () -> {
+            firstStarted.set(true);
+            return firstMayFinish.asMono().thenReturn("first");
+        }).subscribe();
+        assertThat(firstStarted).isTrue();
+
+        var secondSubscription = coordinator.coordinate("key", () -> {
+            secondStarted.set(true);
+            return Mono.just("second");
+        }).subscribe();
+        assertThat(secondStarted).isFalse();
+        secondSubscription.dispose();
+
+        coordinator.coordinate("key", () -> {
+            thirdStarted.set(true);
+            return Mono.just("third");
+        }).subscribe(thirdResult::tryEmitValue, thirdResult::tryEmitError);
+
+        assertThat(thirdStarted).isFalse();
+        firstMayFinish.tryEmitEmpty();
+
+        StepVerifier.create(thirdResult.asMono())
+            .expectNext("third")
+            .verifyComplete();
+    }
 }
