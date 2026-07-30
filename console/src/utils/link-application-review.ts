@@ -60,6 +60,10 @@ export function linkApplicationStatusMeta(status: string | undefined): LinkAppli
 
 export type LinkApplicationReviewMode = "editable" | "resume" | "readonly";
 
+export interface LinkApplicationApprovalFormData extends Omit<ApproveRequest, "feedUrls"> {
+  feedUrlsText?: string;
+}
+
 export function linkApplicationReviewMode(application: LinkApplication): LinkApplicationReviewMode {
   switch (application.spec.status) {
     case "PENDING":
@@ -71,18 +75,23 @@ export function linkApplicationReviewMode(application: LinkApplication): LinkApp
   }
 }
 
-export function buildLinkApplicationApprovalRequest(data: ApproveRequest): ApproveRequest {
+export function buildLinkApplicationApprovalRequest(data: LinkApplicationApprovalFormData): ApproveRequest {
   return {
     url: data.url?.trim(),
     displayName: data.displayName?.trim(),
     logo: data.logo ?? "",
     description: data.description ?? "",
     groupName: data.groupName || undefined,
+    backlink: data.backlink?.trim() || "",
+    feedUrls: [
+      ...new Set(
+        (data.feedUrlsText || "")
+          .split(/\r?\n/)
+          .map((feedUrl) => feedUrl.trim())
+          .filter(Boolean),
+      ),
+    ],
   };
-}
-
-export function canVerifyLinkApplicationBacklink(application: LinkApplication): boolean {
-  return !!application.spec.backlink && application.spec.status !== "APPROVING";
 }
 
 export function linkApplicationEffectiveFields(application: LinkApplication): ApprovalRequest {
@@ -95,12 +104,14 @@ export function linkApplicationEffectiveFields(application: LinkApplication): Ap
     displayName: application.spec.displayName,
     logo: application.spec.logo,
     description: application.spec.description,
+    backlink: application.spec.backlink,
+    feedUrls: application.spec.feedUrls,
   };
 }
 
 export function linkApplicationRejectDescription(application: LinkApplication): string {
   const displayName = application.spec.displayName;
-  if (application.spec.origin?.type === "COMMENT") {
+  if (application.spec.origin.type === "COMMENT") {
     return `拒绝 "${displayName}" 的申请后，该链接不会再被评论识别创建申请，但访客仍可通过表单再次提交。`;
   }
   return `拒绝 "${displayName}" 的申请后，在拒绝记录存在期间，该链接无法再次提交申请，也不会再被评论识别创建。删除拒绝记录可解除限制。`;

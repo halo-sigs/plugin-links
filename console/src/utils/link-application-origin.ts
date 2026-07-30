@@ -1,4 +1,9 @@
-import type { LinkAiFeatureStatus, LinkApplication, Ref } from "@/api/generated";
+import type {
+  LinkAiFeatureStatus,
+  LinkApplication,
+  LinkApplicationOriginSubject,
+  OriginTypeEnum,
+} from "@/api/generated";
 import type { RouteLocationRaw } from "vue-router";
 
 export interface LinkApplicationSourceMeta {
@@ -8,74 +13,42 @@ export interface LinkApplicationSourceMeta {
 
 export interface LinkApplicationSubjectMeta {
   label: string;
-  route?: RouteLocationRaw;
+  url?: string;
 }
+
+const linkApplicationSourceMetas: Record<OriginTypeEnum, LinkApplicationSourceMeta> = {
+  FORM: {
+    label: "表单申请",
+    tagType: "primary",
+  },
+  COMMENT: {
+    label: "评论识别",
+    tagType: "success",
+  },
+};
 
 export function linkApplicationSourceMeta(application: LinkApplication): LinkApplicationSourceMeta {
-  switch (application.spec.origin?.type) {
-    case "FORM":
-      return {
-        label: "表单申请",
-        tagType: "primary",
-      };
-    case "COMMENT":
-      return {
-        label: "评论识别",
-        tagType: "success",
-      };
-    default:
-      return {
-        label: "历史申请",
-        tagType: "default",
-      };
-  }
+  return linkApplicationSourceMetas[application.spec.origin.type];
 }
 
-export function linkApplicationSubjectMeta(subjectRef: Ref | undefined): LinkApplicationSubjectMeta | undefined {
-  if (!subjectRef) {
+export function linkApplicationSubjectMeta(
+  subject: LinkApplicationOriginSubject | undefined,
+): LinkApplicationSubjectMeta | undefined {
+  if (!subject) {
     return undefined;
   }
 
-  if (subjectRef.group === "content.halo.run" && subjectRef.kind === "Post") {
-    return {
-      label: `文章 · ${subjectRef.name}`,
-      route: {
-        name: "PostEditor",
-        query: {
-          name: subjectRef.name,
-        },
-      },
-    };
-  }
-
-  if (subjectRef.group === "content.halo.run" && subjectRef.kind === "SinglePage") {
-    return {
-      label: `页面 · ${subjectRef.name}`,
-      route: {
-        name: "SinglePageEditor",
-        query: {
-          name: subjectRef.name,
-        },
-      },
-    };
-  }
-
-  if (subjectRef.group === "plugin.halo.run" && subjectRef.kind === "Plugin") {
-    return {
-      label: "链接页面",
-      route: {
-        name: "Links",
-      },
-    };
-  }
+  const title = subject.title?.trim();
+  const kindName = subject.kindName?.trim();
 
   return {
-    label: `${subjectRef.kind} · ${subjectRef.name}`,
+    label: title ? (kindName ? `${kindName} · ${title}` : title) : kindName || "评论来源",
+    url: subject.url?.trim() || undefined,
   };
 }
 
 export function linkApplicationCommentRoute(application: LinkApplication): RouteLocationRaw | undefined {
-  const commentName = application.spec.origin?.comment?.name;
+  const commentName = application.spec.origin.comment?.name;
   if (!commentName) {
     return undefined;
   }

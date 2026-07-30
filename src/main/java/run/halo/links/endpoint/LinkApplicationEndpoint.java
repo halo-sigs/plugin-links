@@ -6,6 +6,7 @@ import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuil
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import java.util.List;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -18,13 +19,17 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import run.halo.app.content.comment.CommentSubject;
 import run.halo.app.core.extension.content.Comment;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
 import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.Ref;
+import run.halo.app.plugin.extensionpoint.ExtensionGetter;
 import run.halo.links.dto.LinkApplicationCleanupResult;
 import run.halo.links.dto.LinkApplicationOriginComment;
+import run.halo.links.dto.LinkApplicationOriginSubject;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.query.LinkApplicationQuery;
@@ -38,6 +43,7 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
     private final ReactiveExtensionClient client;
     private final LinkApplicationApprovalService approvalService;
     private final LinkVerificationService verificationService;
+    private final ExtensionGetter extensionGetter;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
@@ -93,6 +99,9 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
                     .description("Manually verify this application's backlink.")
                     .tag(tag)
                     .parameter(pathNameParameter())
+                    .requestBody(requestBodyBuilder()
+                        .description("Optional backlink URL override.")
+                        .implementation(VerifyRequest.class))
                     .response(responseBuilder().responseCode("200")
                         .implementation(VerifyResult.class)))
             .POST("linkapplications/-/cleanup", this::cleanupLinkApplications, builder -> {
@@ -129,9 +138,8 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
         return client.fetch(LinkApplication.class, request.pathVariable("name"))
             .switchIfEmpty(Mono.error(notFound("Link application not found.")))
             .flatMap(application -> {
-                var origin = application.getSpec() == null
-                    ? null : application.getSpec().getOrigin();
-                if (origin == null || origin.getType() != LinkApplication.OriginType.COMMENT
+                var origin = application.getSpec().getOrigin();
+                if (origin.getType() != LinkApplication.OriginType.COMMENT
                     || origin.getComment() == null
                     || StringUtils.isBlank(origin.getComment().getName())) {
                     return Mono.error(notFound("Source Comment is unavailable."));
@@ -139,12 +147,39 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
                 return client.fetch(Comment.class, origin.getComment().getName())
                     .switchIfEmpty(Mono.error(notFound("Source Comment is unavailable.")));
             })
-            .map(comment -> new LinkApplicationOriginComment(
-                comment.getMetadata().getName(),
-                comment.getSpec().getRaw(),
-                comment.getSpec().getSubjectRef(),
-                comment.getSpec().getCreationTime()))
+            .flatMap(this::toOriginComment)
             .flatMap(result -> ServerResponse.ok().bodyValue(result));
+    }
+
+    private Mono<LinkApplicationOriginComment> toOriginComment(Comment comment) {
+        var spec = comment.getSpec();
+        return resolveSubject(spec.getSubjectRef())
+            .map(subject -> new LinkApplicationOriginComment(
+                comment.getMetadata().getName(),
+                spec.getRaw(),
+                spec.getSubjectRef(),
+                spec.getCreationTime(),
+                subject))
+            .defaultIfEmpty(new LinkApplicationOriginComment(
+                comment.getMetadata().getName(),
+                spec.getRaw(),
+                spec.getSubjectRef(),
+                spec.getCreationTime(),
+                null));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Mono<LinkApplicationOriginSubject> resolveSubject(Ref subjectRef) {
+        if (subjectRef == null) {
+            return Mono.empty();
+        }
+        Mono<CommentSubject.SubjectDisplay> display = extensionGetter
+            .getExtensions(CommentSubject.class)
+            .filter(subject -> subject.supports(subjectRef))
+            .next()
+            .flatMap(subject -> subject.getSubjectDisplay(subjectRef.getName()));
+        return display.map(subject -> new LinkApplicationOriginSubject(
+            subject.title(), subject.url(), subject.kindName()));
     }
 
     private Mono<ServerResponse> deleteLinkApplication(ServerRequest request) {
@@ -167,7 +202,8 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
             .flatMap(body -> approvalService.approve(request.pathVariable("name"),
                 new LinkApplicationApprovalService.ApprovalCommand(
                     body.getUrl(), body.getDisplayName(), body.getLogo(),
-                    body.getDescription(), body.getGroupName())))
+                    body.getDescription(), body.getGroupName(), body.getBacklink(),
+                    body.getFeedUrls())))
             .flatMap(link -> ServerResponse.ok().bodyValue(link));
     }
 
@@ -187,26 +223,31 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
     }
 
     private Mono<ServerResponse> verifyBacklink(ServerRequest request) {
-        return client.fetch(LinkApplication.class, request.pathVariable("name"))
-            .switchIfEmpty(Mono.error(notFound("Link application not found.")))
-            .flatMap(application -> {
-                String backlink = application.getSpec() == null
-                    ? null : application.getSpec().getBacklink();
-                if (StringUtils.isBlank(backlink)) {
-                    return Mono.just(new VerifyResult(false, "未提供反链地址"));
-                }
-                return verificationService.verifyBacklink(backlink.trim())
-                    .map(status -> switch (status.getState()) {
-                        case FOUND -> new VerifyResult(true,
-                            "反链已找到: " + status.getMatchedUrl());
-                        case MISSING -> new VerifyResult(false,
-                            "未在对方页面找到指向本站的链接");
-                        case NOT_CONFIGURED -> new VerifyResult(false, "未提供反链地址");
-                        case FAILED -> new VerifyResult(false,
-                            "验证失败: " + status.getError());
-                        case CHECKING -> new VerifyResult(false, "反链验证尚未完成");
-                    });
-            })
+        return request.bodyToMono(VerifyRequest.class)
+            .defaultIfEmpty(new VerifyRequest())
+            .flatMap(body -> client.fetch(LinkApplication.class, request.pathVariable("name"))
+                .switchIfEmpty(Mono.error(notFound("Link application not found.")))
+                .flatMap(application -> {
+                    String backlink = body.getBacklink() == null
+                        ? application.getSpec().getBacklink()
+                        : body.getBacklink();
+                    if (StringUtils.isBlank(backlink)) {
+                        return Mono.just(new VerifyResult(false, "未提供反链地址"));
+                    }
+                    return verificationService.verifyBacklink(backlink.trim())
+                        .map(status -> switch (status.getState()) {
+                            case FOUND -> new VerifyResult(true,
+                                "反链已找到: " + status.getMatchedUrl());
+                            case MISSING -> new VerifyResult(false,
+                                "未在对方页面找到指向本站的链接");
+                            case NOT_CONFIGURED -> new VerifyResult(false,
+                                "未提供反链地址");
+                            case FAILED -> new VerifyResult(false,
+                                "验证失败: " + status.getError());
+                            case CHECKING -> new VerifyResult(false,
+                                "反链验证尚未完成");
+                        });
+                }))
             .flatMap(result -> ServerResponse.ok().bodyValue(result));
     }
 
@@ -270,6 +311,13 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
         private String logo;
         private String description;
         private String groupName;
+        private String backlink;
+        private List<String> feedUrls;
+    }
+
+    @Data
+    public static class VerifyRequest {
+        private String backlink;
     }
 
     @Data

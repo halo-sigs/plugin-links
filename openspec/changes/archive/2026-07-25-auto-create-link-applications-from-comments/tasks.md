@@ -9,7 +9,7 @@
 
 - [x] 2.1 Add the disabled-by-default automatic-recognition settings, structured-output model selector, and Repeater source rules for links, post, and single-page subjects.
 - [x] 2.2 Add conditional settings validation for post and single-page selections and normalize duplicate or incomplete source rules at runtime.
-- [x] 2.3 Extend `LinkApplication` with optional `FORM`/`COMMENT` origin metadata while preserving records without origin.
+- [x] 2.3 Extend `LinkApplication` with required `FORM`/`COMMENT` origin metadata.
 - [x] 2.4 Register indexes for source-aware duplicate checks and stable comment-name idempotency.
 - [x] 2.5 Regenerate the OpenAPI TypeScript client and verify the generated schema represents the origin and recognition settings/status contracts.
 
@@ -19,7 +19,7 @@
 - [x] 3.2 Extract a shared reactive LinkApplication creation service that validates input and returns explicit created, duplicate, or invalid outcomes.
 - [x] 3.3 Implement the formal-Link, active-application, rejected-form, rejected-comment, and comment-name duplicate matrix in the shared service.
 - [x] 3.4 Refactor `/links/apply` to use the shared service, record `FORM` origin, and preserve existing redirects, validation, and rate limiting.
-- [x] 3.5 Add backend tests covering URL canonicalization, every duplicate-matrix branch, historical applications without origin, and repeated/concurrent comment delivery.
+- [x] 3.5 Add backend tests covering URL canonicalization, every duplicate-matrix branch, and repeated/concurrent comment delivery.
 
 ## 4. Build the Conditional AI Recognition Service
 
@@ -43,10 +43,10 @@
 ## 6. Extend the Console Review Flow
 
 - [x] 6.1 Fix the generated-client request-property use in the existing manual extraction flow and add a focused frontend test for successful form prefill.
-- [x] 6.2 Show form, comment, and historical source labels in the existing pending-application list.
+- [x] 6.2 Show form and comment source labels in the existing pending-application list.
 - [x] 6.3 Load and show the current comment subject, management link, and raw content in application details, including a safe fallback when the original comment is unavailable.
 - [x] 6.4 Display a non-blocking warning when recognition is configured but the AI integration is not operational.
-- [x] 6.5 Add focused Vue tests for source presentation, comment references, historical records, and AI status warning states.
+- [x] 6.5 Add focused Vue tests for source presentation, comment references, and AI status warning states.
 
 ## 7. Verify the Complete Change
 

@@ -520,6 +520,16 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "description" : "Optional backlink URL override."
+        },
         "responses" : {
           "200" : {
             "content" : {
@@ -1585,6 +1595,10 @@
         "required" : [ "displayName", "url" ],
         "type" : "object",
         "properties" : {
+          "backlink" : {
+            "type" : "string",
+            "description" : "Approved backlink page URL."
+          },
           "description" : {
             "type" : "string",
             "description" : "Approved Link description."
@@ -1592,6 +1606,15 @@
           "displayName" : {
             "type" : "string",
             "description" : "Approved Link display name."
+          },
+          "feedUrls" : {
+            "type" : "array",
+            "description" : "Approved RSS or Atom feed URLs.",
+            "items" : {
+              "pattern" : "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$",
+              "type" : "string",
+              "format" : "uri"
+            }
           },
           "groupName" : {
             "type" : "string",
@@ -1611,11 +1634,20 @@
       "ApproveRequest" : {
         "type" : "object",
         "properties" : {
+          "backlink" : {
+            "type" : "string"
+          },
           "description" : {
             "type" : "string"
           },
           "displayName" : {
             "type" : "string"
+          },
+          "feedUrls" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           },
           "groupName" : {
             "type" : "string"
@@ -1916,14 +1948,32 @@
           "raw" : {
             "type" : "string"
           },
+          "subject" : {
+            "$ref" : "#/components/schemas/LinkApplicationOriginSubject"
+          },
           "subjectRef" : {
             "$ref" : "#/components/schemas/Ref"
           }
         },
         "description" : "Minimal source Comment context for one LinkApplication."
       },
+      "LinkApplicationOriginSubject" : {
+        "type" : "object",
+        "properties" : {
+          "kindName" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "description" : "Resolved display information for a source Comment subject."
+      },
       "LinkApplicationSpec" : {
-        "required" : [ "displayName", "status", "url" ],
+        "required" : [ "displayName", "origin", "status", "url" ],
         "type" : "object",
         "properties" : {
           "approval" : {
@@ -2946,6 +2996,14 @@
           }
         },
         "description" : "Observed link verification state."
+      },
+      "VerifyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "backlink" : {
+            "type" : "string"
+          }
+        }
       },
       "VerifyResult" : {
         "type" : "object",

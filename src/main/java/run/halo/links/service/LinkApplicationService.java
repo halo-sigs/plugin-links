@@ -88,7 +88,7 @@ public class LinkApplicationService {
 
     private static boolean hasDuplicateApplication(List<LinkApplication> applications,
         Submission incoming, String canonicalUrl) {
-        var incomingOriginType = originType(incoming.origin());
+        var incomingOriginType = incoming.origin().getType();
         var incomingCommentName = commentName(incoming.origin());
         for (var application : applications) {
             var spec = application.getSpec();
@@ -98,7 +98,6 @@ public class LinkApplicationService {
             var existingOrigin = spec.getOrigin();
             if (incomingOriginType == LinkApplication.OriginType.COMMENT
                 && StringUtils.isNotBlank(incomingCommentName)
-                && existingOrigin != null
                 && incomingCommentName.equals(commentName(existingOrigin))) {
                 return true;
             }
@@ -111,7 +110,7 @@ public class LinkApplicationService {
                 || status == LinkApplication.Status.APPROVED) {
                 return true;
             }
-            var existingOriginType = originType(existingOrigin);
+            var existingOriginType = existingOrigin.getType();
             if (existingOriginType == LinkApplication.OriginType.FORM
                 || incomingOriginType == LinkApplication.OriginType.COMMENT) {
                 return true;
@@ -120,15 +119,8 @@ public class LinkApplicationService {
         return false;
     }
 
-    private static LinkApplication.OriginType originType(LinkApplication.Origin origin) {
-        if (origin == null || origin.getType() == null) {
-            return LinkApplication.OriginType.FORM;
-        }
-        return origin.getType();
-    }
-
     private static String commentName(LinkApplication.Origin origin) {
-        if (origin == null || origin.getComment() == null) {
+        if (origin.getComment() == null) {
             return null;
         }
         return origin.getComment().getName();
@@ -156,10 +148,7 @@ public class LinkApplicationService {
 
     private static LinkApplication.Origin copyOrigin(LinkApplication.Origin source) {
         var target = new LinkApplication.Origin();
-        target.setType(originType(source));
-        if (source == null) {
-            return target;
-        }
+        target.setType(source.getType());
         var commentName = normalizeOptional(commentName(source));
         if (commentName != null) {
             var comment = new LinkApplication.CommentOrigin();

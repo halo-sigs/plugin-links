@@ -13,8 +13,8 @@ traceable pending applications without bypassing administrator review.
 - When AI classifies a comment as a friend-link application and a valid website URL can be
   resolved, automatically create a `PENDING` `LinkApplication`; do not create a formal `Link`
   automatically.
-- Add source metadata to `LinkApplication` so form submissions, comment-recognized applications,
-  historical records, and source comments can be distinguished.
+- Add source metadata to `LinkApplication` so form submissions and comment-recognized applications
+  can be distinguished and traced to their source comments.
 - Add source-aware URL deduplication so rejected AI false positives do not block later form
   submissions while explicit form rejections still prevent comment recognition from bypassing an
   administrator decision.

@@ -6,8 +6,7 @@ approved into formal Links, rejected, inspected, and deleted.
 ## Requirements
 
 ### Requirement: Link applications record their origin
-The system SHALL record origin information for newly created LinkApplication resources while
-remaining compatible with historical records that have no origin.
+The system SHALL require origin information on every LinkApplication resource.
 
 #### Scenario: Form application records origin
 - **WHEN** an anonymous visitor successfully submits `/links/apply`
@@ -17,11 +16,6 @@ remaining compatible with historical records that have no origin.
 - **WHEN** comment recognition creates a LinkApplication
 - **THEN** the application has origin type `COMMENT`
 - **AND** records its source Comment metadata name as `origin.comment.name`
-
-#### Scenario: Historical application has no origin
-- **WHEN** an administrator views a LinkApplication created before origin support
-- **THEN** the application remains readable and actionable
-- **AND** the Console labels its source as historical
 
 ### Requirement: Link application settings govern new application creation
 The system SHALL provide a disabled-by-default Link Application settings group whose master switch
@@ -166,18 +160,49 @@ filterable by status and origin type.
 
 ### Requirement: Administrators can inspect application source context
 The system SHALL expose application-origin context through an application-scoped backend operation
-without granting link managers permission to read arbitrary Comments.
+without granting link managers permission to read arbitrary Comments. For Comment-origin
+applications, the operation SHALL resolve an optional public-facing subject display through the
+registered Halo `CommentSubject` extension point, and Console SHALL use only resolved display
+values or generic fallback text for user-visible source information.
 
 #### Scenario: Pending list shows source
-- **WHEN** the application list contains form, Comment, or historical applications
+- **WHEN** the application list contains form or Comment applications
 - **THEN** each item displays the corresponding source label
 
 #### Scenario: Comment application detail is opened
 - **WHEN** an administrator with link-application management permission opens a Comment-origin
   application
 - **THEN** Console requests the source through that LinkApplication's origin-Comment operation
-- **AND** displays its current subject, Comment-management link, raw content, and creation time when
+- **AND** the backend resolves the Comment's current subject through the matching registered
+  `CommentSubject`
+- **AND** the response includes the original Comment data and an optional subject display with
+  `title`, `url`, and `kindName`
+- **AND** Console displays the resolved kind and title as a link to the public-facing subject URL
+  that opens in a new browser tab
+- **AND** Console displays the general Comment-management link, raw content, and creation time when
   available
+- **AND** Console does not expose a subject editor route from the source display
+
+#### Scenario: Subject display is unavailable
+- **WHEN** the original Comment exists but no matching `CommentSubject` returns a subject display
+- **THEN** the origin-Comment operation still returns the original Comment data
+- **AND** the response has no resolved subject display
+- **AND** Console displays that the source page is unavailable
+- **AND** the application remains reviewable
+
+#### Scenario: Subject display contains a non-public or unreachable URL
+- **WHEN** a matching `CommentSubject` returns a display for a draft, private, recycled,
+  unpublished, or otherwise unreachable subject
+- **THEN** the origin-Comment operation returns the provider-supplied display without applying
+  subject-type-specific publication filtering
+- **AND** Console does not claim that the URL is currently reachable
+
+#### Scenario: Console renders application source context
+- **WHEN** Console displays resolved or unavailable Comment-origin source context
+- **THEN** it MUST NOT render the `metadata.name` of the Comment, subject, LinkApplication, or any
+  other referenced resource as user-visible text
+- **AND** it MUST NOT fall back to `subjectRef.name` when a subject title is blank or unavailable
+- **AND** blank resolved titles fall back to the resolved kind name and then generic source text
 
 #### Scenario: Caller attempts to choose an arbitrary Comment
 - **WHEN** a caller requests source context for a LinkApplication
@@ -327,7 +352,8 @@ most one owned formal `Link` for that application.
 
 #### Scenario: Approve with modifications
 - **WHEN** an administrator opens a `PENDING` application detail view
-- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`) are editable
+- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`, `backlink`, and
+  `feedUrls`) are editable
 - **AND** a dropdown allows selecting a `LinkGroup`
 - **AND** the backend validates and normalizes the effective fields before reserving approval
 
@@ -417,9 +443,10 @@ The system SHALL allow administrators to manually trigger backlink verification 
 
 #### Scenario: Manual verification trigger
 - **WHEN** an administrator clicks "Verify Backlink" in the application detail view
-- **THEN** the system fetches the submitted `backlink` URL
+- **THEN** the system fetches the current `backlink` input value
 - **AND** checks whether the page contains a link to the site's own URL
-- **AND** displays the verification result (success/failure) in the detail view
+- **AND** Console displays the verification result (success/failure) in a Toast while the detail
+  view remains open
 
 ### Requirement: Administrators can delete link applications
 The system SHALL allow administrators to delete individual applications and all deletable

@@ -9,6 +9,7 @@ public record LinkApplicationOriginComment(
     String name,
     String raw,
     Ref subjectRef,
-    Instant creationTime
+    Instant creationTime,
+    LinkApplicationOriginSubject subject
 ) {
 }

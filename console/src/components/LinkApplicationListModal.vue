@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { LinkApplication } from "@/api/generated";
+import type { LinkApplication, LinkApplicationSpecStatusEnum } from "@/api/generated";
 import {
   useCleanupLinkApplications,
   useDeleteLinkApplication,
@@ -12,7 +12,23 @@ import {
   linkApplicationCleanupSummary,
   linkApplicationStatusMeta,
 } from "@/utils/link-application-review";
-import { Dialog, Toast, VButton, VEmpty, VLoading, VModal, VPagination, VSpace, VTag } from "@halo-dev/components";
+import {
+  Dialog,
+  IconExternalLinkLine,
+  Toast,
+  VButton,
+  VDropdownDivider,
+  VDropdownItem,
+  VEmpty,
+  VEntity,
+  VEntityContainer,
+  VEntityField,
+  VLoading,
+  VModal,
+  VPagination,
+  VStatusDot,
+  type StatusDotState,
+} from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
 import { computed, ref, useTemplateRef, watch } from "vue";
 import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
@@ -73,6 +89,13 @@ const originTypeFilterOptions = [
   { label: "评论识别", value: "COMMENT" },
 ];
 
+const statusDotStates: Record<LinkApplicationSpecStatusEnum, StatusDotState> = {
+  PENDING: "warning",
+  APPROVING: "default",
+  APPROVED: "success",
+  REJECTED: "error",
+};
+
 function handleDelete(app: LinkApplication) {
   Dialog.warning({
     title: "确认删除申请？",
@@ -131,70 +154,66 @@ function handleCleanup() {
         </div>
       </div>
 
-      <div class=":uno: mb-3 text-sm text-gray-500">共 {{ total }} 条记录</div>
-
       <VLoading v-if="isLoading" />
 
       <VEmpty v-else-if="!applications.length" title="暂无符合条件的申请" />
 
-      <div v-else class=":uno: overflow-x-auto">
-        <table class=":uno: min-w-full divide-y divide-gray-200">
-          <thead class=":uno: bg-gray-50">
-            <tr>
-              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
-                网站名称
-              </th>
-              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
-                链接地址
-              </th>
-              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">状态</th>
-              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">来源</th>
-              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">
-                申请时间
-              </th>
-              <th class=":uno: px-4 py-2 text-left text-xs text-gray-500 font-medium tracking-wider uppercase">操作</th>
-            </tr>
-          </thead>
-          <tbody class=":uno: bg-white divide-y divide-gray-200">
-            <tr v-for="app in applications" :key="app.metadata.name">
-              <td class=":uno: px-4 py-2 text-sm text-gray-900">{{ app.spec.displayName }}</td>
-              <td class=":uno: px-4 py-2 text-sm">
-                <a :href="app.spec.url" target="_blank" class=":uno: text-blue-600 hover:underline">
-                  {{ app.spec.url }}
-                </a>
-              </td>
-              <td class=":uno: px-4 py-2 text-sm">
-                <VTag :type="linkApplicationStatusMeta(app.spec.status).tagType" size="sm">
-                  {{ linkApplicationStatusMeta(app.spec.status).label }}
-                </VTag>
-              </td>
-              <td class=":uno: px-4 py-2 text-sm">
-                <LinkApplicationSourceBadge :application="app" />
-              </td>
-              <td class=":uno: px-4 py-2 text-sm text-gray-500">
-                {{ app.metadata.creationTimestamp ? utils.date.format(app.metadata.creationTimestamp) : "-" }}
-              </td>
-              <td class=":uno: px-4 py-2 text-sm">
-                <VSpace>
-                  <VButton
-                    v-if="app.spec.status === 'APPROVING'"
-                    size="xs"
-                    type="secondary"
-                    @click="emit('view-detail', app)"
+      <div v-else class=":uno: rounded-base overflow-hidden border">
+        <VEntityContainer>
+          <VEntity v-for="app in applications" :key="app.metadata.name">
+            <template #start>
+              <VEntityField
+                :title="app.spec.displayName"
+                :description="app.spec.url"
+                max-width="32rem"
+                @click="emit('view-detail', app)"
+              >
+                <template #extra>
+                  <a
+                    :href="app.spec.url"
+                    target="_blank"
+                    class=":uno: text-gray-600 opacity-0 transition-all hover:text-gray-900 group-hover:opacity-100"
+                    @click.stop
                   >
-                    继续审批
-                  </VButton>
-                  <template v-else>
-                    <VButton size="xs" type="secondary" @click="emit('view-detail', app)">
-                      {{ app.spec.status === "PENDING" ? "审核" : "查看" }}
-                    </VButton>
-                    <VButton size="xs" type="danger" @click="handleDelete(app)"> 删除 </VButton>
-                  </template>
-                </VSpace>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                    <IconExternalLinkLine class=":uno: h-3.5 w-3.5" />
+                  </a>
+                </template>
+              </VEntityField>
+            </template>
+
+            <template #end>
+              <VEntityField>
+                <template #description>
+                  <VStatusDot
+                    :state="statusDotStates[app.spec.status]"
+                    :animate="app.spec.status === 'APPROVING'"
+                    :text="linkApplicationStatusMeta(app.spec.status).label"
+                  />
+                </template>
+              </VEntityField>
+              <VEntityField>
+                <template #description>
+                  <LinkApplicationSourceBadge :application="app" />
+                </template>
+              </VEntityField>
+              <VEntityField
+                :description="utils.date.timeAgo(app.metadata.creationTimestamp)"
+                v-tooltip="utils.date.format(app.metadata.creationTimestamp)"
+              >
+              </VEntityField>
+            </template>
+
+            <template #dropdownItems>
+              <VDropdownItem @click="emit('view-detail', app)">
+                {{ app.spec.status === "APPROVING" ? "继续审批" : app.spec.status === "PENDING" ? "审核" : "查看" }}
+              </VDropdownItem>
+              <template v-if="app.spec.status !== 'APPROVING'">
+                <VDropdownDivider />
+                <VDropdownItem type="danger" @click="handleDelete(app)">删除</VDropdownItem>
+              </template>
+            </template>
+          </VEntity>
+        </VEntityContainer>
       </div>
 
       <div v-if="total" class=":uno: mt-4 flex justify-end">

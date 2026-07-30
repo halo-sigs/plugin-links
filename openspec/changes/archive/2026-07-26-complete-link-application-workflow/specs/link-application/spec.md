@@ -110,7 +110,7 @@ The system SHALL expose application-origin context through an application-scoped
 without granting link managers permission to read arbitrary Comments.
 
 #### Scenario: Pending list shows source
-- **WHEN** the application list contains form, Comment, or historical applications
+- **WHEN** the application list contains form or Comment applications
 - **THEN** each item displays the corresponding source label
 
 #### Scenario: Comment application detail is opened
@@ -238,7 +238,8 @@ most one owned formal `Link` for that application.
 
 #### Scenario: Approve with modifications
 - **WHEN** an administrator opens a `PENDING` application detail view
-- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`) are editable
+- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`, `backlink`, and
+  `feedUrls`) are editable
 - **AND** a dropdown allows selecting a `LinkGroup`
 - **AND** the backend validates and normalizes the effective fields before reserving approval
 

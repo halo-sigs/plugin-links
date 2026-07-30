@@ -8,6 +8,12 @@ describe("htmlToPlainText", () => {
     );
   });
 
+  it("keeps anchor text without exposing its html markup", () => {
+    expect(
+      htmlToPlainText('<p>博客地址：<a target="_blank" href="https://halo.run">https://halo.run</a></p>'),
+    ).toBe("博客地址：https://halo.run");
+  });
+
   it("uses raw comment content before rendered content", () => {
     expect(
       commentPlainText({

@@ -214,8 +214,8 @@ cleaned so the full PR passes `git diff --check`.
 ## Migration Plan
 
 1. Add the application settings schema and normalized defaults before gating either creation path.
-2. Add `APPROVING` and optional nested approval data; historical applications without origin or
-   approval data remain readable.
+2. Add `APPROVING` and optional nested approval data; applications without approval data remain
+   readable.
 3. Update backend endpoints, orchestration, RBAC, and tests.
 4. Regenerate the API client, then update Console history, recovery, source details, and cleanup.
 5. Add theme documentation and run the complete validation matrix.
