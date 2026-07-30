@@ -16,21 +16,11 @@ import {
   linkApplicationReviewMode,
   linkApplicationStatusMeta,
 } from "@/utils/link-application-review";
-import {
-  Dialog,
-  Toast,
-  VAlert,
-  VButton,
-  VDescription,
-  VDescriptionItem,
-  VLoading,
-  VModal,
-  VSpace,
-  VTag,
-} from "@halo-dev/components";
+import { Dialog, Toast, VAlert, VButton, VLoading, VModal, VSpace, VTag } from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
 import { computed, reactive, useTemplateRef } from "vue";
 import MingcuteEarth3Line from "~icons/mingcute/earth-3-line";
+import MingcuteMailLine from "~icons/mingcute/mail-line";
 import LinkApplicationOriginDetails from "./LinkApplicationOriginDetails.vue";
 import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
@@ -192,18 +182,17 @@ function handleDelete() {
 <template>
   <VModal ref="modal" :title="modalTitle" :width="600" :mount-to-body="true" :centered="false" @close="emit('close')">
     <div class=":uno: space-y-4">
-      <div class=":uno: overflow-hidden border border-gray-100 rounded">
-        <VDescription>
-          <VDescriptionItem label="状态" vertical-center>
-            <VTag :type="statusMeta.tagType" size="sm">
-              {{ statusMeta.label }}
-            </VTag>
-          </VDescriptionItem>
-          <VDescriptionItem label="来源" vertical-center>
-            <LinkApplicationSourceBadge :application="application" />
-          </VDescriptionItem>
-          <VDescriptionItem v-if="application.spec.email" label="联系邮箱" :content="application.spec.email" />
-        </VDescription>
+      <div
+        class=":uno: flex flex-wrap items-center gap-x-4 gap-y-2 border border-gray-200 rounded-lg bg-gray-50 px-3.5 py-2.5"
+      >
+        <VTag :type="statusMeta.tagType" size="sm">
+          {{ statusMeta.label }}
+        </VTag>
+        <LinkApplicationSourceBadge :application="application" />
+        <span v-if="application.spec.email" class=":uno: inline-flex items-center gap-1.5 text-sm text-gray-600">
+          <MingcuteMailLine class=":uno: size-3.5 text-gray-400" />
+          {{ application.spec.email }}
+        </span>
       </div>
 
       <VAlert v-if="reviewMode === 'resume'" title="审批已保留" type="info" :closable="false">
@@ -274,37 +263,48 @@ function handleDelete() {
       </FormKit>
 
       <!-- Frozen fields for approving / terminal applications -->
-      <div v-else class=":uno: overflow-hidden border border-gray-100 rounded">
-        <VDescription>
-          <VDescriptionItem label="网站名称" :content="frozenFields.displayName" />
-          <VDescriptionItem label="链接地址">
-            <a :href="frozenFields.url" target="_blank" class=":uno: text-blue-600 hover:underline">
+      <dl v-else class=":uno: overflow-hidden border border-gray-200 rounded-lg divide-y divide-gray-100">
+        <div class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">网站名称</dt>
+          <dd class=":uno: min-w-0 flex-1 break-all text-gray-900">{{ frozenFields.displayName }}</dd>
+        </div>
+        <div class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">链接地址</dt>
+          <dd class=":uno: min-w-0 flex-1">
+            <a :href="frozenFields.url" target="_blank" class=":uno: break-all text-blue-600 hover:underline">
               {{ frozenFields.url }}
             </a>
-          </VDescriptionItem>
-          <VDescriptionItem v-if="frozenFields.logo" label="Logo">
-            <span class=":uno: break-all">{{ frozenFields.logo }}</span>
-          </VDescriptionItem>
-          <VDescriptionItem v-if="frozenFields.description" label="简介">
-            <span class=":uno: whitespace-pre-wrap">{{ frozenFields.description }}</span>
-          </VDescriptionItem>
-          <VDescriptionItem label="分配分组" :content="frozenGroupLabel" />
-          <VDescriptionItem v-if="frozenFields.backlink" label="反链地址" vertical-center>
-            <a
-              :href="frozenFields.backlink"
-              target="_blank"
-              class=":uno: flex-1 truncate text-blue-600 hover:underline"
-            >
+          </dd>
+        </div>
+        <div v-if="frozenFields.logo" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">Logo</dt>
+          <dd class=":uno: min-w-0 flex-1 break-all text-gray-900">{{ frozenFields.logo }}</dd>
+        </div>
+        <div v-if="frozenFields.description" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">简介</dt>
+          <dd class=":uno: min-w-0 flex-1 whitespace-pre-wrap text-gray-900">{{ frozenFields.description }}</dd>
+        </div>
+        <div class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">分配分组</dt>
+          <dd class=":uno: min-w-0 flex-1 text-gray-900">{{ frozenGroupLabel }}</dd>
+        </div>
+        <div v-if="frozenFields.backlink" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">反链地址</dt>
+          <dd class=":uno: min-w-0 flex-1">
+            <a :href="frozenFields.backlink" target="_blank" class=":uno: break-all text-blue-600 hover:underline">
               {{ frozenFields.backlink }}
             </a>
-          </VDescriptionItem>
-          <VDescriptionItem v-if="frozenFields.feedUrls?.length" label="RSS 地址">
+          </dd>
+        </div>
+        <div v-if="frozenFields.feedUrls?.length" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">RSS 地址</dt>
+          <dd class=":uno: min-w-0 flex-1 text-gray-900 space-y-1">
             <div v-for="feedUrl in frozenFields.feedUrls" :key="feedUrl" class=":uno: break-all">
               {{ feedUrl }}
             </div>
-          </VDescriptionItem>
-        </VDescription>
-      </div>
+          </dd>
+        </div>
+      </dl>
     </div>
 
     <template #footer>
