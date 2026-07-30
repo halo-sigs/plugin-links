@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,7 +77,7 @@ class LinkApplicationNotificationSubscriptionManagerTest {
         assertThat(removedSubscriber.getValue().getName()).isEqualTo("removed");
         var addedSubscribers = ArgumentCaptor.forClass(Subscription.Subscriber.class);
         var reasons = ArgumentCaptor.forClass(Subscription.InterestReason.class);
-        verify(notificationCenter, org.mockito.Mockito.times(2))
+        verify(notificationCenter, times(2))
             .subscribe(addedSubscribers.capture(), reasons.capture());
         assertThat(addedSubscribers.getAllValues())
             .extracting(Subscription.Subscriber::getName)
@@ -134,7 +135,7 @@ class LinkApplicationNotificationSubscriptionManagerTest {
             .expectNext(true)
             .verifyComplete();
 
-        verify(notificationCenter, org.mockito.Mockito.times(1)).unsubscribe(any(), any());
+        verify(notificationCenter, times(1)).unsubscribe(any(), any());
         verify(notificationCenter, never()).subscribe(any(), any());
     }
 

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,7 +77,7 @@ class LinkApplicationNotificationPublisherTest {
             .containsExactly("core.halo.run/v1alpha1", "LinkApplication", "link-app-1",
                 "Example Site", "https://example.test/console/links");
         assertThat(payload.getAttributes())
-            .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(
+            .containsExactlyInAnyOrderEntriesOf(Map.of(
                 "displayName", "Example Site",
                 "websiteUrl", "https://friend.example",
                 "originLabel", "访客自助申请",

@@ -2,6 +2,7 @@ package run.halo.links.notification;
 
 import static run.halo.app.extension.index.query.Queries.equal;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -97,7 +98,7 @@ public class LinkApplicationNotificationSubscriptionManager {
         var subscriptionsByUser = new LinkedHashMap<String, List<Subscription>>();
         for (var subscription : existing) {
             String username = subscription.getSpec().getSubscriber().getName();
-            subscriptionsByUser.computeIfAbsent(username, ignored -> new java.util.ArrayList<>())
+            subscriptionsByUser.computeIfAbsent(username, ignored -> new ArrayList<>())
                 .add(subscription);
         }
 

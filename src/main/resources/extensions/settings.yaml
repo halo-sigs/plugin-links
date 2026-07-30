@@ -154,7 +154,9 @@ spec:
               value: []
               multiple: true
               validation: required
-              help: 请选择拥有链接管理权限的管理员，插件不会自动校验所选用户的权限
+              help: >-
+                请选择拥有链接管理权限的管理员，插件不会自动校验权限。插件会按此列表维护通知订阅；
+                邮件中的取消订阅不会修改此列表，如需停止接收，请移除用户或由用户在个人通知偏好中关闭此类型。
     - group: ai
       label: AI
       formSchema:
