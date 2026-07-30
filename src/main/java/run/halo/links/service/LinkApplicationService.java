@@ -2,6 +2,7 @@ package run.halo.links.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -11,16 +12,20 @@ import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
+import run.halo.links.notification.LinkApplicationNotificationPublisher;
 
 /**
  * Shared validation, duplicate detection, and creation for link applications.
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class LinkApplicationService {
 
     private final ReactiveExtensionClient client;
     private final LinkApplicationCreationCoordinator creationCoordinator;
+
+    private final LinkApplicationNotificationPublisher notificationPublisher;
 
     public Mono<CreateResult> create(Submission submission) {
         var validation = validate(submission);
@@ -45,6 +50,12 @@ public class LinkApplicationService {
                 }
                 var application = toApplication(submission);
                 return client.create(application)
+                    .flatMap(created -> notificationPublisher.publish(created)
+                        .doOnError(error -> log.warn(
+                            "[plugin-links] Failed to publish notification for application [{}]",
+                            created.getMetadata().getName(), error))
+                        .onErrorResume(error -> Mono.empty())
+                        .thenReturn(created))
                     .map(CreateResult::created);
             });
     }

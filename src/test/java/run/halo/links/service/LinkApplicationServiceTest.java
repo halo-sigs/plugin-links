@@ -2,6 +2,9 @@ package run.halo.links.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -20,6 +23,7 @@ import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
+import run.halo.links.notification.LinkApplicationNotificationPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class LinkApplicationServiceTest {
@@ -27,12 +31,16 @@ class LinkApplicationServiceTest {
     @Mock
     ReactiveExtensionClient client;
 
+    @Mock
+    LinkApplicationNotificationPublisher notificationPublisher;
+
     LinkApplicationService service;
 
     @BeforeEach
     void setUp() {
+        lenient().when(notificationPublisher.publish(any())).thenReturn(Mono.empty());
         service = new LinkApplicationService(client,
-            new LinkApplicationCreationCoordinator());
+            new LinkApplicationCreationCoordinator(), notificationPublisher);
     }
 
     @Test
@@ -54,6 +62,7 @@ class LinkApplicationServiceTest {
                     .isEqualTo(LinkApplication.OriginType.FORM);
             })
             .verifyComplete();
+        verify(notificationPublisher).publish(any(LinkApplication.class));
     }
 
     @Test
@@ -66,6 +75,7 @@ class LinkApplicationServiceTest {
                 assertThat(result.field()).isEqualTo("url");
             })
             .verifyComplete();
+        verify(notificationPublisher, never()).publish(any());
     }
 
     @Test
@@ -198,6 +208,24 @@ class LinkApplicationServiceTest {
             .assertNext(result -> assertThat(result.application().getSpec().getOrigin()
                 .getComment().getName()).isEqualTo("comment-a"))
             .verifyComplete();
+        verify(notificationPublisher).publish(any(LinkApplication.class));
+    }
+
+    @Test
+    void shouldKeepCreatedResultWhenNotificationFails() {
+        givenExisting(List.of(), List.of());
+        when(client.create(any(LinkApplication.class)))
+            .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        when(notificationPublisher.publish(any()))
+            .thenReturn(Mono.error(new IllegalStateException("notification failed")));
+
+        StepVerifier.create(service.create(submission("https://example.com",
+                LinkApplication.OriginType.FORM, null)))
+            .assertNext(result -> assertThat(result.status())
+                .isEqualTo(LinkApplicationService.CreateStatus.CREATED))
+            .verifyComplete();
+
+        verify(notificationPublisher).publish(any(LinkApplication.class));
     }
 
     @Test

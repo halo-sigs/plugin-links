@@ -31,10 +31,70 @@ class LinkApplicationSettingsFetcherTest {
                 assertThat(settings.applicationEnabled()).isFalse();
                 assertThat(settings.selfSubmissionEnabled()).isFalse();
                 assertThat(settings.commentRecognitionEnabled()).isFalse();
+                assertThat(settings.notificationEnabled()).isFalse();
+                assertThat(settings.notificationRecipients()).isEmpty();
             })
             .verifyComplete();
         StepVerifier.create(fetcher.fetch())
             .assertNext(settings -> assertThat(settings.applicationEnabled()).isFalse())
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldFailClosedForLegacyOrIncompleteNotificationSettings() {
+        var legacy = new LinkApplicationSettings();
+        legacy.setEnabled(true);
+        var withoutRecipients = new LinkApplicationSettings();
+        withoutRecipients.setEnabled(true);
+        var notification = new LinkApplicationSettings.Notification();
+        notification.setEnabled(true);
+        withoutRecipients.setNotification(notification);
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class))
+            .thenReturn(Mono.just(legacy), Mono.just(withoutRecipients));
+        var fetcher = new LinkApplicationSettingsFetcher(settingFetcher);
+
+        StepVerifier.create(fetcher.fetch())
+            .assertNext(settings -> {
+                assertThat(settings.applicationEnabled()).isTrue();
+                assertThat(settings.notificationEnabled()).isFalse();
+                assertThat(settings.notificationRecipients()).isEmpty();
+            })
+            .verifyComplete();
+        StepVerifier.create(fetcher.fetch())
+            .assertNext(settings -> {
+                assertThat(settings.notificationEnabled()).isFalse();
+                assertThat(settings.notificationRecipients()).isEmpty();
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void shouldNormalizeNotificationRecipientsAndApplyMasterSwitch() {
+        var raw = new LinkApplicationSettings();
+        raw.setEnabled(true);
+        var notification = new LinkApplicationSettings.Notification();
+        notification.setEnabled(true);
+        notification.setRecipients(List.of(" admin ", "", "admin", " reviewer "));
+        raw.setNotification(notification);
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class)).thenReturn(Mono.just(raw));
+
+        StepVerifier.create(new LinkApplicationSettingsFetcher(settingFetcher).fetch())
+            .assertNext(settings -> {
+                assertThat(settings.notificationEnabled()).isTrue();
+                assertThat(settings.notificationRecipients())
+                    .containsExactly("admin", "reviewer");
+            })
+            .verifyComplete();
+
+        raw.setEnabled(false);
+        StepVerifier.create(Mono.just(raw.normalized()))
+            .assertNext(settings -> {
+                assertThat(settings.notificationEnabled()).isFalse();
+                assertThat(settings.notificationRecipients())
+                    .containsExactly("admin", "reviewer");
+            })
             .verifyComplete();
     }
 

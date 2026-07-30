@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.config.ScheduledTaskHolder;
 import run.halo.app.extension.SchemeManager;
 import run.halo.app.plugin.PluginContext;
+import run.halo.links.notification.LinkApplicationNotificationSubscriptionManager;
 
 class LinkPluginSchedulingTest {
 
@@ -17,6 +18,8 @@ class LinkPluginSchedulingTest {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
             context.registerBean(PluginContext.class, () -> mock(PluginContext.class));
             context.registerBean(SchemeManager.class, () -> mock(SchemeManager.class));
+            context.registerBean(LinkApplicationNotificationSubscriptionManager.class,
+                () -> mock(LinkApplicationNotificationSubscriptionManager.class));
             context.register(LinkPlugin.class, TestScheduledBean.class);
             context.refresh();
 
