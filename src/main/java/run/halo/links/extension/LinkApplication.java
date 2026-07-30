@@ -25,7 +25,8 @@ public class LinkApplication extends AbstractExtension {
     private LinkApplicationSpec spec;
 
     @Data
-    @Schema(description = "Configurable fields of a link application.")
+    @Schema(description = "Configurable fields of a link application.",
+        requiredProperties = {"url", "displayName", "status", "origin"})
     public static class LinkApplicationSpec {
         @Schema(description = "Absolute URL that the link points to.", requiredMode = REQUIRED)
         private String url;
@@ -55,7 +56,7 @@ public class LinkApplication extends AbstractExtension {
         @Schema(description = "Status of the application.", requiredMode = REQUIRED)
         private Status status;
 
-        @Schema(description = "Origin of the application.")
+        @Schema(description = "Origin of the application.", requiredMode = REQUIRED)
         private Origin origin;
 
         @Schema(description = "Frozen approval state for resumable approval.")
@@ -108,6 +109,15 @@ public class LinkApplication extends AbstractExtension {
 
         @Schema(description = "Metadata name of the selected LinkGroup.")
         private String groupName;
+
+        @Schema(description = "Approved backlink page URL.")
+        private String backlink;
+
+        @ArraySchema(
+            arraySchema = @Schema(description = "Approved RSS or Atom feed URLs."),
+            schema = @Schema(format = "uri", pattern = "^[Hh][Tt][Tt][Pp][Ss]?://\\S+$")
+        )
+        private List<String> feedUrls;
     }
 
     @Schema(description = "Application status.")

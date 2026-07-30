@@ -24,6 +24,7 @@ import run.halo.app.extension.Metadata;
 import run.halo.app.extension.PageRequest;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.Ref;
+import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.service.LinkApplicationApprovalService;
 import run.halo.links.verification.LinkVerificationService;
@@ -157,6 +158,28 @@ class LinkApplicationEndpointTest {
             .expectStatus().isEqualTo(409);
     }
 
+    @Test
+    void shouldVerifyBacklinkOverrideFromReviewForm() {
+        var application = application("application-a", LinkApplication.Status.PENDING);
+        application.getSpec().setBacklink("https://original.example/links");
+        var status = new Link.BacklinkStatus();
+        status.setState(Link.BacklinkState.FOUND);
+        status.setMatchedUrl("https://edited.example/");
+        when(client.fetch(LinkApplication.class, "application-a"))
+            .thenReturn(Mono.just(application));
+        when(verificationService.verifyBacklink("https://edited.example/links"))
+            .thenReturn(Mono.just(status));
+
+        webClient.post()
+            .uri("/linkapplications/application-a/verify")
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+            .bodyValue("{\"backlink\":\"https://edited.example/links\"}")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.found").isEqualTo(true);
+    }
+
     private static LinkApplication application(String name, LinkApplication.Status status) {
         var application = new LinkApplication();
         application.setMetadata(metadata(name));
@@ -164,6 +187,9 @@ class LinkApplicationEndpointTest {
         spec.setUrl("https://" + name + ".example");
         spec.setDisplayName(name);
         spec.setStatus(status);
+        var origin = new LinkApplication.Origin();
+        origin.setType(LinkApplication.OriginType.FORM);
+        spec.setOrigin(origin);
         application.setSpec(spec);
         return application;
     }

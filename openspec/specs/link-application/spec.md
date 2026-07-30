@@ -6,8 +6,7 @@ approved into formal Links, rejected, inspected, and deleted.
 ## Requirements
 
 ### Requirement: Link applications record their origin
-The system SHALL record origin information for newly created LinkApplication resources while
-remaining compatible with historical records that have no origin.
+The system SHALL require origin information on every LinkApplication resource.
 
 #### Scenario: Form application records origin
 - **WHEN** an anonymous visitor successfully submits `/links/apply`
@@ -17,11 +16,6 @@ remaining compatible with historical records that have no origin.
 - **WHEN** comment recognition creates a LinkApplication
 - **THEN** the application has origin type `COMMENT`
 - **AND** records its source Comment metadata name as `origin.comment.name`
-
-#### Scenario: Historical application has no origin
-- **WHEN** an administrator views a LinkApplication created before origin support
-- **THEN** the application remains readable and actionable
-- **AND** the Console labels its source as historical
 
 ### Requirement: Link application settings govern new application creation
 The system SHALL provide a disabled-by-default Link Application settings group whose master switch
@@ -169,7 +163,7 @@ The system SHALL expose application-origin context through an application-scoped
 without granting link managers permission to read arbitrary Comments.
 
 #### Scenario: Pending list shows source
-- **WHEN** the application list contains form, Comment, or historical applications
+- **WHEN** the application list contains form or Comment applications
 - **THEN** each item displays the corresponding source label
 
 #### Scenario: Comment application detail is opened
@@ -327,7 +321,8 @@ most one owned formal `Link` for that application.
 
 #### Scenario: Approve with modifications
 - **WHEN** an administrator opens a `PENDING` application detail view
-- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`) are editable
+- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`, `backlink`, and
+  `feedUrls`) are editable
 - **AND** a dropdown allows selecting a `LinkGroup`
 - **AND** the backend validates and normalizes the effective fields before reserving approval
 
@@ -417,7 +412,7 @@ The system SHALL allow administrators to manually trigger backlink verification 
 
 #### Scenario: Manual verification trigger
 - **WHEN** an administrator clicks "Verify Backlink" in the application detail view
-- **THEN** the system fetches the submitted `backlink` URL
+- **THEN** the system fetches the current `backlink` input value
 - **AND** checks whether the page contains a link to the site's own URL
 - **AND** displays the verification result (success/failure) in the detail view
 

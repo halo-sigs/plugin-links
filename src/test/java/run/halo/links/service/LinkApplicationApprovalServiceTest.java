@@ -64,10 +64,14 @@ class LinkApplicationApprovalServiceTest {
             .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
         when(verificationService.verify(any(LinkVerificationRequest.class)))
             .thenReturn(Mono.just(new LinkVerificationTriggerResult()));
+        when(feedService.refresh("application-a")).thenReturn(Mono.empty());
 
         StepVerifier.create(service.approve("application-a",
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    " https://approved.example ", " Approved ", " ", " Desc ", null)))
+                    " https://approved.example ", " Approved ", " ", " Desc ", null,
+                    " https://approved.example/links ",
+                    List.of(" https://approved.example/feed.xml ",
+                        "https://approved.example/feed.xml"))))
             .assertNext(link -> {
                 assertThat(link.getMetadata().getName()).isEqualTo("application-a");
                 assertThat(link.getMetadata().getAnnotations())
@@ -77,14 +81,23 @@ class LinkApplicationApprovalServiceTest {
                 assertThat(link.getSpec().getDisplayName()).isEqualTo("Approved");
                 assertThat(link.getSpec().getLogo()).isNull();
                 assertThat(link.getSpec().getDescription()).isEqualTo("Desc");
+                assertThat(link.getSpec().getVerification().getBacklinkScanUrl())
+                    .isEqualTo("https://approved.example/links");
+                assertThat(link.getSpec().getRss().getFeedUrls())
+                    .containsExactly("https://approved.example/feed.xml");
                 assertThat(application.getSpec().getStatus())
                     .isEqualTo(LinkApplication.Status.APPROVED);
-                assertThat(application.getSpec().getApproval().getRequest().getUrl())
-                    .isEqualTo("https://approved.example");
+                var frozen = application.getSpec().getApproval().getRequest();
+                assertThat(frozen.getUrl()).isEqualTo("https://approved.example");
+                assertThat(frozen.getBacklink())
+                    .isEqualTo("https://approved.example/links");
+                assertThat(frozen.getFeedUrls())
+                    .containsExactly("https://approved.example/feed.xml");
             })
             .verifyComplete();
 
         verify(verificationService).verify(any(LinkVerificationRequest.class));
+        verify(feedService).refresh("application-a");
     }
 
     @Test
@@ -100,9 +113,16 @@ class LinkApplicationApprovalServiceTest {
 
         StepVerifier.create(service.approve("application-a",
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    "https://replacement.example", "Replacement", null, null, null)))
-            .assertNext(link -> assertThat(link.getSpec().getUrl())
-                .isEqualTo("https://frozen.example"))
+                    "https://replacement.example", "Replacement", null, null, null,
+                    "https://replacement.example/links",
+                    List.of("https://replacement.example/feed.xml"))))
+            .assertNext(link -> {
+                assertThat(link.getSpec().getUrl()).isEqualTo("https://frozen.example");
+                var frozen = application.getSpec().getApproval().getRequest();
+                assertThat(frozen.getBacklink()).isEqualTo("https://frozen.example/links");
+                assertThat(frozen.getFeedUrls())
+                    .containsExactly("https://frozen.example/feed.xml");
+            })
             .verifyComplete();
 
         verify(client, never()).create(any(Link.class));
@@ -132,7 +152,7 @@ class LinkApplicationApprovalServiceTest {
 
         StepVerifier.create(service.approve("application-a",
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    "ftp://example.com", null, null, null, null)))
+                    "ftp://example.com", null, null, null, null, null, null)))
             .expectError(ResponseStatusException.class)
             .verify();
 
@@ -156,7 +176,7 @@ class LinkApplicationApprovalServiceTest {
 
         StepVerifier.create(service.approve("application-b",
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    "https://reserved.example.com/", null, null, null, null)))
+                    "https://reserved.example.com/", null, null, null, null, null, null)))
             .expectErrorSatisfies(error -> {
                 assertThat(error).isInstanceOf(ResponseStatusException.class);
                 assertThat(((ResponseStatusException) error).getStatusCode().value())
@@ -224,7 +244,7 @@ class LinkApplicationApprovalServiceTest {
 
         StepVerifier.create(service.approve("application-a",
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    "https://loser.example", "Loser", null, null, null)))
+                    "https://loser.example", "Loser", null, null, null, null, null)))
             .assertNext(link -> assertThat(link.getSpec().getUrl())
                 .isEqualTo("https://winner.example"))
             .verifyComplete();
@@ -293,6 +313,9 @@ class LinkApplicationApprovalServiceTest {
         spec.setDisplayName("Example");
         spec.setStatus(LinkApplication.Status.PENDING);
         spec.setFeedUrls(List.of());
+        var origin = new LinkApplication.Origin();
+        origin.setType(LinkApplication.OriginType.FORM);
+        spec.setOrigin(origin);
         application.setSpec(spec);
         return application;
     }
@@ -302,6 +325,8 @@ class LinkApplicationApprovalServiceTest {
         var request = new LinkApplication.ApprovalRequest();
         request.setUrl(url);
         request.setDisplayName("Frozen");
+        request.setBacklink("https://frozen.example/links");
+        request.setFeedUrls(List.of("https://frozen.example/feed.xml"));
         var approval = new LinkApplication.Approval();
         approval.setLinkName(name);
         approval.setRequest(request);

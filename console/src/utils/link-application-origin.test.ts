@@ -8,10 +8,9 @@ import {
 } from "./link-application-origin";
 
 describe("link application source presentation", () => {
-  it("labels form, comment, and historical applications", () => {
+  it("labels form and comment applications", () => {
     expect(linkApplicationSourceMeta(application({ type: "FORM" })).label).toBe("表单申请");
     expect(linkApplicationSourceMeta(application({ type: "COMMENT" })).label).toBe("评论识别");
-    expect(linkApplicationSourceMeta(application()).label).toBe("历史申请");
   });
 
   it("builds supported subject routes and keeps an unknown subject readable", () => {
@@ -76,7 +75,7 @@ describe("comment recognition warning", () => {
   });
 });
 
-function application(origin?: Origin): LinkApplication {
+function application(origin: Origin): LinkApplication {
   return {
     apiVersion: "core.halo.run/v1alpha1",
     kind: "LinkApplication",

@@ -52,4 +52,5 @@ export * from './sort-request';
 export * from './test-operation';
 export * from './verification-spec';
 export * from './verification-status';
+export * from './verify-request';
 export * from './verify-result';

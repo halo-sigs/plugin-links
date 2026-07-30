@@ -151,16 +151,15 @@ second application even if its URL presentation changes.
 
 ### 6. Add minimal origin data to LinkApplication
 
-Add an optional `origin` object:
+Add a required `origin` object:
 
 - `type`: `FORM` or `COMMENT`;
 - `comment.name`: metadata name of the source Comment for `COMMENT` origins.
 
-New form records write `FORM`; recognized records write `COMMENT` with the source Comment name.
-Records without `origin` remain valid and are presented as historical applications. The Comment
-name is a stable reference used to load the current subject and raw content when an administrator
-opens application details. Derived Comment data and AI implementation details are not duplicated
-in the LinkApplication.
+Form records write `FORM`; recognized records write `COMMENT` with the source Comment name. The
+Comment name is a stable reference used to load the current subject and raw content when an
+administrator opens application details. Derived Comment data and AI implementation details are
+not duplicated in the LinkApplication.
 
 Register indexes needed for comment-name idempotency and source-aware application queries. This is
 an additive schema change and requires OpenAPI/client regeneration.

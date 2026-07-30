@@ -76,6 +76,8 @@ describe("buildLinkApplicationApprovalRequest", () => {
         logo: "",
         description: "",
         groupName: "",
+        backlink: " https://example.com/links ",
+        feedUrlsText: " https://example.com/feed.xml\n\nhttps://example.com/feed.xml\nhttps://example.com/atom.xml ",
       }),
     ).toEqual({
       url: "https://example.com",
@@ -83,6 +85,25 @@ describe("buildLinkApplicationApprovalRequest", () => {
       logo: "",
       description: "",
       groupName: undefined,
+      backlink: "https://example.com/links",
+      feedUrls: ["https://example.com/feed.xml", "https://example.com/atom.xml"],
+    });
+  });
+
+  it("allows clearing the submitted backlink and feed URLs", () => {
+    expect(
+      buildLinkApplicationApprovalRequest({
+        backlink: " ",
+        feedUrlsText: "\n ",
+      }),
+    ).toEqual({
+      url: undefined,
+      displayName: undefined,
+      logo: "",
+      description: "",
+      groupName: undefined,
+      backlink: "",
+      feedUrls: [],
     });
   });
 });
@@ -116,6 +137,8 @@ describe("linkApplicationEffectiveFields", () => {
       displayName: "Example",
       logo: undefined,
       description: undefined,
+      backlink: undefined,
+      feedUrls: undefined,
     });
   });
 });
@@ -125,11 +148,6 @@ describe("linkApplicationRejectDescription", () => {
     const description = linkApplicationRejectDescription(application({ originType: "FORM" }));
     expect(description).toContain("无法再次提交申请");
     expect(description).toContain("删除拒绝记录可解除限制");
-  });
-
-  it("treats historical applications without origin as form-origin", () => {
-    const description = linkApplicationRejectDescription(application({}));
-    expect(description).toContain("无法再次提交申请");
   });
 
   it("does not claim comment-origin URLs can never be submitted again", () => {
@@ -214,7 +232,7 @@ function application(options: {
       status: options.status ?? "PENDING",
       url: "https://example.com",
       backlink: options.backlink,
-      origin: options.originType ? { type: options.originType } : undefined,
+      origin: { type: options.originType ?? "FORM" },
       approval: options.approval,
     },
   } as LinkApplication;

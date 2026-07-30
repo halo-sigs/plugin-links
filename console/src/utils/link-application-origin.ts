@@ -1,4 +1,4 @@
-import type { LinkAiFeatureStatus, LinkApplication, Ref } from "@/api/generated";
+import type { LinkAiFeatureStatus, LinkApplication, OriginTypeEnum, Ref } from "@/api/generated";
 import type { RouteLocationRaw } from "vue-router";
 
 export interface LinkApplicationSourceMeta {
@@ -11,24 +11,19 @@ export interface LinkApplicationSubjectMeta {
   route?: RouteLocationRaw;
 }
 
+const linkApplicationSourceMetas: Record<OriginTypeEnum, LinkApplicationSourceMeta> = {
+  FORM: {
+    label: "表单申请",
+    tagType: "primary",
+  },
+  COMMENT: {
+    label: "评论识别",
+    tagType: "success",
+  },
+};
+
 export function linkApplicationSourceMeta(application: LinkApplication): LinkApplicationSourceMeta {
-  switch (application.spec.origin?.type) {
-    case "FORM":
-      return {
-        label: "表单申请",
-        tagType: "primary",
-      };
-    case "COMMENT":
-      return {
-        label: "评论识别",
-        tagType: "success",
-      };
-    default:
-      return {
-        label: "历史申请",
-        tagType: "default",
-      };
-  }
+  return linkApplicationSourceMetas[application.spec.origin.type];
 }
 
 export function linkApplicationSubjectMeta(subjectRef: Ref | undefined): LinkApplicationSubjectMeta | undefined {
@@ -75,7 +70,7 @@ export function linkApplicationSubjectMeta(subjectRef: Ref | undefined): LinkApp
 }
 
 export function linkApplicationCommentRoute(application: LinkApplication): RouteLocationRaw | undefined {
-  const commentName = application.spec.origin?.comment?.name;
+  const commentName = application.spec.origin.comment?.name;
   if (!commentName) {
     return undefined;
   }

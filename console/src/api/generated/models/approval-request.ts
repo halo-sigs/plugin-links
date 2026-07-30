@@ -21,6 +21,12 @@
  */
 export interface ApprovalRequest {
     /**
+     * Approved backlink page URL.
+     * @type {string}
+     * @memberof ApprovalRequest
+     */
+    'backlink'?: string;
+    /**
      * Approved Link description.
      * @type {string}
      * @memberof ApprovalRequest
@@ -32,6 +38,12 @@ export interface ApprovalRequest {
      * @memberof ApprovalRequest
      */
     'displayName': string;
+    /**
+     * Approved RSS or Atom feed URLs.
+     * @type {Array<string>}
+     * @memberof ApprovalRequest
+     */
+    'feedUrls'?: Array<string>;
     /**
      * Metadata name of the selected LinkGroup.
      * @type {string}

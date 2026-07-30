@@ -42,7 +42,9 @@ public class LinkApplicationApprovalService {
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Link application not found.")))
             .flatMap(application -> approve(application,
-                command == null ? new ApprovalCommand(null, null, null, null, null) : command));
+                command == null
+                    ? new ApprovalCommand(null, null, null, null, null, null, null)
+                    : command));
     }
 
     private Mono<Link> approve(LinkApplication application, ApprovalCommand command) {
@@ -152,9 +154,7 @@ public class LinkApplicationApprovalService {
             || status == LinkApplication.Status.APPROVED) {
             return true;
         }
-        var origin = spec.getOrigin();
-        return origin == null || origin.getType() == null
-            || origin.getType() == LinkApplication.OriginType.FORM;
+        return spec.getOrigin().getType() == LinkApplication.OriginType.FORM;
     }
 
     private Mono<Link> createOrRecoverOwnedLink(LinkApplication application) {
@@ -212,15 +212,15 @@ public class LinkApplicationApprovalService {
         spec.setDescription(frozen.getDescription());
         spec.setGroupName(frozen.getGroupName());
         spec.setPriority(0);
-        if (appSpec.getFeedUrls() != null && !appSpec.getFeedUrls().isEmpty()) {
+        if (frozen.getFeedUrls() != null && !frozen.getFeedUrls().isEmpty()) {
             var rss = new Link.RssSpec();
             rss.setEnabled(true);
-            rss.setFeedUrls(List.copyOf(appSpec.getFeedUrls()));
+            rss.setFeedUrls(List.copyOf(frozen.getFeedUrls()));
             spec.setRss(rss);
         }
-        if (StringUtils.isNotBlank(appSpec.getBacklink())) {
+        if (StringUtils.isNotBlank(frozen.getBacklink())) {
             var verification = new Link.VerificationSpec();
-            verification.setBacklinkScanUrl(appSpec.getBacklink().trim());
+            verification.setBacklinkScanUrl(frozen.getBacklink());
             spec.setVerification(verification);
         }
         link.setSpec(spec);
@@ -261,6 +261,13 @@ public class LinkApplicationApprovalService {
         frozen.setDescription(optional(command.description(), spec.getDescription()));
         frozen.setGroupName(StringUtils.isBlank(command.groupName())
             ? null : command.groupName().trim());
+        String backlink = optional(command.backlink(), spec.getBacklink());
+        if (backlink != null && LinkUrlCanonicalizer.canonicalKey(backlink).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "backlink: Backlink URL format is invalid.");
+        }
+        frozen.setBacklink(backlink);
+        frozen.setFeedUrls(optionalUrls(command.feedUrls(), spec.getFeedUrls()));
         return frozen;
     }
 
@@ -276,6 +283,25 @@ public class LinkApplicationApprovalService {
     private static String optional(String override, String original) {
         String value = override != null ? override : original;
         return StringUtils.isBlank(value) ? null : value.trim();
+    }
+
+    private static List<String> optionalUrls(List<String> override, List<String> original) {
+        var values = override != null ? override : original;
+        if (values == null) {
+            return List.of();
+        }
+        var normalized = values.stream()
+            .filter(StringUtils::isNotBlank)
+            .map(String::trim)
+            .distinct()
+            .toList();
+        for (String value : normalized) {
+            if (LinkUrlCanonicalizer.canonicalKey(value).isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "feedUrls: Feed URL format is invalid.");
+            }
+        }
+        return normalized;
     }
 
     private boolean isConflict(Throwable error) {
@@ -303,7 +329,9 @@ public class LinkApplicationApprovalService {
         String displayName,
         String logo,
         String description,
-        String groupName
+        String groupName,
+        String backlink,
+        List<String> feedUrls
     ) {
     }
 

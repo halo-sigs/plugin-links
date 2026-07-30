@@ -34,6 +34,8 @@ import type { LinkApplicationList } from '../models';
 // @ts-ignore
 import type { LinkApplicationOriginComment } from '../models';
 // @ts-ignore
+import type { VerifyRequest } from '../models';
+// @ts-ignore
 import type { VerifyResult } from '../models';
 /**
  * ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi - axios parameter creator
@@ -397,10 +399,11 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
         /**
          * Manually verify this application\'s backlink.
          * @param {string} name LinkApplication metadata name.
+         * @param {VerifyRequest} [verifyRequest] Optional backlink URL override.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        verifyBacklink: async (name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        verifyBacklink: async (name: string, verifyRequest?: VerifyRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'name' is not null or undefined
             assertParamExists('verifyBacklink', 'name', name)
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/linkapplications/{name}/verify`
@@ -426,9 +429,12 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiAxiosParamCreator = 
 
 
 
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(verifyRequest, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -545,11 +551,12 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp = function(config
         /**
          * Manually verify this application\'s backlink.
          * @param {string} name LinkApplication metadata name.
+         * @param {VerifyRequest} [verifyRequest] Optional backlink URL override.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async verifyBacklink(name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<VerifyResult>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.verifyBacklink(name, options);
+        async verifyBacklink(name: string, verifyRequest?: VerifyRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<VerifyResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.verifyBacklink(name, verifyRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi.verifyBacklink']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -634,7 +641,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFactory = function (
          * @throws {RequiredError}
          */
         verifyBacklink(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiVerifyBacklinkRequest, options?: RawAxiosRequestConfig): AxiosPromise<VerifyResult> {
-            return localVarFp.verifyBacklink(requestParameters.name, options).then((request) => request(axios, basePath));
+            return localVarFp.verifyBacklink(requestParameters.name, requestParameters.verifyRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -839,6 +846,13 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiVerifyBacklinkRe
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiVerifyBacklink
      */
     readonly name: string
+
+    /**
+     * Optional backlink URL override.
+     * @type {VerifyRequest}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiVerifyBacklink
+     */
+    readonly verifyRequest?: VerifyRequest
 }
 
 /**
@@ -933,6 +947,6 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi extends BaseAPI {
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkApplicationApi
      */
     public verifyBacklink(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiVerifyBacklinkRequest, options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp(this.configuration).verifyBacklink(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
+        return ConsoleApiLinkHaloRunV1alpha1LinkApplicationApiFp(this.configuration).verifyBacklink(requestParameters.name, requestParameters.verifyRequest, options).then((request) => request(this.axios, this.basePath));
     }
 }

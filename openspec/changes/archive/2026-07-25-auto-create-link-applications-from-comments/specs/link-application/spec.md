@@ -1,8 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Link applications record their origin
-The system SHALL record origin information for newly created LinkApplication resources while
-remaining compatible with historical records that have no origin.
+The system SHALL require origin information on every LinkApplication resource.
 
 #### Scenario: Form application records origin
 - **WHEN** an anonymous visitor successfully submits `/links/apply`
@@ -13,16 +12,11 @@ remaining compatible with historical records that have no origin.
 - **THEN** the application has origin type `COMMENT`
 - **AND** records its source Comment metadata name as `origin.comment.name`
 
-#### Scenario: Historical application has no origin
-- **WHEN** an administrator views a LinkApplication created before origin support
-- **THEN** the application remains readable and actionable
-- **AND** the Console labels its source as historical
-
 ### Requirement: Administrators can inspect application source context
 The system SHALL expose application-origin context in the existing pending application review flow.
 
 #### Scenario: Pending list shows source
-- **WHEN** the pending application list contains form, comment, or historical applications
+- **WHEN** the pending application list contains form or comment applications
 - **THEN** each item displays the corresponding source label
 
 #### Scenario: Comment application detail is opened

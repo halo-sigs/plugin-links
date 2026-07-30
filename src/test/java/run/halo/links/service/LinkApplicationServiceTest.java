@@ -177,16 +177,6 @@ class LinkApplicationServiceTest {
     }
 
     @Test
-    void shouldTreatHistoricalRejectedApplicationAsFormOrigin() {
-        var historical = application("https://example.com", LinkApplication.Status.REJECTED,
-            null, null);
-        givenExisting(List.of(), List.of(historical));
-
-        verifyDuplicate(submission("https://example.com",
-            LinkApplication.OriginType.COMMENT, "comment-a"));
-    }
-
-    @Test
     void shouldUseCommentNameAsStableIdempotencyKey() {
         givenExisting(List.of(), List.of(application("https://old.example.com",
             LinkApplication.Status.REJECTED, LinkApplication.OriginType.COMMENT,
@@ -316,16 +306,14 @@ class LinkApplicationServiceTest {
         spec.setUrl(url);
         spec.setDisplayName("Existing");
         spec.setStatus(status);
-        if (originType != null) {
-            var origin = new LinkApplication.Origin();
-            origin.setType(originType);
-            if (commentName != null) {
-                var comment = new LinkApplication.CommentOrigin();
-                comment.setName(commentName);
-                origin.setComment(comment);
-            }
-            spec.setOrigin(origin);
+        var origin = new LinkApplication.Origin();
+        origin.setType(originType);
+        if (commentName != null) {
+            var comment = new LinkApplication.CommentOrigin();
+            comment.setName(commentName);
+            origin.setComment(comment);
         }
+        spec.setOrigin(origin);
         application.setSpec(spec);
         return application;
     }

@@ -73,7 +73,7 @@ export interface LinkApplicationSpec {
      * @type {Origin}
      * @memberof LinkApplicationSpec
      */
-    'origin'?: Origin;
+    'origin': Origin;
     /**
      * Application status.
      * @type {string}

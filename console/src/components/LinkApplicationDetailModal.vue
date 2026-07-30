@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ApproveRequest, LinkApplication } from "@/api/generated";
+import type { LinkApplication } from "@/api/generated";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import {
   useApproveLinkApplication,
@@ -11,14 +11,27 @@ import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/us
 import {
   buildLinkApplicationApprovalRequest,
   canVerifyLinkApplicationBacklink,
+  type LinkApplicationApprovalFormData,
   linkApplicationEffectiveFields,
   linkApplicationRejectDescription,
   linkApplicationReviewMode,
   linkApplicationStatusMeta,
 } from "@/utils/link-application-review";
-import { Dialog, Toast, VAlert, VButton, VModal, VSpace, VTag } from "@halo-dev/components";
+import {
+  Dialog,
+  Toast,
+  VAlert,
+  VButton,
+  VDescription,
+  VDescriptionItem,
+  VLoading,
+  VModal,
+  VSpace,
+  VTag,
+} from "@halo-dev/components";
 import { useQueryClient } from "@tanstack/vue-query";
-import { computed, useTemplateRef } from "vue";
+import { computed, reactive, useTemplateRef } from "vue";
+import MingcuteEarth3Line from "~icons/mingcute/earth-3-line";
 import LinkApplicationOriginDetails from "./LinkApplicationOriginDetails.vue";
 import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
@@ -39,12 +52,26 @@ const { data: groups } = useLinkGroupFetch();
 const { mutate: approveApplication, isPending: isApproving } = useApproveLinkApplication();
 const { mutate: rejectApplication, isPending: isRejecting } = useRejectLinkApplication();
 const { mutate: deleteApplication } = useDeleteLinkApplication();
-const { mutate: verifyApplication, data: verifyResult } = useVerifyBacklink();
+const { mutate: verifyApplication, data: verifyResult, isPending: isVerifying } = useVerifyBacklink();
 
 const reviewMode = computed(() => linkApplicationReviewMode(props.application));
 const statusMeta = computed(() => linkApplicationStatusMeta(props.application.spec.status));
 const frozenFields = computed(() => linkApplicationEffectiveFields(props.application));
-const backlinkVerificationAvailable = computed(() => canVerifyLinkApplicationBacklink(props.application));
+const approvalForm = reactive<LinkApplicationApprovalFormData>({
+  url: props.application.spec.url,
+  displayName: props.application.spec.displayName,
+  logo: props.application.spec.logo || "",
+  description: props.application.spec.description || "",
+  groupName: "",
+  backlink: props.application.spec.backlink || "",
+  feedUrlsText: props.application.spec.feedUrls?.join("\n") || "",
+});
+const verificationBacklink = computed(() =>
+  reviewMode.value === "editable" ? approvalForm.backlink?.trim() : frozenFields.value.backlink?.trim(),
+);
+const backlinkVerificationAvailable = computed(() =>
+  reviewMode.value === "editable" ? !!verificationBacklink.value : canVerifyLinkApplicationBacklink(props.application),
+);
 
 const modalTitle = computed(() =>
   reviewMode.value === "editable"
@@ -83,7 +110,7 @@ function handleApproveSuccess() {
   modal.value?.close();
 }
 
-function handleApprove(data: ApproveRequest) {
+function handleApprove(data: LinkApplicationApprovalFormData) {
   if (!data.displayName?.trim()) {
     Toast.error("网站名称不能为空");
     return;
@@ -133,15 +160,21 @@ function handleReject() {
 function handleVerify() {
   const name = props.application.metadata.name;
   if (!name) return;
-  verifyApplication(name, {
-    onSuccess: (result) => {
-      if (result.found) {
-        Toast.success(result.message || "反链验证通过");
-      } else {
-        Toast.warning(result.message || "反链验证未通过");
-      }
+  verifyApplication(
+    {
+      name,
+      backlink: verificationBacklink.value,
     },
-  });
+    {
+      onSuccess: (result) => {
+        if (result.found) {
+          Toast.success(result.message || "反链验证通过");
+        } else {
+          Toast.warning(result.message || "反链验证未通过");
+        }
+      },
+    },
+  );
 }
 
 function handleDelete() {
@@ -164,13 +197,18 @@ function handleDelete() {
 <template>
   <VModal ref="modal" :title="modalTitle" :width="600" :mount-to-body="true" :centered="false" @close="emit('close')">
     <div class=":uno: space-y-4">
-      <!-- Status -->
-      <div class=":uno: flex items-center gap-2">
-        <span class=":uno: text-sm text-gray-500">状态：</span>
-        <VTag :type="statusMeta.tagType" size="sm">
-          {{ statusMeta.label }}
-        </VTag>
-        <LinkApplicationSourceBadge :application="application" />
+      <div class=":uno: overflow-hidden border border-gray-100 rounded">
+        <VDescription>
+          <VDescriptionItem label="状态" vertical-center>
+            <VTag :type="statusMeta.tagType" size="sm">
+              {{ statusMeta.label }}
+            </VTag>
+          </VDescriptionItem>
+          <VDescriptionItem label="来源" vertical-center>
+            <LinkApplicationSourceBadge :application="application" />
+          </VDescriptionItem>
+          <VDescriptionItem v-if="application.spec.email" label="联系邮箱" :content="application.spec.email" />
+        </VDescription>
       </div>
 
       <VAlert v-if="reviewMode === 'resume'" title="审批已保留" type="info" :closable="false">
@@ -186,90 +224,96 @@ function handleDelete() {
         name="link-application-form"
         type="form"
         :config="{ validationVisibility: 'submit' }"
-        :value="{
-          url: application.spec.url,
-          displayName: application.spec.displayName,
-          logo: application.spec.logo || '',
-          description: application.spec.description || '',
-          groupName: '',
-        }"
         @submit="handleApprove"
       >
-        <FormKit type="text" name="displayName" validation="required" label="网站名称" />
-        <FormKit type="url" name="url" validation="required" label="链接地址" />
-        <FormKit type="url" name="logo" label="Logo" />
-        <FormKit type="textarea" name="description" label="简介" auto-height />
-        <FormKit type="select" name="groupName" label="分配分组" :options="groupOptions" />
+        <FormKit
+          v-model="approvalForm.displayName"
+          type="text"
+          name="displayName"
+          validation="required"
+          label="网站名称"
+        />
+        <FormKit v-model="approvalForm.url" type="url" name="url" validation="required" label="链接地址" />
+        <FormKit v-model="approvalForm.logo" type="url" name="logo" label="Logo" />
+        <FormKit v-model="approvalForm.description" type="textarea" name="description" label="简介" auto-height />
+        <FormKit
+          v-model="approvalForm.groupName"
+          type="select"
+          name="groupName"
+          label="分配分组"
+          :options="groupOptions"
+        />
+        <FormKit
+          v-model="approvalForm.backlink"
+          type="url"
+          name="backlink"
+          label="反链地址"
+          help="填写对方固定放置本站链接的页面，留空则不检测反链"
+          placeholder="https://example.com/links"
+        >
+          <template v-if="backlinkVerificationAvailable" #suffix>
+            <button
+              v-tooltip="{
+                content: '验证反链',
+              }"
+              type="button"
+              aria-label="验证反链"
+              class=":uno: group h-full flex cursor-pointer items-center border-0 border-l border-gray-200 bg-transparent px-3 transition-all disabled:cursor-not-allowed hover:bg-gray-100 disabled:opacity-50"
+              :disabled="isVerifying"
+              @click="handleVerify"
+            >
+              <VLoading v-if="isVerifying" class=":uno: size-4 text-gray-500" />
+              <MingcuteEarth3Line v-else class=":uno: size-4 text-gray-500 group-hover:text-gray-700" />
+            </button>
+          </template>
+        </FormKit>
+        <FormKit
+          v-model="approvalForm.feedUrlsText"
+          type="textarea"
+          name="feedUrlsText"
+          label="RSS 地址"
+          help="每行一个 RSS 或 Atom 地址"
+          placeholder="https://example.com/rss.xml&#10;https://example.com/atom.xml"
+          auto-height
+        />
       </FormKit>
 
       <!-- Frozen fields for approving / terminal applications -->
-      <dl v-else class=":uno: text-sm space-y-3">
-        <div>
-          <dt class=":uno: text-gray-500">网站名称</dt>
-          <dd class=":uno: mt-1 text-gray-700">{{ frozenFields.displayName }}</dd>
-        </div>
-        <div>
-          <dt class=":uno: text-gray-500">链接地址</dt>
-          <dd class=":uno: mt-1 text-gray-700">
+      <div v-else class=":uno: overflow-hidden border border-gray-100 rounded">
+        <VDescription>
+          <VDescriptionItem label="网站名称" :content="frozenFields.displayName" />
+          <VDescriptionItem label="链接地址">
             <a :href="frozenFields.url" target="_blank" class=":uno: text-blue-600 hover:underline">
               {{ frozenFields.url }}
             </a>
-          </dd>
-        </div>
-        <div v-if="frozenFields.logo">
-          <dt class=":uno: text-gray-500">Logo</dt>
-          <dd class=":uno: mt-1 break-all text-gray-700">{{ frozenFields.logo }}</dd>
-        </div>
-        <div v-if="frozenFields.description">
-          <dt class=":uno: text-gray-500">简介</dt>
-          <dd class=":uno: mt-1 whitespace-pre-wrap text-gray-700">{{ frozenFields.description }}</dd>
-        </div>
-        <div>
-          <dt class=":uno: text-gray-500">分配分组</dt>
-          <dd class=":uno: mt-1 text-gray-700">{{ frozenGroupLabel }}</dd>
-        </div>
-        <div v-if="application.spec.approval?.linkName">
-          <dt class=":uno: text-gray-500">正式链接</dt>
-          <dd class=":uno: mt-1 text-gray-700">{{ application.spec.approval.linkName }}</dd>
-        </div>
-      </dl>
-
-      <!-- Email (read-only display) -->
-      <div v-if="application.spec.email">
-        <label class=":uno: mb-1 block text-sm text-gray-700 font-medium">联系邮箱</label>
-        <div class=":uno: text-sm text-gray-600">{{ application.spec.email }}</div>
-      </div>
-
-      <!-- Backlink -->
-      <div v-if="application.spec.backlink">
-        <label class=":uno: mb-1 block text-sm text-gray-700 font-medium">反链地址</label>
-        <div class=":uno: flex items-center gap-2">
-          <a
-            :href="application.spec.backlink"
-            target="_blank"
-            class=":uno: flex-1 truncate text-sm text-blue-600 hover:underline"
-          >
-            {{ application.spec.backlink }}
-          </a>
-          <VButton v-if="backlinkVerificationAvailable" size="xs" type="secondary" @click="handleVerify">
-            验证反链
-          </VButton>
-        </div>
-        <div
-          v-if="verifyResult"
-          class=":uno: mt-1 text-xs"
-          :class="verifyResult.found ? ':uno: text-green-600' : ':uno: text-red-600'"
-        >
-          {{ verifyResult.message }}
-        </div>
-      </div>
-
-      <!-- Feed URLs -->
-      <div v-if="application.spec.feedUrls?.length">
-        <label class=":uno: mb-1 block text-sm text-gray-700 font-medium">RSS 地址</label>
-        <div v-for="(feedUrl, index) in application.spec.feedUrls" :key="index" class=":uno: text-sm text-gray-600">
-          {{ feedUrl }}
-        </div>
+          </VDescriptionItem>
+          <VDescriptionItem v-if="frozenFields.logo" label="Logo">
+            <span class=":uno: break-all">{{ frozenFields.logo }}</span>
+          </VDescriptionItem>
+          <VDescriptionItem v-if="frozenFields.description" label="简介">
+            <span class=":uno: whitespace-pre-wrap">{{ frozenFields.description }}</span>
+          </VDescriptionItem>
+          <VDescriptionItem label="分配分组" :content="frozenGroupLabel" />
+          <VDescriptionItem v-if="frozenFields.backlink" label="反链地址" vertical-center>
+            <a
+              :href="frozenFields.backlink"
+              target="_blank"
+              class=":uno: flex-1 truncate text-blue-600 hover:underline"
+            >
+              {{ frozenFields.backlink }}
+            </a>
+          </VDescriptionItem>
+          <VDescriptionItem v-if="frozenFields.feedUrls?.length" label="RSS 地址">
+            <div v-for="feedUrl in frozenFields.feedUrls" :key="feedUrl" class=":uno: break-all">
+              {{ feedUrl }}
+            </div>
+          </VDescriptionItem>
+          <VDescriptionItem
+            v-if="application.spec.approval?.linkName"
+            label="正式链接"
+            :content="application.spec.approval.linkName"
+          />
+        </VDescription>
       </div>
     </div>
 

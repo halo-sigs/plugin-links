@@ -1,5 +1,5 @@
 import { linksConsoleApiClient } from "@/api";
-import type { ApproveRequest, LinkApplication } from "@/api/generated";
+import type { ApproveRequest, LinkApplication, VerifyRequest } from "@/api/generated";
 import type { LinkApplicationQuery } from "@/utils/link-application-review";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, unref, type MaybeRef } from "vue";
@@ -25,7 +25,7 @@ export function useLinkApplications(params: MaybeRef<LinkApplicationQuery>) {
 export function useLinkApplicationOriginComment(application: MaybeRef<LinkApplication>) {
   const target = computed(() => unref(application));
   const applicationName = computed(() => target.value.metadata?.name);
-  const enabled = computed(() => target.value.spec.origin?.type === "COMMENT" && !!applicationName.value);
+  const enabled = computed(() => target.value.spec.origin.type === "COMMENT" && !!applicationName.value);
   return useQuery({
     queryKey: ["plugin:links:link-application-origin-comment", applicationName],
     queryFn: async () => {
@@ -93,8 +93,11 @@ export function useCleanupLinkApplications() {
 
 export function useVerifyBacklink() {
   return useMutation({
-    mutationFn: async (name: string) => {
-      const { data } = await linksConsoleApiClient.application.verifyBacklink({ name });
+    mutationFn: async ({ name, ...verifyRequest }: { name: string } & VerifyRequest) => {
+      const { data } = await linksConsoleApiClient.application.verifyBacklink({
+        name,
+        verifyRequest,
+      });
       return data;
     },
   });

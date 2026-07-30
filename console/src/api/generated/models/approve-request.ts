@@ -25,6 +25,12 @@ export interface ApproveRequest {
      * @type {string}
      * @memberof ApproveRequest
      */
+    'backlink'?: string;
+    /**
+     *
+     * @type {string}
+     * @memberof ApproveRequest
+     */
     'description'?: string;
     /**
      *
@@ -32,6 +38,12 @@ export interface ApproveRequest {
      * @memberof ApproveRequest
      */
     'displayName'?: string;
+    /**
+     *
+     * @type {Array<string>}
+     * @memberof ApproveRequest
+     */
+    'feedUrls'?: Array<string>;
     /**
      *
      * @type {string}

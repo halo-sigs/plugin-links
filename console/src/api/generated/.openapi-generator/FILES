@@ -72,4 +72,5 @@ models/sort-request.ts
 models/test-operation.ts
 models/verification-spec.ts
 models/verification-status.ts
+models/verify-request.ts
 models/verify-result.ts
