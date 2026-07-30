@@ -94,10 +94,6 @@ export function buildLinkApplicationApprovalRequest(data: LinkApplicationApprova
   };
 }
 
-export function canVerifyLinkApplicationBacklink(application: LinkApplication): boolean {
-  return !!linkApplicationEffectiveFields(application).backlink && application.spec.status !== "APPROVING";
-}
-
 export function linkApplicationEffectiveFields(application: LinkApplication): ApprovalRequest {
   const frozenRequest = application.spec.approval?.request;
   if (frozenRequest) {

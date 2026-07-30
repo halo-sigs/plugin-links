@@ -10,7 +10,6 @@ import {
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import {
   buildLinkApplicationApprovalRequest,
-  canVerifyLinkApplicationBacklink,
   type LinkApplicationApprovalFormData,
   linkApplicationEffectiveFields,
   linkApplicationRejectDescription,
@@ -52,7 +51,7 @@ const { data: groups } = useLinkGroupFetch();
 const { mutate: approveApplication, isPending: isApproving } = useApproveLinkApplication();
 const { mutate: rejectApplication, isPending: isRejecting } = useRejectLinkApplication();
 const { mutate: deleteApplication } = useDeleteLinkApplication();
-const { mutate: verifyApplication, data: verifyResult, isPending: isVerifying } = useVerifyBacklink();
+const { mutate: verifyApplication, isPending: isVerifying } = useVerifyBacklink();
 
 const reviewMode = computed(() => linkApplicationReviewMode(props.application));
 const statusMeta = computed(() => linkApplicationStatusMeta(props.application.spec.status));
@@ -66,12 +65,7 @@ const approvalForm = reactive<LinkApplicationApprovalFormData>({
   backlink: props.application.spec.backlink || "",
   feedUrlsText: props.application.spec.feedUrls?.join("\n") || "",
 });
-const verificationBacklink = computed(() =>
-  reviewMode.value === "editable" ? approvalForm.backlink?.trim() : frozenFields.value.backlink?.trim(),
-);
-const backlinkVerificationAvailable = computed(() =>
-  reviewMode.value === "editable" ? !!verificationBacklink.value : canVerifyLinkApplicationBacklink(props.application),
-);
+const verificationBacklink = computed(() => approvalForm.backlink?.trim());
 
 const modalTitle = computed(() =>
   reviewMode.value === "editable"
@@ -85,19 +79,20 @@ const frozenGroupLabel = computed(() => {
     return "不分配";
   }
   const group = groups.value?.find((item) => item.metadata?.name === groupName);
-  return group?.spec?.displayName || groupName;
+  return group?.spec?.displayName || "未知分组";
 });
 
 const groupOptions = computed(() => [
   { value: "", label: "不分配" },
   ...(groups.value || []).flatMap((group) => {
     const name = group.metadata?.name;
-    if (!name) {
+    const displayName = group.spec?.displayName;
+    if (!name || !displayName) {
       return [];
     }
     return {
       value: name,
-      label: group.spec?.displayName || name,
+      label: displayName,
     };
   }),
 ]);
@@ -251,7 +246,7 @@ function handleDelete() {
           help="填写对方固定放置本站链接的页面，留空则不检测反链"
           placeholder="https://example.com/links"
         >
-          <template v-if="backlinkVerificationAvailable" #suffix>
+          <template v-if="verificationBacklink" #suffix>
             <button
               v-tooltip="{
                 content: '验证反链',
@@ -308,11 +303,6 @@ function handleDelete() {
               {{ feedUrl }}
             </div>
           </VDescriptionItem>
-          <VDescriptionItem
-            v-if="application.spec.approval?.linkName"
-            label="正式链接"
-            :content="application.spec.approval.linkName"
-          />
         </VDescription>
       </div>
     </div>

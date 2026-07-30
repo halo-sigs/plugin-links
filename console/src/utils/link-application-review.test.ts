@@ -4,7 +4,6 @@ import {
   buildLinkApplicationApprovalRequest,
   buildLinkApplicationCleanupParams,
   buildLinkApplicationQuery,
-  canVerifyLinkApplicationBacklink,
   linkApplicationCleanupDescription,
   linkApplicationCleanupSummary,
   linkApplicationEffectiveFields,
@@ -105,17 +104,6 @@ describe("buildLinkApplicationApprovalRequest", () => {
       backlink: "",
       feedUrls: [],
     });
-  });
-});
-
-describe("canVerifyLinkApplicationBacklink", () => {
-  it("does not expose backlink verification while approval is reserved", () => {
-    expect(
-      canVerifyLinkApplicationBacklink(application({ status: "PENDING", backlink: "https://example.com/links" })),
-    ).toBe(true);
-    expect(
-      canVerifyLinkApplicationBacklink(application({ status: "APPROVING", backlink: "https://example.com/links" })),
-    ).toBe(false);
   });
 });
 

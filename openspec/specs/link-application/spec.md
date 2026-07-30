@@ -445,7 +445,8 @@ The system SHALL allow administrators to manually trigger backlink verification 
 - **WHEN** an administrator clicks "Verify Backlink" in the application detail view
 - **THEN** the system fetches the current `backlink` input value
 - **AND** checks whether the page contains a link to the site's own URL
-- **AND** displays the verification result (success/failure) in the detail view
+- **AND** Console displays the verification result (success/failure) in a Toast while the detail
+  view remains open
 
 ### Requirement: Administrators can delete link applications
 The system SHALL allow administrators to delete individual applications and all deletable
