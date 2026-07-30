@@ -85,26 +85,17 @@
 
 ## 访客友链申请
 
-插件设置中的“友链申请”总开关默认关闭。总开关和“允许访客提交”子开关同时开启时，
-`linkApplicationEnabled` 为 `true`，主题才应展示申请入口。
+当模板变量 `linkApplicationEnabled` 为 `true` 时，主题可以展示申请表单。适配需要使用
+以下两个同源端点：
 
-待审核申请达到管理员配置的容量时，`linkApplicationEnabled` 仍为 `true`，验证码图片
-端点也保持可用。容量可能随审核进度动态释放，主题无需读取或展示容量值，提交结果以
-`POST /links/apply/submit` 的实际响应为准。
+- `GET /links/apply/captcha`：获取验证码图片
+- `POST /links/apply/submit`：提交申请，只接受
+  `application/x-www-form-urlencoded`
 
-主题展示申请表单时，必须加载内置图形验证码，并随表单提交 `captchaCode`。
+表单必须包含 `_csrf` 和 `captchaCode`。验证码图片直接使用 `<img>` 加载即可，关联
+Cookie 由浏览器自动处理。
 
-验证码图片端点为同源的 `GET /links/apply/captcha`。开启访客申请时，它返回固定
-`160 x 48` PNG，并通过路径为 `/links`、有效期五分钟、`HttpOnly`、`SameSite=Lax`
-的 Cookie 关联一次性挑战；HTTPS 请求还会设置 `Secure`。图片响应禁止缓存。每次成功
-加载或刷新图片都会覆盖 Cookie 并使上一张图片失效，提交尝试无论成功与否也会使当前
-挑战和 Cookie 失效。
-
-提交端点为同源、CSRF 保护的 `POST /links/apply/submit`，仅接受
-`application/x-www-form-urlencoded`。它不接受 JSON 请求体；主题可以使用普通 HTML
-表单完成提交，也可以在同一端点上通过内容协商获取 JSON 结果。
-
-字段如下：
+### 表单字段
 
 | 字段 | 必填 | 说明 |
 | ---- | ---- | ---- |
@@ -115,12 +106,24 @@
 | `email` | 否 | 联系邮箱 |
 | `backlink` | 否 | 反链页面的 HTTP/HTTPS 地址 |
 | `feedUrls` | 否 | RSS/Atom 的 HTTP/HTTPS 地址，一行一个 |
-| `captchaCode` | 是 | 当前图片中的五位英文字母或数字，不区分大小写 |
-| `_csrf` | 是 | 使用模板变量 `csrfToken` |
+| `captchaCode` | 是 | 图片中的五位字符，不区分大小写 |
+| `_csrf` | 是 | 模板变量 `csrfToken` |
 
-HTML 示例：
+### 纯 HTML 表单
+
+普通表单提交后，插件会重定向回 `/links`。主题通过 `applied`、`message`、`field` 和
+`value` 查询参数展示结果或回填出错字段。
 
 ```html
+<p th:if="${param.applied == 'success'}" role="status">
+    申请已提交，等待审核。
+</p>
+<p
+    th:if="${param.applied == 'error' || param.applied == 'disabled'}"
+    th:text="${param.message ?: '提交失败，请稍后再试'}"
+    role="alert"
+></p>
+
 <form
     id="link-application-form"
     th:if="${linkApplicationEnabled}"
@@ -128,198 +131,143 @@ HTML 示例：
     th:action="@{/links/apply/submit}"
 >
     <input type="hidden" name="_csrf" th:value="${csrfToken}">
-    <input name="url" required th:value="${param.field == 'url' ? param.value : ''}">
-    <input name="displayName" required
-           th:value="${param.field == 'displayName' ? param.value : ''}">
-    <input name="logo">
-    <textarea name="description"></textarea>
-    <input name="email" type="email">
-    <input name="backlink">
-    <textarea name="feedUrls" placeholder="每行一个订阅地址"></textarea>
-    <p id="captcha-help">请输入图片中的五位字符。看不清时可刷新页面换一张。</p>
+    <label>
+        网站地址
+        <input name="url" type="url" required
+               th:value="${param.field == 'url' ? param.value : ''}">
+    </label>
+    <label>
+        网站名称
+        <input name="displayName" required
+               th:value="${param.field == 'displayName' ? param.value : ''}">
+    </label>
+    <label>
+        Logo 地址
+        <input name="logo" type="url"
+               th:value="${param.field == 'logo' ? param.value : ''}">
+    </label>
+    <label>
+        网站描述
+        <textarea name="description"
+                  th:text="${param.field == 'description' ? param.value : ''}"></textarea>
+    </label>
+    <label>
+        联系邮箱
+        <input name="email" type="email"
+               th:value="${param.field == 'email' ? param.value : ''}">
+    </label>
+    <label>
+        反链地址
+        <input name="backlink" type="url"
+               th:value="${param.field == 'backlink' ? param.value : ''}">
+    </label>
+    <label>
+        订阅地址
+        <textarea name="feedUrls" placeholder="每行一个"
+                  th:text="${param.field == 'feedUrls' ? param.value : ''}"></textarea>
+    </label>
+
     <img
         id="link-application-captcha"
         src="/links/apply/captcha"
-        alt="友链申请图形验证码"
+        alt="友链申请验证码"
         width="160"
         height="48"
-        aria-describedby="captcha-help"
     >
-    <input
-        name="captchaCode"
-        required
-        minlength="5"
-        maxlength="5"
-        autocomplete="off"
-        aria-describedby="captcha-help"
-    >
-    <button id="link-application-submit" type="submit">申请友链</button>
+    <label>
+        验证码
+        <input
+            name="captchaCode"
+            required
+            minlength="5"
+            maxlength="5"
+            autocomplete="off"
+        >
+    </label>
+
+    <button type="submit">申请友链</button>
     <p id="link-application-result" role="status" aria-live="polite"></p>
 </form>
 ```
 
-图片直接加载即可设置关联 Cookie，所以以上表单在禁用 JavaScript 时仍可完整提交。
-如需提供不丢失表单内容的刷新操作，可增加键盘可操作的按钮：
+提交失败时直接展示 `message` 即可；当 `field` 指向某个字段时，可以使用 `value`
+回填该字段。验证码错误不会返回原值，页面重新加载后会自动获取新的验证码。
 
-```html
-<button type="button" id="refresh-link-captcha">换一张验证码</button>
+### JavaScript 异步提交
 
-<script>
-  const image = document.querySelector('#link-application-captcha')
-  document.querySelector('#refresh-link-captcha').addEventListener('click', () => {
-    image.src = `/links/apply/captcha?refresh=${Date.now()}`
-  })
-</script>
-```
+异步提交仍然序列化同一个表单，只需额外发送 `Accept: application/json`。响应中的
+`message` 用于展示，`field` 可用于定位表单控件；`code` 用于程序判断，不要依赖
+`message` 文案。只在表单实际渲染后加载这段脚本。
 
-每次刷新都会使旧图片失效，多标签页也会相互覆盖同一 Cookie。验证码仅提供图形挑战，
-不提供音频或其他非视觉挑战；主题应保留说明文字和键盘可操作的刷新按钮。
+成功时 `code` 为 `APPLICATION_CREATED`。错误码如下：
 
-不使用 JavaScript 时，端点继续返回 `303 See Other` 并重定向回 `/links`：
-
-- 成功：`applied=success`
-- 验证或限流失败：`applied=error&message=...`；字段错误还包含 `field`，并在有原值时包含
-  `value`，主题可据此回填
-- 验证码缺失、格式错误、答案错误、过期或重放统一返回
-  `applied=error&field=captchaCode&message=验证码错误或已过期，请重新输入`，且不会返回
-  `value` 或其他已提交字段；主题应重新加载图片
-- 待审核申请达到容量：
-  `applied=error&message=待审核申请数量已达上限，请稍后再试`
-- 容量设置或待审核数量暂时无法读取：
-  `applied=error&message=暂时无法提交，请稍后再试`
-- 两种容量错误都不包含 `field`、`value` 或实际容量；已经验证的 CAPTCHA 和提交频率
-  额度仍会被消耗
-- 功能关闭：`applied=disabled&message=友链申请功能暂未开放`
-
-### 异步提交
-
-请求头中的 `Accept` 明确让 `application/json` 比 `text/html` 具有更高优先级时，同一
-端点返回 JSON。未发送 `Accept`、发送 `*/*`、HTML 优先或两者优先级相同时，仍返回上述
-`303`；两种表示都不可接受时返回空的 `406 Not Acceptable`，且不会处理申请。
-
-JSON 响应使用以下结构，`field` 仅在错误与具体字段有关时出现：
-
-```json
-{
-  "status": "error",
-  "code": "VALIDATION_FAILED",
-  "field": "url",
-  "message": "URL格式错误"
-}
-```
-
-`code` 用于程序分支，`message` 是可直接展示的文字，不应作为程序判断条件。代码集合
-是稳定但可扩展的，主题必须为未知代码保留通用处理。
-
-| HTTP 状态 | `code` | `field` | 含义 |
-| --------- | ------ | ------- | ---- |
-| `201` | `APPLICATION_CREATED` | 无 | 申请已创建 |
-| `403` | `APPLICATION_DISABLED` | 无 | 访客申请未开启 |
-| `422` | `INVALID_CAPTCHA` | `captchaCode` | CAPTCHA 无效或过期 |
-| `422` | `VALIDATION_FAILED` | 具体字段 | 表单字段校验失败 |
-| `409` | `DUPLICATE_APPLICATION` | `url` | 链接已经申请 |
-| `429` | `RATE_LIMITED` | 无 | 提交过于频繁；响应同时包含准确的 `Retry-After` |
-| `409` | `CAPACITY_REACHED` | 无 | 待审核申请达到容量 |
-| `503` | `APPLICATION_UNAVAILABLE` | 无 | 暂时无法完成申请 |
-| `415` | `UNSUPPORTED_MEDIA_TYPE` | 无 | 请求体不是表单编码 |
-
-协商得到的 `303` 与 JSON 结果都包含 `Vary: Accept`；JSON 响应还包含
-`Cache-Control: no-store`。请求体不是表单编码时，仅明确选择 JSON 的客户端获得上述
-`415` JSON 结构，其他客户端获得不承诺插件结构的 `415`。JSON 结果不会返回提交值、
-申请对象或通用 `data` 字段。
-
-下面的完整示例直接序列化现有表单，因此 `_csrf` 的来源仍由主题模板决定；它不要求
-主题通过特定的 `meta` 或 `data-*` 属性传递 CSRF Token 或
-`linkApplicationEnabled`。主题应只在该表单已经渲染时加载这段脚本：
+| `code` | 含义 | `field` |
+| ---- | ---- | ---- |
+| `APPLICATION_DISABLED` | 访客申请未开启 | 无 |
+| `INVALID_CAPTCHA` | 验证码错误或已过期 | `captchaCode` |
+| `VALIDATION_FAILED` | 表单字段校验失败 | 具体出错字段 |
+| `DUPLICATE_APPLICATION` | 该链接已经申请 | `url` |
+| `RATE_LIMITED` | 提交过于频繁 | 无 |
+| `CAPACITY_REACHED` | 待审核申请达到上限 | 无 |
+| `APPLICATION_UNAVAILABLE` | 暂时无法完成申请 | 无 |
+| `UNSUPPORTED_MEDIA_TYPE` | 请求体不是表单编码 | 无 |
 
 ```js
 const form = document.querySelector('#link-application-form')
-const submitButton = document.querySelector('#link-application-submit')
+const submitButton = form.querySelector('button[type="submit"]')
 const result = document.querySelector('#link-application-result')
 const captchaImage = document.querySelector('#link-application-captcha')
-const defaultButtonText = submitButton.textContent
-
-const captchaConsumedCodes = new Set([
-  'INVALID_CAPTCHA',
-  'VALIDATION_FAILED',
-  'DUPLICATE_APPLICATION',
-  'RATE_LIMITED',
-  'CAPACITY_REACHED',
-  'APPLICATION_UNAVAILABLE',
-])
 
 function refreshCaptcha() {
-  captchaImage.src = `/links/apply/captcha?refresh=${Date.now()}`
+  captchaImage.src = '/links/apply/captcha?t=' + Date.now()
 }
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault()
   submitButton.disabled = true
-  submitButton.textContent = '提交中…'
   result.textContent = ''
 
   try {
     const response = await fetch(form.action, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      },
+      headers: { Accept: 'application/json' },
       body: new URLSearchParams(new FormData(form)),
     })
 
     const contentType = response.headers.get('content-type') || ''
-    if (!contentType.toLowerCase().startsWith('application/json')) {
-      throw new Error('Non-JSON response')
+    if (!contentType.includes('application/json')) {
+      throw new Error('Unexpected response')
     }
 
     const payload = await response.json()
-    const isEnvelope =
-      (payload.status === 'success' || payload.status === 'error') &&
-      typeof payload.code === 'string' &&
-      typeof payload.message === 'string'
-    if (!isEnvelope) {
-      throw new Error('Unexpected JSON response')
+    if (typeof payload.code !== 'string' || typeof payload.message !== 'string') {
+      throw new Error('Unexpected response')
     }
 
-    result.textContent = payload.message || '提交未完成，请稍后重试'
+    result.textContent = payload.message
 
-    if (
-      response.status === 201 &&
-      payload.status === 'success' &&
-      payload.code === 'APPLICATION_CREATED'
-    ) {
+    if (response.ok && payload.code === 'APPLICATION_CREATED') {
       form.reset()
-      refreshCaptcha()
-      return
-    }
-
-    if (payload.field) {
-      const field = form.elements.namedItem(payload.field)
-      if (field instanceof HTMLElement) {
-        field.focus()
-      }
-    }
-
-    if (captchaConsumedCodes.has(payload.code)) {
-      refreshCaptcha()
+    } else if (payload.field) {
+      form.elements.namedItem(payload.field)?.focus()
     }
   } catch {
+    // CSRF 拒绝、平台错误、非 JSON 响应和网络异常统一使用主题自己的提示。
     result.textContent = '暂时无法提交，请稍后再试'
   } finally {
+    refreshCaptcha()
     submitButton.disabled = false
-    submitButton.textContent = defaultButtonText
   }
 })
 ```
 
-验证码错误以及验证码已经验证后的所有业务失败都会使当前挑战失效，示例因此刷新图片；
-成功后也会重置表单并取得新挑战。如果主题成功后关闭表单，则无需立即刷新。
+异常处理保持简单：
 
-Halo Security 会在处理器之前校验 CSRF。无效或缺失的 Token 保持平台原生 `403`，不承诺
-上述插件 JSON 结构。`406`、平台错误、网络错误以及其他非 JSON 响应也在结构之外；
-异步主题应像示例一样显示自己的通用提示，不解析重定向 URL 或任意响应正文。
+- 收到插件 JSON 时展示 `message`，有 `field` 时聚焦对应控件。
+- 成功以 `APPLICATION_CREATED` 为准；其他已知或未知错误都可以直接展示服务端消息。
+- 非 JSON 响应、CSRF 拒绝和网络异常使用主题自己的通用提示。
+- 每次提交后刷新验证码，并在请求期间禁用提交按钮，避免重复提交。
 
 ---
 
