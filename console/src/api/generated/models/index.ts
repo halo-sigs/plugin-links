@@ -14,6 +14,7 @@ export * from './link-application';
 export * from './link-application-cleanup-result';
 export * from './link-application-list';
 export * from './link-application-origin-comment';
+export * from './link-application-origin-subject';
 export * from './link-application-spec';
 export * from './link-comment-extraction-request';
 export * from './link-comment-extraction-result';

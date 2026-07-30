@@ -32,6 +32,7 @@ models/link-ai-feature-status.ts
 models/link-application-cleanup-result.ts
 models/link-application-list.ts
 models/link-application-origin-comment.ts
+models/link-application-origin-subject.ts
 models/link-application-spec.ts
 models/link-application.ts
 models/link-comment-extraction-request.ts

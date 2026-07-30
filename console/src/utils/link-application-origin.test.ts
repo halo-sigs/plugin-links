@@ -13,32 +13,39 @@ describe("link application source presentation", () => {
     expect(linkApplicationSourceMeta(application({ type: "COMMENT" })).label).toBe("评论识别");
   });
 
-  it("builds supported subject routes and keeps an unknown subject readable", () => {
+  it("uses the resolved subject display and provider URL", () => {
     expect(
       linkApplicationSubjectMeta({
-        group: "content.halo.run",
-        kind: "Post",
-        name: "post-a",
+        kindName: "文章",
+        title: "公开文章",
+        url: "https://example.com/posts/public-post",
       }),
     ).toEqual({
-      label: "文章 · post-a",
-      route: {
-        name: "PostEditor",
-        query: {
-          name: "post-a",
-        },
-      },
+      label: "文章 · 公开文章",
+      url: "https://example.com/posts/public-post",
     });
+  });
 
-    expect(
-      linkApplicationSubjectMeta({
-        group: "example.test",
-        kind: "ExternalSubject",
-        name: "subject-a",
-      }),
-    ).toEqual({
-      label: "ExternalSubject · subject-a",
+  it("uses readable fallbacks without exposing resource names", () => {
+    expect(linkApplicationSubjectMeta({ kindName: "文章", title: "  ", url: "/posts/post-a" })).toEqual({
+      label: "文章",
+      url: "/posts/post-a",
     });
+    expect(linkApplicationSubjectMeta({ kindName: "  ", title: "  ", url: "/posts/post-a" })).toEqual({
+      label: "评论来源",
+      url: "/posts/post-a",
+    });
+    expect(linkApplicationSubjectMeta({ kindName: "  ", title: "公开文章", url: "/posts/post-a" })).toEqual({
+      label: "公开文章",
+      url: "/posts/post-a",
+    });
+    expect(linkApplicationSubjectMeta({ kindName: "文章", title: "  ", url: "/posts/post-a" })?.label).not.toContain(
+      "post-a",
+    );
+  });
+
+  it("returns no display when the backend cannot resolve the subject", () => {
+    expect(linkApplicationSubjectMeta(undefined)).toBeUndefined();
   });
 
   it("builds a comment route from the nested source reference", () => {

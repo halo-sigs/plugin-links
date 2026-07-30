@@ -19,13 +19,17 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import run.halo.app.content.comment.CommentSubject;
 import run.halo.app.core.extension.content.Comment;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
 import run.halo.app.extension.ListResult;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.Ref;
+import run.halo.app.plugin.extensionpoint.ExtensionGetter;
 import run.halo.links.dto.LinkApplicationCleanupResult;
 import run.halo.links.dto.LinkApplicationOriginComment;
+import run.halo.links.dto.LinkApplicationOriginSubject;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.query.LinkApplicationQuery;
@@ -39,6 +43,7 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
     private final ReactiveExtensionClient client;
     private final LinkApplicationApprovalService approvalService;
     private final LinkVerificationService verificationService;
+    private final ExtensionGetter extensionGetter;
 
     @Override
     public RouterFunction<ServerResponse> endpoint() {
@@ -142,12 +147,39 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
                 return client.fetch(Comment.class, origin.getComment().getName())
                     .switchIfEmpty(Mono.error(notFound("Source Comment is unavailable.")));
             })
-            .map(comment -> new LinkApplicationOriginComment(
-                comment.getMetadata().getName(),
-                comment.getSpec().getRaw(),
-                comment.getSpec().getSubjectRef(),
-                comment.getSpec().getCreationTime()))
+            .flatMap(this::toOriginComment)
             .flatMap(result -> ServerResponse.ok().bodyValue(result));
+    }
+
+    private Mono<LinkApplicationOriginComment> toOriginComment(Comment comment) {
+        var spec = comment.getSpec();
+        return resolveSubject(spec.getSubjectRef())
+            .map(subject -> new LinkApplicationOriginComment(
+                comment.getMetadata().getName(),
+                spec.getRaw(),
+                spec.getSubjectRef(),
+                spec.getCreationTime(),
+                subject))
+            .defaultIfEmpty(new LinkApplicationOriginComment(
+                comment.getMetadata().getName(),
+                spec.getRaw(),
+                spec.getSubjectRef(),
+                spec.getCreationTime(),
+                null));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Mono<LinkApplicationOriginSubject> resolveSubject(Ref subjectRef) {
+        if (subjectRef == null) {
+            return Mono.empty();
+        }
+        Mono<CommentSubject.SubjectDisplay> display = extensionGetter
+            .getExtensions(CommentSubject.class)
+            .filter(subject -> subject.supports(subjectRef))
+            .next()
+            .flatMap(subject -> subject.getSubjectDisplay(subjectRef.getName()));
+        return display.map(subject -> new LinkApplicationOriginSubject(
+            subject.title(), subject.url(), subject.kindName()));
     }
 
     private Mono<ServerResponse> deleteLinkApplication(ServerRequest request) {

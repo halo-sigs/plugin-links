@@ -15,6 +15,9 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
+import type { LinkApplicationOriginSubject } from './link-application-origin-subject';
+// May contain unused imports in some cases
+// @ts-ignore
 import type { Ref } from './ref';
 
 /**
@@ -41,6 +44,12 @@ export interface LinkApplicationOriginComment {
      * @memberof LinkApplicationOriginComment
      */
     'raw'?: string;
+    /**
+     *
+     * @type {LinkApplicationOriginSubject}
+     * @memberof LinkApplicationOriginComment
+     */
+    'subject'?: LinkApplicationOriginSubject;
     /**
      *
      * @type {Ref}
