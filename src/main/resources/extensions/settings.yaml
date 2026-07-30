@@ -94,7 +94,7 @@ spec:
               step: 1
               validation: 'required|number|min:1|matches:/^[1-9][0-9]*$/'
               value: 100
-              help: 限制待审核友链申请的最大数量。达到上限后将暂停接收新申请，直到待审核数量下降。
+              help: 限制待审核友链申请的最大数量。达到上限后将暂停接收新申请，直到待审核数量下降
         - $formkit: group
           if: "$get(link_application_enabled).value === true"
           name: commentRecognition
@@ -105,7 +105,7 @@ spec:
               name: enabled
               id: comment_application_recognition_enabled
               value: false
-              help: 仅处理开启后新创建且来源匹配的顶级评论，不会扫描历史评论。匹配评论的原始内容会发送给所选 AI 模型，隐藏或未审核评论也可能被处理
+              help: 需要在应用市场安装并启用 AI Foundation 插件，且所选模型必须支持结构化输出，开启之后会根据评论来源配置自动识别友链申请并创建新申请，此功能将在每次有新评论的时候触发，所以请根据实际需要开启
             - $formkit: aiModelSelector
               if: "$get(comment_application_recognition_enabled).value === true"
               modelType: language
@@ -168,7 +168,7 @@ spec:
               validation: required
               help: >-
                 请选择拥有链接管理权限的管理员，插件不会自动校验权限。插件会按此列表维护通知订阅；
-                邮件中的取消订阅不会修改此列表，如需停止接收，请移除用户或由用户在个人通知偏好中关闭此类型。
+                邮件中的取消订阅不会修改此列表，如需停止接收，请移除用户或由用户在个人通知偏好中关闭此类型
     - group: ai
       label: AI
       formSchema:
@@ -177,7 +177,7 @@ spec:
           name: enabled
           id: ai_enabled
           value: false
-          help: 开启后，可以在支持的场景中使用 AI Foundation 提供的模型能力
+          help: 开启后，可以在支持的场景中使用 AI Foundation 提供的模型能力，需要在应用市场安装并启用 AI Foundation 插件
         - $formkit: group
           if: "$get(ai_enabled).value === true"
           name: commentExtraction
@@ -196,4 +196,4 @@ spec:
               name: modelName
               key: modelName
               placeholder: 请选择语言模型
-              help: 可选，不设置时会使用 AI Foundation 的默认语言模型
+              help: 可选，不设置时会使用 AI Foundation 的默认语言模型。
