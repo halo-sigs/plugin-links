@@ -143,7 +143,8 @@ the separate cookie-free REST contract required by browser and general HTTP inte
 #### Scenario: Theme renders a protected native Form
 - **WHEN** a theme renders the native application form
 - **THEN** the documented example loads its image from `GET /links/apply/captcha`
-- **AND** includes the `_csrf` hidden field, required `captchaCode`, and supported application fields
+- **AND** includes the `_csrf` hidden field, required `captchaCode`, and all supported application
+  fields
 - **AND** submits `application/x-www-form-urlencoded` to `/links/apply/submit`
 
 #### Scenario: Native Form works without JavaScript
@@ -174,19 +175,20 @@ the separate cookie-free REST contract required by browser and general HTTP inte
 #### Scenario: Theme handles REST results
 - **WHEN** a JavaScript submission receives a REST response
 - **THEN** the documented example handles the `201` created result
-- **AND** branches on Problem Details `status` and `type` for expected failures
+- **AND** reads Problem Details `status` and `type` for failures
 - **AND** treats `detail` as display text rather than a program identifier
-- **AND** provides a generic fallback for platform, network, or unknown problems
+- **AND** leaves presentation and interaction-specific error handling to the theme
 
-#### Scenario: Theme prevents repeated REST submission
-- **WHEN** a JavaScript REST submission is pending
-- **THEN** the documented example disables repeated submission until the request settles
-- **AND** the public endpoint does not require an idempotency key
+#### Scenario: Theme owns REST submission interaction
+- **WHEN** a theme integrates the REST application resource
+- **THEN** the documentation does not prescribe button state, repeated-submission guards, messages,
+  or form lifecycle
+- **AND** the public endpoint still does not provide an idempotency key
 
 #### Scenario: Theme refreshes REST CAPTCHA after failure
 - **WHEN** a REST application attempt fails after presenting a challenge
-- **THEN** the documented example requests a new REST CAPTCHA before another attempt
-- **AND** a successful result closes or resets the form
+- **THEN** the documentation explains that another attempt requires a new REST CAPTCHA
+- **AND** the theme decides how to refresh the challenge and handle successful submission
 
 #### Scenario: Theme chooses how to expose template state to JavaScript
 - **WHEN** theme JavaScript needs `linkApplicationEnabled`
@@ -201,9 +203,9 @@ the separate cookie-free REST contract required by browser and general HTTP inte
 
 #### Scenario: Theme presents the visual challenge
 - **WHEN** a theme renders the image-only CAPTCHA
-- **THEN** its integration guidance provides explanatory text and a keyboard-operable refresh
-  control
-- **AND** documents that no audio or non-visual challenge is provided in this version
+- **THEN** the documentation states that no audio or non-visual challenge is provided in this
+  version
+- **AND** leaves accessible presentation and refresh controls to the theme
 
 ### Requirement: Anonymous users can submit link applications
 The system SHALL allow visitors to submit link applications through the native Form or REST

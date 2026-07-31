@@ -52,6 +52,7 @@ public class LinkApplicationPublicEndpoint implements CustomEndpoint {
                     .description("Create a cookie-free CAPTCHA challenge for a link application.")
                     .tag(tag)
                     .response(jsonResponse("200", LinkApplicationCaptchaResponse.class))
+                    .response(responseBuilder().responseCode("404"))
                     .response(problemResponse("429"))
                     .response(problemResponse("503")))
             .POST(APPLICATION_PATH, this::createApplication,

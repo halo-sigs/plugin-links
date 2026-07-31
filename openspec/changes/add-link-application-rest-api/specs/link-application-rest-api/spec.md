@@ -258,6 +258,7 @@ without replacing the native Form documentation.
 - **WHEN** an integrator reads `dev/theme-api.md`
 - **THEN** the native Form and REST contracts are documented in separate sections
 - **AND** REST guidance includes cURL and browser `fetch` examples
-- **AND** explains explicit challenge refresh, Halo-owned CORS, cookie-free calls, Problem type
-  handling, and the absence of status lookup and idempotency
+- **AND** lists the stable REST error status and Problem type pairs
+- **AND** explains explicit challenge refresh, Halo-owned CORS, cookie-free calls, and the absence
+  of status lookup and idempotency
 - **AND** does not require a platform-specific mini-program SDK

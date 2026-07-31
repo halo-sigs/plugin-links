@@ -251,35 +251,6 @@ REST API 位于 Halo 公共 API 组：
 }
 ```
 
-#### cURL 示例
-
-先获取挑战并查看 `image` 数据 URL 中的验证码，再提交申请。下面用 `jq` 提取字段：
-
-```bash
-HALO_URL='https://halo.example'
-
-CAPTCHA_JSON="$(
-  curl --fail --silent --show-error \
-    --request POST \
-    "$HALO_URL/apis/api.link.halo.run/v1alpha1/link-applications/captcha"
-)"
-
-echo "$CAPTCHA_JSON" | jq -r '.image'
-CHALLENGE_ID="$(echo "$CAPTCHA_JSON" | jq -r '.challengeId')"
-
-curl --include \
-  --request POST \
-  --header 'Content-Type: application/json' \
-  --data "{
-    \"url\": \"https://example.com\",
-    \"displayName\": \"Example\",
-    \"feedUrls\": [\"https://example.com/feed.xml\"],
-    \"challengeId\": \"$CHALLENGE_ID\",
-    \"captchaCode\": \"ABCDE\"
-  }" \
-  "$HALO_URL/apis/api.link.halo.run/v1alpha1/link-applications"
-```
-
 #### 浏览器 `fetch` 示例
 
 浏览器调用不携带 Cookie。跨域能否调用由 Halo 对 `/apis/**` 的有效 CORS 配置决定，

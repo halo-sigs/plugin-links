@@ -62,9 +62,10 @@
   drift.
 - [x] 5.2 Rewrite `dev/theme-api.md` to separate native Form and REST contracts, remove the beta
   asynchronous Form example and envelope table, and document the migration to the REST resource.
-- [x] 5.3 Add complete cURL and browser `fetch` examples covering explicit CAPTCHA acquisition,
-  `credentials: "omit"`, JSON submission, `201`, Problem `status + type`, challenge refresh, and
-  generic failure fallback.
+- [x] 5.3 Add minimal cURL and browser `fetch` examples covering explicit CAPTCHA acquisition,
+  `credentials: "omit"`, JSON submission, `201`, Problem `status + type`, and the need for a new
+  challenge after failure without prescribing theme interaction; keep a complete stable REST
+  error-code list outside the examples.
 - [x] 5.4 Document Halo-owned CORS, create-only anonymous scope, absent idempotency and status lookup,
   process-local security state, and the lack of a platform-specific mini-program SDK.
 

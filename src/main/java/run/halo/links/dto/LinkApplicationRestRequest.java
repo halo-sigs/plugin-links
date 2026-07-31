@@ -23,20 +23,20 @@ public class LinkApplicationRestRequest {
     @Schema(description = "Human-readable site name.", requiredMode = REQUIRED)
     private String displayName;
 
-    @Schema(description = "Optional logo URL.")
+    @Schema(description = "Optional logo URL.", nullable = true)
     private String logo;
 
-    @Schema(description = "Optional site description.")
+    @Schema(description = "Optional site description.", nullable = true)
     private String description;
 
-    @Schema(description = "Optional applicant email.")
+    @Schema(description = "Optional applicant email.", nullable = true)
     private String email;
 
-    @Schema(description = "Optional backlink page URL.")
+    @Schema(description = "Optional backlink page URL.", nullable = true)
     private String backlink;
 
     @ArraySchema(
-        arraySchema = @Schema(description = "Optional RSS or Atom feed URLs."),
+        arraySchema = @Schema(description = "Optional RSS or Atom feed URLs.", nullable = true),
         schema = @Schema(type = "string", format = "uri")
     )
     private List<String> feedUrls;

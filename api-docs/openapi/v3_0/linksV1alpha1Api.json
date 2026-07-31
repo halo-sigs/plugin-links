@@ -117,6 +117,9 @@
             },
             "description" : "OK"
           },
+          "404" : {
+            "description" : "Not Found"
+          },
           "429" : {
             "content" : {
               "application/problem+json" : {
@@ -2196,7 +2199,8 @@
         "properties" : {
           "backlink" : {
             "type" : "string",
-            "description" : "Optional backlink page URL."
+            "description" : "Optional backlink page URL.",
+            "nullable" : true
           },
           "captchaCode" : {
             "type" : "string",
@@ -2208,7 +2212,8 @@
           },
           "description" : {
             "type" : "string",
-            "description" : "Optional site description."
+            "description" : "Optional site description.",
+            "nullable" : true
           },
           "displayName" : {
             "type" : "string",
@@ -2216,11 +2221,13 @@
           },
           "email" : {
             "type" : "string",
-            "description" : "Optional applicant email."
+            "description" : "Optional applicant email.",
+            "nullable" : true
           },
           "feedUrls" : {
             "type" : "array",
             "description" : "Optional RSS or Atom feed URLs.",
+            "nullable" : true,
             "items" : {
               "type" : "string",
               "format" : "uri"
@@ -2228,7 +2235,8 @@
           },
           "logo" : {
             "type" : "string",
-            "description" : "Optional logo URL."
+            "description" : "Optional logo URL.",
+            "nullable" : true
           },
           "url" : {
             "type" : "string",

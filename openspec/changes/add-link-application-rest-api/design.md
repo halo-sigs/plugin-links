@@ -29,7 +29,7 @@ response headers. The existing public API group and OpenAPI grouping already cov
   capacity, persistence, and notification workflow.
 - Preserve `FORM` as the stored origin for both visitor transports.
 - Use Halo's global Problem Details handling and stable problem type URIs for REST failures.
-- Publish typed OpenAPI operations and complete Form, cURL, and browser integration guidance.
+- Publish typed OpenAPI operations and minimal Form, cURL, and browser contract examples.
 - Remove the beta-only negotiated JSON response from the native Form endpoint so each transport has
   one request and response contract.
 
@@ -182,14 +182,15 @@ compatibility switch or alias.
 ### 8. Specify and test the public boundary rather than implementation branches
 
 OpenAPI describes request, CAPTCHA, created-result, and Problem Details shapes and both public
-operations. Public documentation separates the native Form and REST contracts, includes cURL and
-browser `fetch` examples, explains Halo-owned CORS, challenge refresh, machine-readable problem
-types, and the absence of cookies, status queries, and idempotency.
+operations. Public documentation separates the native Form and REST contracts and keeps examples
+limited to the minimum request mechanics. It explains Halo-owned CORS, challenge refresh,
+machine-readable problem types, and the absence of cookies, status queries, and idempotency while
+leaving form state, messages, accessibility, and other interaction design to themes.
 
 Targeted tests cover each transport independently and assert their shared settings, admission, and
 creation behavior. Form regression tests prove all negotiation branches are gone. REST tests cover
 anonymous RBAC, JSON decoding and normalization, CAPTCHA single use, shared rate limits, domain
-outcomes, Halo Problem Details, generated OpenAPI, and sensitive-data boundaries.
+outcomes, Halo Problem Details, and sensitive-data boundaries.
 
 ## Risks / Trade-offs
 
