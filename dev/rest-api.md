@@ -10,7 +10,8 @@ https://raw.githubusercontent.com/halo-sigs/plugin-links/refs/heads/main/api-doc
 
 ## 公共 API（匿名可访问）
 
-此插件提供了一组公共、匿名、只读的 JSON API，位于 `api.link.halo.run/v1alpha1`，方便使用 React / Vue / Svelte 等前端框架构建客户端渲染链接页的主题使用。
+此插件提供了一组位于 `api.link.halo.run/v1alpha1` 的公共匿名 JSON API，包括链接查询和
+创建友链申请所需的 CAPTCHA、提交接口，可用于前端框架、小程序或服务端集成。
 
 ### 端点列表
 
@@ -21,14 +22,22 @@ https://raw.githubusercontent.com/halo-sigs/plugin-links/refs/heads/main/api-doc
 | `/apis/api.link.halo.run/v1alpha1/links/-/count` | `GET` | 返回链接总数                                                                                   |
 | `/apis/api.link.halo.run/v1alpha1/linkgroups` | `GET` | 返回所有链接分组数组，按 `spec.priority`、创建时间、`metadata.name` 升序排列                                   |
 | `/apis/api.link.halo.run/v1alpha1/linkfeeds` | `GET` | 查询链接 RSS 条目，支持 `linkName`、`groupName`、`beforePublishedAt`、`beforeId`、`limit` 查询参数；默认关闭，需要在插件设置中开启“公开 RSS 订阅动态” |
+| `/apis/api.link.halo.run/v1alpha1/link-applications/captcha` | `POST` | 获取无 Cookie 的友链申请 CAPTCHA 挑战；访客提交关闭时返回 `404` |
+| `/apis/api.link.halo.run/v1alpha1/link-applications` | `POST` | 使用 JSON 和显式 CAPTCHA 创建友链申请，成功返回 `201`；不提供匿名查询、修改或取消 |
 
 ### 匿名访问说明
 
-插件内置了 `role-template-link-anonymous` 角色模板，会自动聚合到匿名角色（`rbac.authorization.halo.run/aggregate-to-anonymous: "true"`），因此上述端点无需登录即可访问。
+插件内置了 `role-template-link-anonymous` 角色模板，会自动聚合到匿名角色
+（`rbac.authorization.halo.run/aggregate-to-anonymous: "true"`），因此上述端点无需登录
+即可访问。查询接口只授予读取权限；友链申请接口只授予创建申请和 CAPTCHA 所需的最小
+`create` 权限，不授予申请列表、详情或管理权限。
 
 该角色**不会**授予 `console.api.link.halo.run` 或 `core.halo.run` 的访问权限，Console API 和标准 CRUD 端点仍需认证。
 
 `linkfeeds` 会公开已抓取的 RSS 条目内容，因此默认关闭。站点管理员需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，匿名访问者和主题才能读取该接口。公开返回值不会包含 RSS 订阅地址。
+
+友链申请的请求体、成功响应、Problem Details 错误、CORS 和 CAPTCHA 生命周期请参考
+[主题 API 文档中的“访客友链申请”](./theme-api.md#访客友链申请)。
 
 ### 排序说明
 

@@ -74,3 +74,9 @@ rules:
   - apiGroups: [ "api.link.halo.run" ]
     resources: [ "links", "linkgroups", "links/random", "links/count", "linkfeeds" ]
     verbs: [ "get", "list" ]
+  - apiGroups: [ "api.link.halo.run" ]
+    resources: [ "link-applications" ]
+    verbs: [ "create" ]
+  - nonResourceURLs:
+      - "/apis/api.link.halo.run/v1alpha1/link-applications/captcha"
+    verbs: [ "create" ]

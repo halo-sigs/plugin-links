@@ -13,6 +13,137 @@
     "bearerAuth" : [ ]
   } ],
   "paths" : {
+    "/apis/api.link.halo.run/v1alpha1/link-applications" : {
+      "post" : {
+        "description" : "Create a visitor link application with an explicit CAPTCHA.",
+        "operationId" : "createLinkApplication",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkApplicationRestRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationCreatedResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Too Many Requests"
+          },
+          "503" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Service Unavailable"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
+    "/apis/api.link.halo.run/v1alpha1/link-applications/captcha" : {
+      "post" : {
+        "description" : "Create a cookie-free CAPTCHA challenge for a link application.",
+        "operationId" : "createLinkApplicationCaptcha",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationCaptchaResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "description" : "Not Found"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Too Many Requests"
+          },
+          "503" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkApplicationProblemResponse"
+                }
+              }
+            },
+            "description" : "Service Unavailable"
+          }
+        },
+        "tags" : [ "api.link.halo.run/v1alpha1/LinkApplication" ]
+      }
+    },
     "/apis/api.link.halo.run/v1alpha1/linkfeeds" : {
       "get" : {
         "description" : "List public RSS or Atom feed items with cursor pagination. Requires public RSS feed queries to be enabled in plugin settings.",
@@ -1864,6 +1995,28 @@
         },
         "description" : "Link application extension that represents a pending link submission."
       },
+      "LinkApplicationCaptchaResponse" : {
+        "required" : [ "challengeId", "expiresInSeconds", "image" ],
+        "type" : "object",
+        "properties" : {
+          "challengeId" : {
+            "type" : "string",
+            "description" : "Opaque challenge identifier."
+          },
+          "expiresInSeconds" : {
+            "type" : "integer",
+            "description" : "Challenge lifetime in seconds.",
+            "format" : "int64",
+            "example" : 300
+          },
+          "image" : {
+            "type" : "string",
+            "description" : "PNG image encoded as a data URL.",
+            "example" : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA"
+          }
+        },
+        "description" : "Explicit CAPTCHA challenge for cookie-free clients."
+      },
       "LinkApplicationCleanupResult" : {
         "type" : "object",
         "properties" : {
@@ -1885,6 +2038,22 @@
           }
         },
         "description" : "Result of cleaning all LinkApplications matching the supplied filters."
+      },
+      "LinkApplicationCreatedResponse" : {
+        "required" : [ "id", "status" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Created LinkApplication metadata name."
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Initial application status.",
+            "enum" : [ "PENDING" ]
+          }
+        },
+        "description" : "Minimal reference to a newly created link application."
       },
       "LinkApplicationList" : {
         "required" : [ "first", "hasNext", "hasPrevious", "items", "last", "page", "size", "total", "totalPages" ],
@@ -1971,6 +2140,110 @@
           }
         },
         "description" : "Resolved display information for a source Comment subject."
+      },
+      "LinkApplicationProblemResponse" : {
+        "required" : [ "detail", "instance", "requestId", "status", "timestamp", "title", "type" ],
+        "type" : "object",
+        "properties" : {
+          "detail" : {
+            "type" : "string",
+            "description" : "Safe display detail."
+          },
+          "errors" : {
+            "type" : "array",
+            "description" : "Display validation messages for invalid application fields.",
+            "items" : {
+              "type" : "string",
+              "description" : "Display validation messages for invalid application fields."
+            }
+          },
+          "instance" : {
+            "type" : "string",
+            "description" : "Request URI.",
+            "format" : "uri"
+          },
+          "requestId" : {
+            "type" : "string",
+            "description" : "Halo request identifier."
+          },
+          "retryAfterSeconds" : {
+            "type" : "integer",
+            "description" : "Positive retry delay for rate-limited requests.",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "integer",
+            "description" : "HTTP status code.",
+            "format" : "int32"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "description" : "Problem creation time.",
+            "format" : "date-time"
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "HTTP status title."
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "Stable machine-readable problem type.",
+            "format" : "uri"
+          }
+        },
+        "description" : "Halo Problem Details response for public link application operations."
+      },
+      "LinkApplicationRestRequest" : {
+        "required" : [ "captchaCode", "challengeId", "displayName", "url" ],
+        "type" : "object",
+        "properties" : {
+          "backlink" : {
+            "type" : "string",
+            "description" : "Optional backlink page URL.",
+            "nullable" : true
+          },
+          "captchaCode" : {
+            "type" : "string",
+            "description" : "Answer shown in the CAPTCHA image."
+          },
+          "challengeId" : {
+            "type" : "string",
+            "description" : "Opaque identifier returned by the CAPTCHA operation."
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Optional site description.",
+            "nullable" : true
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Human-readable site name."
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Optional applicant email.",
+            "nullable" : true
+          },
+          "feedUrls" : {
+            "type" : "array",
+            "description" : "Optional RSS or Atom feed URLs.",
+            "nullable" : true,
+            "items" : {
+              "type" : "string",
+              "format" : "uri"
+            }
+          },
+          "logo" : {
+            "type" : "string",
+            "description" : "Optional logo URL.",
+            "nullable" : true
+          },
+          "url" : {
+            "type" : "string",
+            "description" : "Absolute HTTP or HTTPS URL of the site."
+          }
+        },
+        "description" : "Cookie-free link application request."
       },
       "LinkApplicationSpec" : {
         "required" : [ "displayName", "origin", "status", "url" ],

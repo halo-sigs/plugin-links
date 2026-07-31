@@ -34,7 +34,7 @@ plugin-links 是 Halo 2.0 的链接管理插件，用于管理友情链接、检
 
 - **列表路由** `/links`：模板为 `links.html`，支持通过 `group` 查询参数筛选分组。
 - **Finder API** `linkFinder`：支持 `groupBy()`、`listBy(group)`、`random(maxSize)` 和 `count()`。
-- **公共 REST API**：匿名只读接口，可用于 React / Vue / Svelte 等前端框架构建客户端渲染链接页。
+- **公共 REST API**：提供匿名链接查询，以及创建友链申请和 CAPTCHA 的接口，可用于前端框架、小程序或服务端集成。
 - **评论来源适配**：可在链接页面接入 Halo 评论组件。
 - **状态字段**：`LinkVo.status` 暴露 RSS 获取状态、链接访问检测状态和反链检测状态，主题可按需展示。
 

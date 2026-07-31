@@ -5,15 +5,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.awt.Font;
 import java.time.Instant;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 import run.halo.links.support.MutableClock;
@@ -35,7 +32,7 @@ class LinkApplicationCaptchaServiceTest {
             new LinkApplicationCaptchaGenerationLimiter.Admission(false, 37));
         var service = service(limiter, generator);
 
-        StepVerifier.create(service.issue(request))
+        StepVerifier.create(service.issue(request, null))
             .assertNext(result -> {
                 assertThat(result.status())
                     .isEqualTo(LinkApplicationCaptchaService.IssueStatus.RATE_LIMITED);
@@ -46,22 +43,57 @@ class LinkApplicationCaptchaServiceTest {
     }
 
     @Test
-    void shouldIssueImageAndReplacePreviousChallengeOnlyAfterSuccessfulDrawing() {
-        var request = ServerRequestFixtures.request("https", "192.0.2.10",
-            Map.of(LinkApplicationCaptchaCookie.COOKIE_NAME, "previous"), Map.of());
+    void shouldIssueAndVerifyTransportNeutralChallenge() {
+        var request = ServerRequestFixtures.request("192.0.2.10");
         when(limiter.admit(request)).thenReturn(
             new LinkApplicationCaptchaGenerationLimiter.Admission(true, 0));
         when(generator.generate()).thenReturn(
             new LinkApplicationCaptchaGenerator.GeneratedCaptcha("ABCDE", new byte[] {1, 2, 3}));
         var service = service(limiter, generator);
 
-        var result = service.issue(request).block();
+        var result = service.issue(request, null).block();
 
         assertThat(result.status()).isEqualTo(LinkApplicationCaptchaService.IssueStatus.ISSUED);
+        assertThat(result.identifier()).isEqualTo("id-1");
         assertThat(result.png()).containsExactly(1, 2, 3);
-        assertThat(result.cookie().isSecure()).isTrue();
-        assertThat(service.verify(requestWithCookie(result.cookie().getValue()), "abcde").valid())
-            .isTrue();
+        assertThat(result.expiresInSeconds()).isEqualTo(300);
+        assertThat(service.verifyChallenge(result.identifier(), " abcde ")).isTrue();
+        assertThat(service.verifyChallenge(result.identifier(), "ABCDE")).isFalse();
+    }
+
+    @Test
+    void shouldKeepIndependentCookielessChallengesValid() {
+        var request = ServerRequestFixtures.request("192.0.2.10");
+        when(limiter.admit(request)).thenReturn(
+            new LinkApplicationCaptchaGenerationLimiter.Admission(true, 0));
+        when(generator.generate()).thenReturn(
+            new LinkApplicationCaptchaGenerator.GeneratedCaptcha("ABCDE", new byte[] {1}),
+            new LinkApplicationCaptchaGenerator.GeneratedCaptcha("FGHJK", new byte[] {2}));
+        var service = service(limiter, generator);
+
+        var first = service.issue(request, null).block();
+        var second = service.issue(request, null).block();
+
+        assertThat(first.identifier()).isNotEqualTo(second.identifier());
+        assertThat(service.verifyChallenge(first.identifier(), "ABCDE")).isTrue();
+        assertThat(service.verifyChallenge(second.identifier(), "FGHJK")).isTrue();
+    }
+
+    @Test
+    void shouldInvalidateExplicitPreviousChallengeAfterSuccessfulDrawing() {
+        var request = ServerRequestFixtures.request("192.0.2.10");
+        when(limiter.admit(request)).thenReturn(
+            new LinkApplicationCaptchaGenerationLimiter.Admission(true, 0));
+        when(generator.generate()).thenReturn(
+            new LinkApplicationCaptchaGenerator.GeneratedCaptcha("ABCDE", new byte[] {1}),
+            new LinkApplicationCaptchaGenerator.GeneratedCaptcha("FGHJK", new byte[] {2}));
+        var service = service(limiter, generator);
+        var previous = service.issue(request, null).block();
+
+        var current = service.issue(request, previous.identifier()).block();
+
+        assertThat(service.verifyChallenge(previous.identifier(), "ABCDE")).isFalse();
+        assertThat(service.verifyChallenge(current.identifier(), "FGHJK")).isTrue();
     }
 
     @Test
@@ -72,29 +104,10 @@ class LinkApplicationCaptchaServiceTest {
         when(generator.generate()).thenThrow(new IllegalStateException("render failed"));
         var service = service(limiter, generator);
 
-        StepVerifier.create(service.issue(request))
+        StepVerifier.create(service.issue(request, null))
             .assertNext(result -> assertThat(result.status())
                 .isEqualTo(LinkApplicationCaptchaService.IssueStatus.UNAVAILABLE))
             .verifyComplete();
-    }
-
-    @Test
-    void shouldConsumeMissingWrongAndCorrectAnswersAndAlwaysExpireCookie() {
-        var request = ServerRequestFixtures.request("192.0.2.10");
-        when(limiter.admit(request)).thenReturn(
-            new LinkApplicationCaptchaGenerationLimiter.Admission(true, 0));
-        when(generator.generate()).thenReturn(
-            new LinkApplicationCaptchaGenerator.GeneratedCaptcha("ABCDE", new byte[] {1}));
-        var service = service(limiter, generator);
-        var issued = service.issue(request).block();
-        var cookieRequest = requestWithCookie(issued.cookie().getValue());
-
-        var wrong = service.verify(cookieRequest, "XXXXX");
-
-        assertThat(wrong.valid()).isFalse();
-        assertThat(wrong.expiredCookie().getMaxAge()).isEqualTo(java.time.Duration.ZERO);
-        assertThat(service.verify(cookieRequest, "ABCDE").valid()).isFalse();
-        assertThat(service.verify(request, null).valid()).isFalse();
     }
 
     private static LinkApplicationCaptchaService service(
@@ -105,13 +118,6 @@ class LinkApplicationCaptchaServiceTest {
             new MutableClock(Instant.parse("2026-07-29T00:00:00Z")), 10,
             () -> "id-" + ids.incrementAndGet());
         return new LinkApplicationCaptchaService(limiter, generator, store,
-            new LinkApplicationCaptchaCookie(),
             new LinkApplicationCaptchaRenderGate(4, Schedulers.immediate()));
-    }
-
-    private static org.springframework.web.reactive.function.server.ServerRequest requestWithCookie(
-        String identifier) {
-        return ServerRequestFixtures.request("http", "192.0.2.10",
-            Map.of(LinkApplicationCaptchaCookie.COOKIE_NAME, identifier), Map.of());
     }
 }

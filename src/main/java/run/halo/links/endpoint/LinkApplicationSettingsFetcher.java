@@ -17,13 +17,17 @@ public class LinkApplicationSettingsFetcher {
     private final ReactiveSettingFetcher settingFetcher;
 
     public Mono<LinkApplicationSettings> fetch() {
-        return settingFetcher.fetch(SETTING_GROUP, LinkApplicationSettings.class)
-            .defaultIfEmpty(LinkApplicationSettings.defaults())
-            .map(LinkApplicationSettings::normalized)
+        return fetchStrict()
             .onErrorResume(error -> {
                 log.warn("[plugin-links] Failed to load application settings, disabling "
                     + "new applications", error);
                 return Mono.just(LinkApplicationSettings.defaults().normalized());
             });
+    }
+
+    public Mono<LinkApplicationSettings> fetchStrict() {
+        return settingFetcher.fetch(SETTING_GROUP, LinkApplicationSettings.class)
+            .defaultIfEmpty(LinkApplicationSettings.defaults())
+            .map(LinkApplicationSettings::normalized);
     }
 }

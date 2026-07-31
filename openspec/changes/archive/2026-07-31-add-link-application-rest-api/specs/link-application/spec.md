@@ -1,9 +1,35 @@
-# link-application Specification
+## ADDED Requirements
 
-## Purpose
-Define how visitor and Comment-origin friend-link applications are created, deduplicated, reviewed,
-approved into formal Links, rejected, inspected, and deleted.
-## Requirements
+### Requirement: Native Form submission has one redirect representation
+The system SHALL keep `POST /links/apply/submit` as an
+`application/x-www-form-urlencoded`-only transport whose plugin-owned business outcomes use the
+existing redirect contract.
+
+#### Scenario: Form client declares any Accept preference
+- **WHEN** a client submits a supported native Form request with any `Accept` header or no
+  `Accept` header
+- **THEN** the plugin processes the request without negotiating its response representation
+- **AND** returns the existing `303` success or error redirect for its business outcome
+
+#### Scenario: Form client asks for JSON
+- **WHEN** a client submits a supported native Form request with `Accept: application/json`
+- **THEN** the plugin does not return the removed JSON envelope
+- **AND** does not return `406 Not Acceptable`
+- **AND** returns the same redirect contract as other native Form clients
+
+#### Scenario: Form request media type is unsupported
+- **WHEN** a client posts to `/links/apply/submit` with a request media type other than
+  `application/x-www-form-urlencoded`
+- **THEN** the endpoint returns `415 Unsupported Media Type`
+- **AND** does not process an application
+
+#### Scenario: Form responses no longer vary on Accept
+- **WHEN** `/links/apply/submit` returns a plugin-owned response
+- **THEN** it does not add `Vary: Accept`
+- **AND** it does not expose an Accept-driven JSON representation
+
+## MODIFIED Requirements
+
 ### Requirement: Link applications record their origin
 The system SHALL require origin information on every LinkApplication resource and SHALL treat both
 public visitor transports as `FORM` origin.
@@ -78,39 +104,6 @@ whenever either public visitor submission transport is effective.
 - **WHEN** application settings are missing or fail to load
 - **THEN** the system treats the master switch as disabled
 
-### Requirement: Administrators can configure pending application capacity
-The system SHALL expose `application.security.pendingCapacity` as a required positive integer under
-a Security subgroup of friend-link application settings and SHALL use `100` as both the settings
-schema and backend default.
-
-#### Scenario: Administrator opens enabled application settings
-- **WHEN** the friend-link application master switch is enabled
-- **THEN** the settings form displays a Security subgroup
-- **AND** displays a pending application capacity field with default value `100`
-- **AND** explains that new applications pause at the limit until the pending count decreases
-
-#### Scenario: Administrator configures a positive capacity
-- **WHEN** the administrator saves a positive integer capacity
-- **THEN** the system uses that value for subsequent supported application creation
-
-#### Scenario: Administrator enters a non-positive capacity
-- **WHEN** the administrator enters `0` or a negative capacity
-- **THEN** settings validation rejects the value
-- **AND** `0` is not interpreted as unlimited or disabled
-
-#### Scenario: Capacity has no configured maximum
-- **WHEN** the administrator configures a positive integer above the default
-- **THEN** the settings schema does not reject it solely for exceeding an artificial maximum
-
-#### Scenario: Application settings have not been persisted
-- **WHEN** the application feature uses its initial unsaved settings
-- **THEN** the backend pending application capacity is `100`
-
-#### Scenario: Saved capacity is malformed
-- **WHEN** the saved pending application capacity is explicitly malformed or non-positive
-- **THEN** the system treats new application creation as unavailable
-- **AND** does not fall back to an unlimited capacity
-
 ### Requirement: Single-instance application creation is concurrency-safe
 The system SHALL serialize the complete duplicate-check and create operation by canonical URL within
 one plugin instance for native Form, REST, and Comment creation.
@@ -136,67 +129,6 @@ one plugin instance for native Form, REST, and Comment creation.
 - **WHEN** a serialized create operation succeeds or fails
 - **THEN** its process-local coordination entry is released
 - **AND** completed URL keys do not accumulate without bound
-
-### Requirement: Pending capacity governs supported application creation
-The system SHALL admit a new LinkApplication through supported plugin creation paths only when the
-current number of `PENDING` LinkApplications is strictly less than the effective pending capacity.
-
-#### Scenario: Visitor and Comment applications share capacity
-- **WHEN** FORM-origin and COMMENT-origin LinkApplications are pending
-- **THEN** both origins contribute to the same pending capacity
-
-#### Scenario: Only pending applications consume capacity
-- **WHEN** the system evaluates capacity
-- **THEN** it counts LinkApplications with status `PENDING`
-- **AND** does not count `APPROVING`, `APPROVED`, or `REJECTED` applications
-
-#### Scenario: Capacity has one remaining slot
-- **WHEN** the pending count is one less than the configured capacity
-- **THEN** one otherwise valid supported creation may persist a new `PENDING` LinkApplication
-
-#### Scenario: Capacity is exhausted
-- **WHEN** the pending count is greater than or equal to the configured capacity
-- **THEN** supported creation returns a distinct capacity-reached result
-- **AND** does not persist a LinkApplication
-- **AND** does not publish a new-application notification
-
-#### Scenario: Capacity is lowered below the current count
-- **WHEN** an administrator lowers capacity below the number of existing pending applications
-- **THEN** the system preserves every existing application and its current status
-- **AND** rejects supported new creation until the pending count becomes lower than the new capacity
-
-#### Scenario: Pending application leaves the queue
-- **WHEN** a pending application becomes `APPROVING` or `REJECTED`, or is deleted
-- **THEN** it no longer consumes pending capacity
-
-#### Scenario: Authoritative capacity cannot be evaluated
-- **WHEN** effective capacity settings or the authoritative pending application query are unavailable
-- **THEN** supported creation fails closed
-- **AND** does not persist a LinkApplication
-
-#### Scenario: Privileged caller writes directly through the Extension API
-- **WHEN** a caller bypasses the plugin's shared creation service and writes a LinkApplication
-  directly through Halo's Extension API
-- **THEN** this capability does not guarantee enforcement for that write
-
-### Requirement: Single-instance pending capacity is concurrency-safe
-The system SHALL serialize authoritative capacity evaluation and persistence across all supported
-LinkApplication creation attempts within one plugin instance.
-
-#### Scenario: Different URLs compete for one remaining slot
-- **WHEN** two otherwise valid requests with different canonical URLs concurrently observe one
-  remaining pending slot
-- **THEN** at most one request persists a new `PENDING` LinkApplication
-- **AND** the other request receives the capacity-reached result
-
-#### Scenario: Capacity coordination finishes
-- **WHEN** an authoritative creation operation succeeds, is rejected, or fails
-- **THEN** the process-wide creation gate is released
-- **AND** later creation attempts can evaluate current capacity
-
-#### Scenario: Another plugin instance creates an application
-- **WHEN** supported creation executes in more than one plugin instance
-- **THEN** this capability does not guarantee a distributed hard upper bound
 
 ### Requirement: Theme authors can integrate visitor applications
 The system SHALL document the native same-origin, CSRF-protected, Cookie-CAPTCHA Form contract and
@@ -274,91 +206,6 @@ the separate cookie-free REST contract required by browser and general HTTP inte
 - **THEN** the documentation states that no audio or non-visual challenge is provided in this
   version
 - **AND** leaves accessible presentation and refresh controls to the theme
-
-### Requirement: Administrators can browse application history
-The system SHALL provide a real paginated application history sorted by newest creation time and
-filterable by status and origin type.
-
-#### Scenario: Administrator opens application history
-- **WHEN** an administrator opens the application list
-- **THEN** Console requests the first 20 applications by default
-- **AND** displays the server-reported page, size, and total
-
-#### Scenario: Administrator filters application history
-- **WHEN** an administrator filters by status or origin type
-- **THEN** the backend applies all selected filters before pagination
-- **AND** returns only matching applications
-
-#### Scenario: Pending summary is displayed
-- **WHEN** the Link management page loads
-- **THEN** the pending summary uses the server-reported total for status `PENDING`
-
-#### Scenario: Approval in progress is displayed
-- **WHEN** history contains an `APPROVING` application
-- **THEN** Console labels it as approval in progress
-- **AND** exposes only the continue-approval operation
-
-### Requirement: Administrators can inspect application source context
-The system SHALL expose application-origin context through an application-scoped backend operation
-without granting link managers permission to read arbitrary Comments. For Comment-origin
-applications, the operation SHALL resolve an optional public-facing subject display through the
-registered Halo `CommentSubject` extension point, and Console SHALL use only resolved display
-values or generic fallback text for user-visible source information.
-
-#### Scenario: Pending list shows source
-- **WHEN** the application list contains form or Comment applications
-- **THEN** each item displays the corresponding source label
-
-#### Scenario: Comment application detail is opened
-- **WHEN** an administrator with link-application management permission opens a Comment-origin
-  application
-- **THEN** Console requests the source through that LinkApplication's origin-Comment operation
-- **AND** the backend resolves the Comment's current subject through the matching registered
-  `CommentSubject`
-- **AND** the response includes the original Comment data and an optional subject display with
-  `title`, `url`, and `kindName`
-- **AND** Console displays the resolved kind and title as a link to the public-facing subject URL
-  that opens in a new browser tab
-- **AND** Console displays the general Comment-management link, raw content, and creation time when
-  available
-- **AND** Console does not expose a subject editor route from the source display
-
-#### Scenario: Subject display is unavailable
-- **WHEN** the original Comment exists but no matching `CommentSubject` returns a subject display
-- **THEN** the origin-Comment operation still returns the original Comment data
-- **AND** the response has no resolved subject display
-- **AND** Console displays that the source page is unavailable
-- **AND** the application remains reviewable
-
-#### Scenario: Subject display contains a non-public or unreachable URL
-- **WHEN** a matching `CommentSubject` returns a display for a draft, private, recycled,
-  unpublished, or otherwise unreachable subject
-- **THEN** the origin-Comment operation returns the provider-supplied display without applying
-  subject-type-specific publication filtering
-- **AND** Console does not claim that the URL is currently reachable
-
-#### Scenario: Console renders application source context
-- **WHEN** Console displays resolved or unavailable Comment-origin source context
-- **THEN** it MUST NOT render the `metadata.name` of the Comment, subject, LinkApplication, or any
-  other referenced resource as user-visible text
-- **AND** it MUST NOT fall back to `subjectRef.name` when a subject title is blank or unavailable
-- **AND** blank resolved titles fall back to the resolved kind name and then generic source text
-
-#### Scenario: Caller attempts to choose an arbitrary Comment
-- **WHEN** a caller requests source context for a LinkApplication
-- **THEN** the backend resolves only the Comment name recorded by that application
-- **AND** the caller cannot supply a different Comment name
-
-#### Scenario: Original comment is unavailable
-- **WHEN** a Comment-origin application references a Comment that has been deleted
-- **THEN** the source operation returns not found
-- **AND** the application remains reviewable
-- **AND** Console indicates that the original Comment is unavailable
-
-#### Scenario: Caller lacks application-management permission
-- **WHEN** a caller without link-application management permission requests source Comment context
-- **THEN** the operation is forbidden
-- **AND** Console does not mislabel the authorization failure as a deleted Comment
 
 ### Requirement: Anonymous users can submit link applications
 The system SHALL allow visitors to submit link applications through the native Form or REST
@@ -533,220 +380,6 @@ pending-capacity outcomes through the native Form or REST transport.
 - **THEN** the system records an operational diagnostic
 - **AND** the diagnostic excludes application fields and other attacker-controlled values
 
-### Requirement: Administrators can view pending applications
-The system SHALL provide a Console UI for administrators to view pending link applications, their
-source, and recognition availability.
-
-#### Scenario: Pending count alert
-- **WHEN** an administrator opens the Link management page
-- **THEN** a card at the top of the page displays the server-reported count of `PENDING`
-  applications
-- **AND** clicking the card opens the application list filtered to `PENDING`
-
-#### Scenario: Application list display
-- **WHEN** the application list is filtered to `PENDING`
-- **THEN** each application is displayed with its `url`, `displayName`, submission time, and source
-  label
-- **AND** clicking an application opens its detail view
-
-#### Scenario: Enabled recognition is unavailable
-- **WHEN** the application master switch and Comment-recognition child switch are enabled
-- **AND** the selected AI integration is not operational
-- **THEN** the Link management page displays a non-blocking warning
-- **AND** application review and non-AI link management remain available
-
-#### Scenario: Recognition master switch is disabled
-- **WHEN** the application master switch or Comment-recognition child switch is disabled
-- **THEN** Console does not report recognition as operationally unavailable
-
-### Requirement: Administrators can approve link applications
-The system SHALL approve an application through a resumable, idempotent lifecycle that creates at
-most one owned formal `Link` for that application.
-
-#### Scenario: Approve with modifications
-- **WHEN** an administrator opens a `PENDING` application detail view
-- **THEN** all approval fields (`url`, `displayName`, `logo`, `description`, `backlink`, and
-  `feedUrls`) are editable
-- **AND** a dropdown allows selecting a `LinkGroup`
-- **AND** the backend validates and normalizes the effective fields before reserving approval
-
-#### Scenario: Invalid approval override
-- **WHEN** approval contains an invalid URL, missing required field, unknown group, or URL that is
-  already a formal Link or active application
-- **THEN** the backend rejects approval before changing the application from `PENDING`
-- **AND** does not create a Link
-
-#### Scenario: Approval is reserved
-- **WHEN** a valid approval request wins the resource-version update for a `PENDING` application
-- **THEN** the application status becomes `APPROVING`
-- **AND** the normalized approval fields and a stable Link name are stored under `spec.approval`
-- **AND** later retries cannot replace the stored approval fields
-
-#### Scenario: Concurrent administrators approve the same application
-- **WHEN** two administrators approve the same `PENDING` application concurrently
-- **THEN** only one request reserves the `APPROVING` transition
-- **AND** both requests converge on the same stored approval and Link identity
-- **AND** at most one Link is created
-
-#### Scenario: Approval is resumed after interruption
-- **WHEN** approval is requested for an `APPROVING` application
-- **THEN** the backend resumes the stored approval request
-- **AND** reuses an existing Link owned by the application when it was already created
-- **AND** does not create a second Link
-
-#### Scenario: Approval completes
-- **WHEN** the owned Link exists for an `APPROVING` application
-- **THEN** the application status becomes `APPROVED`
-- **AND** `spec.approval.linkName` identifies the formal Link
-- **AND** the Link contains the approved fields and optional group assignment
-
-#### Scenario: Completed approval is retried
-- **WHEN** approval is requested again for an `APPROVED` application with a recorded Link
-- **THEN** the operation returns that Link without creating or modifying another Link
-
-#### Scenario: Reject races with approval reservation
-- **WHEN** approve and reject requests race for the same `PENDING` application
-- **THEN** resource-version conflict handling allows only one lifecycle transition to win
-- **AND** a `REJECTED` application never creates a Link
-
-#### Scenario: Approval is interrupted after reservation
-- **WHEN** infrastructure failure occurs after status becomes `APPROVING`
-- **THEN** the application remains `APPROVING`
-- **AND** Console allows an administrator to continue the same frozen approval safely
-
-#### Scenario: Post-approval automation
-- **WHEN** an application reaches `APPROVED`
-- **THEN** the backend automatically triggers verification and initial RSS refresh for the new Link
-
-#### Scenario: Post-approval automation fails
-- **WHEN** verification or RSS refresh fails after approval
-- **THEN** the formal Link and `APPROVED` application remain persisted
-- **AND** the failure is exposed through the existing Link runtime status or retry operation
-
-#### Scenario: Approve without group assignment
-- **WHEN** an administrator approves an application without selecting a group
-- **THEN** the created Link has no group assignment
-
-### Requirement: Administrators can reject link applications
-The system SHALL allow administrators to reject only pending applications and SHALL communicate the
-source-aware future-submission behavior.
-
-#### Scenario: Reject application
-- **WHEN** an administrator rejects a `PENDING` application
-- **THEN** the LinkApplication status is updated to `REJECTED`
-- **AND** no Link is created
-
-#### Scenario: Reject application already in approval
-- **WHEN** an administrator attempts to reject an `APPROVING` or `APPROVED` application
-- **THEN** the system rejects the lifecycle transition
-
-#### Scenario: Rejected form URL blocks resubmission
-- **WHEN** a user attempts to submit or automatically recognize a URL that matches a `REJECTED`
-  form-origin application
-- **THEN** the new application is not created
-- **AND** Console explains that the URL remains blocked while the rejected record exists
-
-#### Scenario: Rejected comment URL permits later form submission
-- **WHEN** a user submits a form URL that matches only a `REJECTED` Comment-origin application
-- **THEN** the form submission is not blocked by that rejected Comment application
-- **AND** Console does not claim that the URL can never be submitted again
-
-### Requirement: Administrators can manually verify backlinks
-The system SHALL allow administrators to manually trigger backlink verification during the approval process.
-
-#### Scenario: Manual verification trigger
-- **WHEN** an administrator clicks "Verify Backlink" in the application detail view
-- **THEN** the system fetches the current `backlink` input value
-- **AND** checks whether the page contains a link to the site's own URL
-- **AND** Console displays the verification result (success/failure) in a Toast while the detail
-  view remains open
-
-### Requirement: Administrators can delete link applications
-The system SHALL allow administrators to delete individual applications and all deletable
-applications matching the current server-side history filter.
-
-#### Scenario: Delete approved application
-- **WHEN** an administrator deletes an `APPROVED` application
-- **THEN** the LinkApplication record is permanently removed
-- **AND** the associated Link is not affected
-
-#### Scenario: Delete pending application
-- **WHEN** an administrator deletes a `PENDING` application
-- **THEN** the LinkApplication record is permanently removed
-- **AND** its URL can be submitted again when no other duplicate rule applies
-
-#### Scenario: Delete rejected application
-- **WHEN** an administrator deletes a `REJECTED` application
-- **THEN** the LinkApplication record is permanently removed
-- **AND** any duplicate-blocking effect of that record is removed
-
-#### Scenario: Delete approving application
-- **WHEN** an administrator attempts to delete an `APPROVING` application
-- **THEN** the system rejects individual deletion
-- **AND** preserves the application for safe approval recovery
-
-#### Scenario: Clean current filtered result
-- **WHEN** an administrator confirms cleanup for the current status and origin filters
-- **THEN** the backend reapplies those filters and processes every match across all pages
-- **AND** deletes matching `PENDING`, `APPROVED`, and `REJECTED` applications
-- **AND** skips matching `APPROVING` applications
-- **AND** returns matched, deleted, failed, and skipped counts
-
-#### Scenario: Cleanup confirmation includes records that can block resubmission
-- **WHEN** the current cleanup filter includes pending or rejected form-origin applications
-- **THEN** Console warns that deleting them may allow those URLs to be submitted again
-
-### Requirement: LinkApplication lifecycle management
-The system SHALL manage LinkApplication records through `PENDING`, `APPROVING`, `APPROVED`, and
-`REJECTED` lifecycle states.
-
-#### Scenario: Pending to approving transition
-- **WHEN** a valid approval request reserves a `PENDING` application
-- **THEN** its status becomes `APPROVING`
-- **AND** its approval request and stable Link name are persisted
-
-#### Scenario: Approving to approved transition
-- **WHEN** the formal Link for an `APPROVING` application is durably available
-- **THEN** its status becomes `APPROVED`
-- **AND** the record is retained
-
-#### Scenario: Pending to rejected transition
-- **WHEN** a `PENDING` application is rejected
-- **THEN** its status becomes `REJECTED`
-- **AND** the record is retained
-
-#### Scenario: Approving application is recoverable
-- **WHEN** an application remains `APPROVING` after an interrupted request
-- **THEN** it can resume only the persisted approval operation
-- **AND** cannot be rejected or deleted while in that state
-
-### Requirement: Visitor CAPTCHA images use a fixed first-party format
-The system SHALL generate the visitor-application CAPTCHA inside plugin-links without an external
-provider or administrator CAPTCHA configuration.
-
-#### Scenario: CAPTCHA image is generated
-- **WHEN** an admitted request reaches `GET /links/apply/captcha` while visitor submission is enabled
-- **THEN** the system returns a `160 x 48` PNG containing five alphanumeric characters
-- **AND** excludes ambiguous characters
-- **AND** derives the answer and visual variation from a cryptographically secure random source
-- **AND** uses a packaged, openly licensed font
-
-#### Scenario: CAPTCHA comparison is normalized
-- **WHEN** the visitor submits an answer
-- **THEN** the system trims it and rejects it unless exactly five ASCII characters remain
-- **AND** compares a correctly sized answer without case sensitivity
-
-#### Scenario: CAPTCHA response is not cached
-- **WHEN** an image is generated successfully
-- **THEN** the response uses `Content-Type: image/png`
-- **AND** sets `Cache-Control: no-store, no-cache, must-revalidate`
-
-#### Scenario: Visitor submission is disabled
-- **WHEN** either the application master switch or visitor-submission switch is disabled
-- **AND** a client requests `GET /links/apply/captcha`
-- **THEN** the endpoint returns `404`
-- **AND** does not create challenge state
-
 ### Requirement: Visitor CAPTCHA challenges are short-lived and single-use
 The system SHALL associate each native Form or REST image with one bounded process-local challenge
 that can be consumed by at most one verification attempt.
@@ -852,63 +485,24 @@ native Form and REST generation independently from the formal application submis
 - **THEN** those requests do not consume the shared one-per-IP-per-minute application submission
   allowance
 
-### Requirement: CAPTCHA processing minimizes sensitive data exposure
-The system SHALL keep challenge secrets and failed form data out of persistent resources,
-redirects, and routine logs.
+## REMOVED Requirements
 
-#### Scenario: Challenge is created
-- **WHEN** the system issues a CAPTCHA
-- **THEN** it does not persist the answer, identifier, cookie, or image in a LinkApplication or other
-  extension
+### Requirement: Visitor submission responses are content negotiated
+**Reason**: Native Form response negotiation is replaced by a dedicated JSON REST transport so the
+Form endpoint has one request and redirect contract.
 
-#### Scenario: CAPTCHA verification fails normally
-- **WHEN** a visitor submits an invalid CAPTCHA
-- **THEN** the system does not log the answer, identifier, cookie, application fields, or raw IP
-- **AND** does not write a routine per-attempt failure log
+**Migration**: Clients that sent `Accept: application/json` to `/links/apply/submit` must issue a
+REST CAPTCHA and submit JSON to `/apis/api.link.halo.run/v1alpha1/link-applications`.
 
-#### Scenario: CAPTCHA system fails
-- **WHEN** capacity, rendering, or storage produces an operational failure
-- **THEN** the system may log aggregate diagnostic context
-- **AND** does not log challenge secrets, submitted form data, or raw client IPs
+### Requirement: Visitor JSON results use a stable envelope
+**Reason**: The Form-specific `{status, code, field, message}` envelope is replaced by the REST
+created-result and Halo Problem Details contracts.
 
-### Requirement: Native Form submission has one redirect representation
-The system SHALL keep `POST /links/apply/submit` as an
-`application/x-www-form-urlencoded`-only transport whose plugin-owned business outcomes use the
-existing redirect contract.
+**Migration**: Clients must handle the REST `201` body and branch on Problem Details `status` and
+`type`.
 
-#### Scenario: Form client declares any Accept preference
-- **WHEN** a client submits a supported native Form request with any `Accept` header or no
-  `Accept` header
-- **THEN** the plugin processes the request without negotiating its response representation
-- **AND** returns the existing `303` success or error redirect for its business outcome
+### Requirement: Visitor JSON results use outcome-specific HTTP semantics
+**Reason**: Outcome-specific HTTP semantics now belong exclusively to the REST capability; the
+native Form transport always uses redirects for plugin-owned business outcomes.
 
-#### Scenario: Form client asks for JSON
-- **WHEN** a client submits a supported native Form request with `Accept: application/json`
-- **THEN** the plugin does not return the removed JSON envelope
-- **AND** does not return `406 Not Acceptable`
-- **AND** returns the same redirect contract as other native Form clients
-
-#### Scenario: Form request media type is unsupported
-- **WHEN** a client posts to `/links/apply/submit` with a request media type other than
-  `application/x-www-form-urlencoded`
-- **THEN** the endpoint returns `415 Unsupported Media Type`
-- **AND** does not process an application
-
-#### Scenario: Form responses no longer vary on Accept
-- **WHEN** `/links/apply/submit` returns a plugin-owned response
-- **THEN** it does not add `Vary: Accept`
-- **AND** it does not expose an Accept-driven JSON representation
-
-
-
-### Requirement: Obsolete visitor application action paths are removed
-The system SHALL expose visitor application submission and CAPTCHA generation only at their new
-action paths and SHALL NOT retain the previous paths as aliases or redirects.
-
-#### Scenario: Previous submission path is not exposed
-- **WHEN** a client sends `POST /links/apply`
-- **THEN** the plugin does not route the request to the visitor application submission handler
-
-#### Scenario: Previous CAPTCHA path is not exposed
-- **WHEN** a client sends `GET /links/captcha`
-- **THEN** the plugin does not route the request to the visitor CAPTCHA handler
+**Migration**: Asynchronous clients must move to the REST application and CAPTCHA operations.

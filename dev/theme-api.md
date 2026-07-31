@@ -85,6 +85,16 @@
 
 ## 访客友链申请
 
+插件提供两套职责明确的访客申请接口：
+
+- 原生 Form：适合同源主题页面，使用 Cookie CAPTCHA、CSRF 和 `303` 重定向。
+- REST API：适合页面脚本、小程序和服务端集成，使用显式 CAPTCHA、JSON 和 Problem Details。
+
+两套接口共用访客提交开关、验证码限流、提交限流、字段校验、重复检测、待审核容量、
+持久化和通知流程；创建的申请来源都记录为 `FORM`。
+
+### 原生 Form
+
 当模板变量 `linkApplicationEnabled` 为 `true` 时，主题可以展示申请表单。适配需要使用
 以下两个同源端点：
 
@@ -95,7 +105,7 @@
 表单必须包含 `_csrf` 和 `captchaCode`。验证码图片直接使用 `<img>` 加载即可，关联
 Cookie 由浏览器自动处理。
 
-### 表单字段
+#### 表单字段
 
 | 字段 | 必填 | 说明 |
 | ---- | ---- | ---- |
@@ -109,7 +119,7 @@ Cookie 由浏览器自动处理。
 | `captchaCode` | 是 | 图片中的五位字符，不区分大小写 |
 | `_csrf` | 是 | 模板变量 `csrfToken` |
 
-### 纯 HTML 表单
+#### HTML 表单
 
 普通表单提交后，插件会重定向回 `/links`。主题通过 `applied`、`message`、`field` 和
 `value` 查询参数展示结果或回填出错字段。
@@ -193,81 +203,145 @@ Cookie 由浏览器自动处理。
 提交失败时直接展示 `message` 即可；当 `field` 指向某个字段时，可以使用 `value`
 回填该字段。验证码错误不会返回原值，页面重新加载后会自动获取新的验证码。
 
-### JavaScript 异步提交
+`POST /links/apply/submit` 不协商响应格式。无论 `Accept` 是什么，所有插件业务结果都
+使用上述重定向契约；非 `application/x-www-form-urlencoded` 请求返回 `415`。需要
+结构化响应的页面脚本应改用下面的 REST API。
 
-异步提交仍然序列化同一个表单，只需额外发送 `Accept: application/json`。响应中的
-`message` 用于展示，`field` 可用于定位表单控件；`code` 用于程序判断，不要依赖
-`message` 文案。只在表单实际渲染后加载这段脚本。
+### REST API
 
-成功时 `code` 为 `APPLICATION_CREATED`。错误码如下：
+REST API 位于 Halo 公共 API 组：
 
-| `code` | 含义 | `field` |
-| ---- | ---- | ---- |
-| `APPLICATION_DISABLED` | 访客申请未开启 | 无 |
-| `INVALID_CAPTCHA` | 验证码错误或已过期 | `captchaCode` |
-| `VALIDATION_FAILED` | 表单字段校验失败 | 具体出错字段 |
-| `DUPLICATE_APPLICATION` | 该链接已经申请 | `url` |
-| `RATE_LIMITED` | 提交过于频繁 | 无 |
-| `CAPACITY_REACHED` | 待审核申请达到上限 | 无 |
-| `APPLICATION_UNAVAILABLE` | 暂时无法完成申请 | 无 |
-| `UNSUPPORTED_MEDIA_TYPE` | 请求体不是表单编码 | 无 |
+- `POST /apis/api.link.halo.run/v1alpha1/link-applications/captcha`
+- `POST /apis/api.link.halo.run/v1alpha1/link-applications`
 
-```js
-const form = document.querySelector('#link-application-form')
-const submitButton = form.querySelector('button[type="submit"]')
-const result = document.querySelector('#link-application-result')
-const captchaImage = document.querySelector('#link-application-captcha')
+获取 CAPTCHA 成功时返回：
 
-function refreshCaptcha() {
-  captchaImage.src = '/links/apply/captcha?t=' + Date.now()
+```json
+{
+  "challengeId": "opaque-challenge-id",
+  "image": "data:image/png;base64,...",
+  "expiresInSeconds": 300
 }
-
-form.addEventListener('submit', async (event) => {
-  event.preventDefault()
-  submitButton.disabled = true
-  result.textContent = ''
-
-  try {
-    const response = await fetch(form.action, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { Accept: 'application/json' },
-      body: new URLSearchParams(new FormData(form)),
-    })
-
-    const contentType = response.headers.get('content-type') || ''
-    if (!contentType.includes('application/json')) {
-      throw new Error('Unexpected response')
-    }
-
-    const payload = await response.json()
-    if (typeof payload.code !== 'string' || typeof payload.message !== 'string') {
-      throw new Error('Unexpected response')
-    }
-
-    result.textContent = payload.message
-
-    if (response.ok && payload.code === 'APPLICATION_CREATED') {
-      form.reset()
-    } else if (payload.field) {
-      form.elements.namedItem(payload.field)?.focus()
-    }
-  } catch {
-    // CSRF 拒绝、平台错误、非 JSON 响应和网络异常统一使用主题自己的提示。
-    result.textContent = '暂时无法提交，请稍后再试'
-  } finally {
-    refreshCaptcha()
-    submitButton.disabled = false
-  }
-})
 ```
 
-异常处理保持简单：
+`image` 可以直接赋给 `<img src>`。每个挑战五分钟内有效且只能验证一次；任何已解码的
+提交尝试都会消费其挑战，因此提交失败后也必须重新获取。重复获取 REST CAPTCHA 不会
+主动使之前的挑战失效。
 
-- 收到插件 JSON 时展示 `message`，有 `field` 时聚焦对应控件。
-- 成功以 `APPLICATION_CREATED` 为准；其他已知或未知错误都可以直接展示服务端消息。
-- 非 JSON 响应、CSRF 拒绝和网络异常使用主题自己的通用提示。
-- 每次提交后刷新验证码，并在请求期间禁用提交按钮，避免重复提交。
+申请请求只接受 `application/json`：
+
+| 字段 | 必填 | 说明 |
+| ---- | ---- | ---- |
+| `url` | 是 | 申请网站的 HTTP/HTTPS 地址 |
+| `displayName` | 是 | 网站名称 |
+| `logo` | 否 | Logo 的 HTTP/HTTPS 地址 |
+| `description` | 否 | 网站描述 |
+| `email` | 否 | 联系邮箱 |
+| `backlink` | 否 | 反链页面的 HTTP/HTTPS 地址 |
+| `feedUrls` | 否 | RSS/Atom 地址字符串数组 |
+| `challengeId` | 是 | CAPTCHA 响应中的挑战标识 |
+| `captchaCode` | 是 | 图片中的五位字符，不区分大小写 |
+
+成功响应为 `201 Created`，不包含提交字段，也不返回 `Location`：
+
+```json
+{
+  "id": "link-app-...",
+  "status": "PENDING"
+}
+```
+
+#### 浏览器 `fetch` 示例
+
+浏览器调用不携带 Cookie。跨域能否调用由 Halo 对 `/apis/**` 的有效 CORS 配置决定，
+插件不维护额外的来源白名单。
+
+```js
+const apiBase = 'https://halo.example/apis/api.link.halo.run/v1alpha1'
+const captchaImage = document.querySelector('#rest-captcha')
+const result = document.querySelector('#application-result')
+let challengeId = null
+
+async function refreshCaptcha() {
+  const response = await fetch(`${apiBase}/link-applications/captcha`, {
+    method: 'POST',
+    credentials: 'omit',
+  })
+  if (!response.ok) throw new Error('CAPTCHA unavailable')
+
+  const payload = await response.json()
+  challengeId = payload.challengeId
+  captchaImage.src = payload.image
+}
+
+async function submitApplication(fields, captchaCode) {
+  try {
+    const response = await fetch(`${apiBase}/link-applications`, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...fields,
+        feedUrls: fields.feedUrls ?? [],
+        challengeId,
+        captchaCode,
+      }),
+    })
+
+    if (response.status === 201) {
+      const created = await response.json()
+      result.textContent = `申请已提交：${created.id}`
+      return
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/problem+json')) {
+      throw new Error('Unexpected response')
+    }
+
+    const problem = await response.json()
+    const problemKey = `${problem.status} ${problem.type}`
+    const messages = {
+      '400 https://halo.run/probs/invalid-link-application': '请检查申请内容',
+      '400 https://halo.run/probs/invalid-link-application-captcha': '验证码错误或已过期',
+      '403 https://halo.run/probs/link-application-disabled': '友链申请暂未开放',
+      '409 https://halo.run/probs/duplicate-link-application': '该链接已经申请',
+      '409 https://halo.run/probs/link-application-capacity-reached': '待审核申请已满',
+      '429 https://halo.run/probs/request-not-permitted': '请求过于频繁',
+      '503 https://halo.run/probs/link-application-unavailable': '服务暂时不可用',
+    }
+    result.textContent = messages[problemKey] ?? '暂时无法提交，请稍后再试'
+  } catch {
+    result.textContent = '暂时无法提交，请稍后再试'
+  } finally {
+    challengeId = null
+    await refreshCaptcha().catch(() => {
+      captchaImage.removeAttribute('src')
+    })
+  }
+}
+
+refreshCaptcha()
+```
+
+Halo 使用 `application/problem+json` 返回错误。客户端应以 `status + type` 做程序判断，
+把 `detail` 仅作为可展示文案；字段校验错误还包含 `errors` 字符串数组，限流错误包含
+正数 `retryAfterSeconds`。稳定类型如下：
+
+| 状态 | `type` |
+| ---- | ---- |
+| `400` | `https://halo.run/probs/invalid-link-application` |
+| `400` | `https://halo.run/probs/invalid-link-application-captcha` |
+| `403` | `https://halo.run/probs/link-application-disabled` |
+| `409` | `https://halo.run/probs/duplicate-link-application` |
+| `409` | `https://halo.run/probs/link-application-capacity-reached` |
+| `429` | `https://halo.run/probs/request-not-permitted` |
+| `503` | `https://halo.run/probs/link-application-unavailable` |
+
+匿名权限只允许创建申请和 CAPTCHA，不提供查询、修改、取消或审核接口，也没有幂等键。
+如果客户端未收到已经成功持久化的 `201`，再次提交会按现有重复规则处理，可能返回
+`409`。CAPTCHA、限流和创建协调状态均保存在当前 Halo 进程中；多实例部署需要保证相关
+请求落到合适的实例。接口是通用 HTTP 协议，不提供特定小程序平台的 SDK。
 
 ---
 
