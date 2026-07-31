@@ -109,9 +109,7 @@ spec:
             - $formkit: aiModelSelector
               if: "$get(comment_application_recognition_enabled).value === true"
               modelType: language
-              requiredFeatures:
-                - structured-output
-              clearable: false
+              clearable: true
               name: modelName
               key: recognitionModelName
               label: 识别模型
