@@ -44,6 +44,19 @@ class LinkApplicationSettingsFetcherTest {
     }
 
     @Test
+    void shouldExposeOperationalFailureToStrictRestCaller() {
+        when(settingFetcher.fetch(LinkApplicationSettingsFetcher.SETTING_GROUP,
+            LinkApplicationSettings.class))
+            .thenReturn(Mono.error(new IllegalStateException("settings unavailable")));
+        var fetcher = new LinkApplicationSettingsFetcher(settingFetcher);
+
+        StepVerifier.create(fetcher.fetchStrict())
+            .expectErrorMatches(error -> error instanceof IllegalStateException
+                && "settings unavailable".equals(error.getMessage()))
+            .verify();
+    }
+
+    @Test
     void shouldFailClosedForLegacyOrIncompleteNotificationSettings() {
         var legacy = new LinkApplicationSettings();
         legacy.setEnabled(true);

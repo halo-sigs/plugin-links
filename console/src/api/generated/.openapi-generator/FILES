@@ -3,6 +3,7 @@
 .openapi-generator-ignore
 api.ts
 api/api-link-halo-run-v1alpha1-link-api.ts
+api/api-link-halo-run-v1alpha1-link-application-api.ts
 api/api-link-halo-run-v1alpha1-link-feed-api.ts
 api/api-link-halo-run-v1alpha1-link-group-api.ts
 api/console-api-link-halo-run-v1alpha1-link-ai-api.ts
@@ -29,10 +30,14 @@ models/feed-result.ts
 models/index.ts
 models/json-patch-inner.ts
 models/link-ai-feature-status.ts
+models/link-application-captcha-response.ts
 models/link-application-cleanup-result.ts
+models/link-application-created-response.ts
 models/link-application-list.ts
 models/link-application-origin-comment.ts
 models/link-application-origin-subject.ts
+models/link-application-problem-response.ts
+models/link-application-rest-request.ts
 models/link-application-spec.ts
 models/link-application.ts
 models/link-comment-extraction-request.ts
