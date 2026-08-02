@@ -19,6 +19,7 @@ import { useRouter } from "vue-router";
 import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
 import EyeCloseLineIcon from "~icons/mingcute/eye-close-line?width=unset&height=unset";
 import MailOpenLineIcon from "~icons/mingcute/mail-open-line?width=unset&height=unset";
+import MultiselectLineIcon from "~icons/mingcute/multiselect-line?width=unset&height=unset";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
@@ -512,7 +513,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
               </VButton>
               <VButton size="sm" :disabled="!mainItems.length" @click="enterSelectionMode">
                 <template #icon>
-                  <EyeCloseLineIcon />
+                  <MultiselectLineIcon />
                 </template>
                 批量选择
               </VButton>
