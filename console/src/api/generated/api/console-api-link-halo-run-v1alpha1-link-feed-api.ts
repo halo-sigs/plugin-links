@@ -26,6 +26,12 @@ import type { LinkFeedCleanupResult } from '../models';
 // @ts-ignore
 import type { LinkFeedDiscoveryResult } from '../models';
 // @ts-ignore
+import type { LinkFeedHiddenCount } from '../models';
+// @ts-ignore
+import type { LinkFeedHiddenStateRequest } from '../models';
+// @ts-ignore
+import type { LinkFeedHiddenStateResult } from '../models';
+// @ts-ignore
 import type { LinkFeedItemPage } from '../models';
 // @ts-ignore
 import type { LinkFeedMarkReadResult } from '../models';
@@ -66,7 +72,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
-    
+
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
@@ -108,6 +114,43 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
             if (url !== undefined) {
                 localVarQueryParameter['url'] = url;
             }
+
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Return the exact number of hidden cached RSS or Atom feed items.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getLinkFeedHiddenCount: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden-count`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -164,13 +207,14 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
          * @param {boolean} [read] Filter items by read state.
          * @param {boolean} [favorite] Filter items by favorite state.
          * @param {boolean} [readLater] Filter items by read-later state.
+         * @param {boolean} [hidden] Filter items by hidden state; defaults to false.
          * @param {string} [beforePublishedAt] Cursor published time boundary.
          * @param {string} [beforeId] Cursor stable item id boundary.
          * @param {number} [limit] Maximum number of items to return.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listLinkFeedItems: async (linkName?: string, groupName?: string, read?: boolean, favorite?: boolean, readLater?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        listLinkFeedItems: async (linkName?: string, groupName?: string, read?: boolean, favorite?: boolean, readLater?: boolean, hidden?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/rss/items`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -209,6 +253,10 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
 
             if (readLater !== undefined) {
                 localVarQueryParameter['readLater'] = readLater;
+            }
+
+            if (hidden !== undefined) {
+                localVarQueryParameter['hidden'] = hidden;
             }
 
             if (beforePublishedAt !== undefined) {
@@ -461,6 +509,49 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiAxiosParamCreator = functio
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Set hidden state for explicit cached feed item IDs in one transaction. Duplicate IDs are counted once and missing IDs are ignored.
+         * @param {LinkFeedHiddenStateRequest} linkFeedHiddenStateRequest
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateLinkFeedItemsHiddenState: async (linkFeedHiddenStateRequest: LinkFeedHiddenStateRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'linkFeedHiddenStateRequest' is not null or undefined
+            assertParamExists('updateLinkFeedItemsHiddenState', 'linkFeedHiddenStateRequest', linkFeedHiddenStateRequest)
+            const localVarPath = `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(linkFeedHiddenStateRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -495,6 +586,17 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Return the exact number of hidden cached RSS or Atom feed items.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getLinkFeedHiddenCount(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkFeedHiddenCount>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getLinkFeedHiddenCount(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.getLinkFeedHiddenCount']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Summarize unread cached RSS or Atom feed item counts.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -512,14 +614,15 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
          * @param {boolean} [read] Filter items by read state.
          * @param {boolean} [favorite] Filter items by favorite state.
          * @param {boolean} [readLater] Filter items by read-later state.
+         * @param {boolean} [hidden] Filter items by hidden state; defaults to false.
          * @param {string} [beforePublishedAt] Cursor published time boundary.
          * @param {string} [beforeId] Cursor stable item id boundary.
          * @param {number} [limit] Maximum number of items to return.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listLinkFeedItems(linkName?: string, groupName?: string, read?: boolean, favorite?: boolean, readLater?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkFeedItemPage>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listLinkFeedItems(linkName, groupName, read, favorite, readLater, beforePublishedAt, beforeId, limit, options);
+        async listLinkFeedItems(linkName?: string, groupName?: string, read?: boolean, favorite?: boolean, readLater?: boolean, hidden?: boolean, beforePublishedAt?: string, beforeId?: string, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkFeedItemPage>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listLinkFeedItems(linkName, groupName, read, favorite, readLater, hidden, beforePublishedAt, beforeId, limit, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.listLinkFeedItems']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -587,6 +690,18 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp = function(configuration
             const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.refreshLinkFeed']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * Set hidden state for explicit cached feed item IDs in one transaction. Duplicate IDs are counted once and missing IDs are ignored.
+         * @param {LinkFeedHiddenStateRequest} linkFeedHiddenStateRequest
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateLinkFeedItemsHiddenState(linkFeedHiddenStateRequest: LinkFeedHiddenStateRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<LinkFeedHiddenStateResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateLinkFeedItemsHiddenState(linkFeedHiddenStateRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.updateLinkFeedItemsHiddenState']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -615,6 +730,14 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
             return localVarFp.discoverLinkFeed(requestParameters.url, options).then((request) => request(axios, basePath));
         },
         /**
+         * Return the exact number of hidden cached RSS or Atom feed items.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getLinkFeedHiddenCount(options?: RawAxiosRequestConfig): AxiosPromise<LinkFeedHiddenCount> {
+            return localVarFp.getLinkFeedHiddenCount(options).then((request) => request(axios, basePath));
+        },
+        /**
          * Summarize unread cached RSS or Atom feed item counts.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -629,7 +752,7 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
          * @throws {RequiredError}
          */
         listLinkFeedItems(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<LinkFeedItemPage> {
-            return localVarFp.listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.favorite, requestParameters.readLater, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(axios, basePath));
+            return localVarFp.listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.favorite, requestParameters.readLater, requestParameters.hidden, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(axios, basePath));
         },
         /**
          * Mark a cached RSS or Atom feed item as favorite or not favorite.
@@ -675,6 +798,15 @@ export const ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFactory = function (configu
          */
         refreshLinkFeed(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiRefreshLinkFeedRequest, options?: RawAxiosRequestConfig): AxiosPromise<LinkFeedRefreshResult> {
             return localVarFp.refreshLinkFeed(requestParameters.name, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Set hidden state for explicit cached feed item IDs in one transaction. Duplicate IDs are counted once and missing IDs are ignored.
+         * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenStateRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateLinkFeedItemsHiddenState(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenStateRequest, options?: RawAxiosRequestConfig): AxiosPromise<LinkFeedHiddenStateResult> {
+            return localVarFp.updateLinkFeedItemsHiddenState(requestParameters.linkFeedHiddenStateRequest, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -733,6 +865,13 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsReques
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItems
      */
     readonly readLater?: boolean
+
+    /**
+     * Filter items by hidden state; defaults to false.
+     * @type {boolean}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItems
+     */
+    readonly hidden?: boolean
 
     /**
      * Cursor published time boundary.
@@ -848,6 +987,20 @@ export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiRefreshLinkFeedRequest 
 }
 
 /**
+ * Request parameters for updateLinkFeedItemsHiddenState operation in ConsoleApiLinkHaloRunV1alpha1LinkFeedApi.
+ * @export
+ * @interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenStateRequest
+ */
+export interface ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenStateRequest {
+    /**
+     *
+     * @type {LinkFeedHiddenStateRequest}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenState
+     */
+    readonly linkFeedHiddenStateRequest: LinkFeedHiddenStateRequest
+}
+
+/**
  * ConsoleApiLinkHaloRunV1alpha1LinkFeedApi - object-oriented interface
  * @export
  * @class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
@@ -876,6 +1029,16 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
     }
 
     /**
+     * Return the exact number of hidden cached RSS or Atom feed items.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
+     */
+    public getLinkFeedHiddenCount(options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).getLinkFeedHiddenCount(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * Summarize unread cached RSS or Atom feed item counts.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -893,7 +1056,7 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
      * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
      */
     public listLinkFeedItems(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiListLinkFeedItemsRequest = {}, options?: RawAxiosRequestConfig) {
-        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.favorite, requestParameters.readLater, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(this.axios, this.basePath));
+        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).listLinkFeedItems(requestParameters.linkName, requestParameters.groupName, requestParameters.read, requestParameters.favorite, requestParameters.readLater, requestParameters.hidden, requestParameters.beforePublishedAt, requestParameters.beforeId, requestParameters.limit, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -950,5 +1113,15 @@ export class ConsoleApiLinkHaloRunV1alpha1LinkFeedApi extends BaseAPI {
     public refreshLinkFeed(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiRefreshLinkFeedRequest, options?: RawAxiosRequestConfig) {
         return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).refreshLinkFeed(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
     }
-}
 
+    /**
+     * Set hidden state for explicit cached feed item IDs in one transaction. Duplicate IDs are counted once and missing IDs are ignored.
+     * @param {ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenStateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConsoleApiLinkHaloRunV1alpha1LinkFeedApi
+     */
+    public updateLinkFeedItemsHiddenState(requestParameters: ConsoleApiLinkHaloRunV1alpha1LinkFeedApiUpdateLinkFeedItemsHiddenStateRequest, options?: RawAxiosRequestConfig) {
+        return ConsoleApiLinkHaloRunV1alpha1LinkFeedApiFp(this.configuration).updateLinkFeedItemsHiddenState(requestParameters.linkFeedHiddenStateRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+}

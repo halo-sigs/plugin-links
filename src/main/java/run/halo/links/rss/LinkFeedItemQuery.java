@@ -15,6 +15,7 @@ public class LinkFeedItemQuery {
     private Boolean read;
     private Boolean favorite;
     private Boolean readLater;
+    private Boolean hidden;
     private int limit = DEFAULT_LIMIT;
 
     public int normalizedLimit() {

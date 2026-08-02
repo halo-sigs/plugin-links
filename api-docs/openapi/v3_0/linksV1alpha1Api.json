@@ -1077,6 +1077,13 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Filter items by hidden state; defaults to false.",
+          "in" : "query",
+          "name" : "hidden",
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
           "description" : "Cursor published time boundary.",
           "in" : "query",
           "name" : "beforePublishedAt",
@@ -1105,6 +1112,54 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/LinkFeedItemPage"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden" : {
+      "post" : {
+        "description" : "Set hidden state for explicit cached feed item IDs in one transaction. Duplicate IDs are counted once and missing IDs are ignored.",
+        "operationId" : "updateLinkFeedItemsHiddenState",
+        "requestBody" : {
+          "content" : {
+            "*/*" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkFeedHiddenStateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedHiddenStateResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden-count" : {
+      "get" : {
+        "description" : "Return the exact number of hidden cached RSS or Atom feed items.",
+        "operationId" : "getLinkFeedHiddenCount",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedHiddenCount"
                 }
               }
             },
@@ -2406,6 +2461,49 @@
           }
         }
       },
+      "LinkFeedHiddenCount" : {
+        "type" : "object",
+        "properties" : {
+          "hiddenCount" : {
+            "type" : "integer",
+            "description" : "Exact number of hidden cached feed items.",
+            "format" : "int64"
+          }
+        }
+      },
+      "LinkFeedHiddenStateRequest" : {
+        "required" : [ "hidden", "ids" ],
+        "type" : "object",
+        "properties" : {
+          "hidden" : {
+            "type" : "boolean",
+            "description" : "Hidden state to apply."
+          },
+          "ids" : {
+            "type" : "array",
+            "description" : "Stable cached feed item IDs to update.",
+            "items" : {
+              "type" : "string",
+              "description" : "Stable cached feed item IDs to update."
+            }
+          }
+        }
+      },
+      "LinkFeedHiddenStateResult" : {
+        "type" : "object",
+        "properties" : {
+          "requestedCount" : {
+            "type" : "integer",
+            "description" : "Number of distinct requested item IDs.",
+            "format" : "int64"
+          },
+          "updatedCount" : {
+            "type" : "integer",
+            "description" : "Number of existing items whose hidden state changed.",
+            "format" : "int64"
+          }
+        }
+      },
       "LinkFeedItem" : {
         "type" : "object",
         "properties" : {
@@ -2431,6 +2529,10 @@
           },
           "guid" : {
             "type" : "string"
+          },
+          "hidden" : {
+            "type" : "boolean",
+            "description" : "Whether this cached item is hidden from normal and public feed lists."
           },
           "id" : {
             "type" : "string"

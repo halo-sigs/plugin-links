@@ -293,9 +293,11 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
                   content_hash TEXT,
                   read INTEGER NOT NULL DEFAULT 0 CHECK (read IN (0, 1)),
                   favorite INTEGER NOT NULL DEFAULT 0 CHECK (favorite IN (0, 1)),
-                  read_later INTEGER NOT NULL DEFAULT 0 CHECK (read_later IN (0, 1))
+                  read_later INTEGER NOT NULL DEFAULT 0 CHECK (read_later IN (0, 1)),
+                  hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1))
                 )
                 """);
+            ensureHiddenColumn(connection);
             statement.execute("""
                 CREATE TABLE IF NOT EXISTS storage_metadata (
                   key TEXT PRIMARY KEY,
@@ -322,7 +324,32 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
                 CREATE INDEX IF NOT EXISTS idx_feed_items_states
                 ON link_feed_items(read, favorite, read_later, link_name)
                 """);
+            statement.execute("""
+                CREATE INDEX IF NOT EXISTS idx_feed_items_hidden_recent
+                ON link_feed_items(hidden, published_at DESC, id DESC)
+                """);
             statement.execute("PRAGMA user_version = " + SCHEMA_VERSION);
+        }
+    }
+
+    private static void ensureHiddenColumn(Connection connection) throws SQLException {
+        boolean hiddenColumnExists = false;
+        try (Statement statement = connection.createStatement();
+            ResultSet columns = statement.executeQuery("PRAGMA table_info(link_feed_items)")) {
+            while (columns.next()) {
+                if ("hidden".equalsIgnoreCase(columns.getString("name"))) {
+                    hiddenColumnExists = true;
+                    break;
+                }
+            }
+        }
+        if (!hiddenColumnExists) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("""
+                    ALTER TABLE link_feed_items
+                    ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1))
+                    """);
+            }
         }
     }
 

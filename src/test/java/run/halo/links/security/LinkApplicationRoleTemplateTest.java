@@ -9,6 +9,27 @@ import org.junit.jupiter.api.Test;
 class LinkApplicationRoleTemplateTest {
 
     @Test
+    void shouldGrantFeedHiddenCountToViewAndHiddenStateToManageRole()
+        throws IOException {
+        String yaml;
+        try (var input = getClass().getResourceAsStream("/extensions/roleTemplate.yaml")) {
+            assertThat(input).isNotNull();
+            yaml = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        String viewRole = yaml.substring(0, yaml.indexOf("---"));
+        String manageRole = yaml.substring(yaml.indexOf("name: role-template-link-manage"),
+            yaml.lastIndexOf("---"));
+
+        assertThat(viewRole)
+            .contains("rss/items/hidden-count")
+            .doesNotContain("rss/items/hidden\"");
+        assertThat(manageRole)
+            .contains("resources: [ \"rss/items/hidden\" ]")
+            .contains("resourceNames: [ \"-\" ]")
+            .contains("verbs: [ \"create\" ]");
+    }
+
+    @Test
     void shouldGrantOnlyManageRoleApplicationSubresources() throws IOException {
         String yaml;
         try (var input = getClass().getResourceAsStream("/extensions/roleTemplate.yaml")) {

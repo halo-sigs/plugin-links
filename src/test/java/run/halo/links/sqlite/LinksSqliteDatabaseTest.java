@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.sqlite.SQLiteConfig;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
 
@@ -32,9 +34,98 @@ class LinksSqliteDatabaseTest {
             assertThat(pragma(database, "journal_mode")).isEqualToIgnoringCase("wal");
             assertThat(pragma(database, "synchronous")).isEqualTo("2");
             assertThat(pragma(database, "busy_timeout")).isEqualTo("5000");
+            assertThat(columnExists(database, "link_feed_items", "hidden")).isTrue();
+            assertThat(indexExists(database, "idx_feed_items_hidden_recent")).isTrue();
             assertThat(database.isAvailable()).isTrue();
         } finally {
             database.destroy();
+        }
+    }
+
+    @Test
+    void shouldAddHiddenColumnToExistingVersionOneDatabaseAndPreserveRows() throws Exception {
+        Path dbPath = tempDir.resolve("links.sqlite");
+        createVersionOneDatabaseWithoutHidden(dbPath, "existing-item");
+
+        LinksSqliteDatabase database = new LinksSqliteDatabase(dbPath);
+        try {
+            assertThat(database.isAvailable()).isTrue();
+            assertThat(pragma(database, "user_version")).isEqualTo("1");
+            assertThat(columnExists(database, "link_feed_items", "hidden")).isTrue();
+            int hidden = database.execute(connection -> {
+                try (var statement = connection.createStatement();
+                    var result = statement.executeQuery(
+                        "SELECT hidden FROM link_feed_items WHERE id = 'existing-item'")) {
+                    return result.next() ? result.getInt(1) : -1;
+                }
+            });
+            assertThat(hidden).isZero();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldPreserveHiddenStateAcrossRepeatedStartup() {
+        Path dbPath = tempDir.resolve("links.sqlite");
+        LinksSqliteDatabase first = new LinksSqliteDatabase(dbPath);
+        new SqliteLinkFeedItemStore(first).upsert(item("hidden-item"));
+        new SqliteLinkFeedItemStore(first).updateHidden(List.of("hidden-item"), true);
+        first.destroy();
+
+        LinksSqliteDatabase restarted = new LinksSqliteDatabase(dbPath);
+        try {
+            assertThat(restarted.isAvailable()).isTrue();
+            assertThat(new SqliteLinkFeedItemStore(restarted).countHidden()).isOne();
+            assertThat(pragma(restarted, "user_version")).isEqualTo("1");
+        } finally {
+            restarted.destroy();
+        }
+    }
+
+    @Test
+    void shouldUpgradeRestoredVersionOneSnapshotWithoutHiddenColumn() throws Exception {
+        Path dbPath = tempDir.resolve("links.sqlite");
+        Path snapshot = tempDir.resolve("links.sqlite.snapshot-20260801000000000");
+        createVersionOneDatabaseWithoutHidden(snapshot, "snapshot-item");
+
+        LinksSqliteDatabase database = new LinksSqliteDatabase(dbPath);
+        try {
+            assertThat(database.isAvailable()).isTrue();
+            assertThat(columnExists(database, "link_feed_items", "hidden")).isTrue();
+            assertThat(new SqliteLinkFeedItemStore(database).count()).isOne();
+            assertThat(new SqliteLinkFeedItemStore(database).countHidden()).isZero();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldKeepDatabaseForRetryWhenHiddenIndexCreationFails() throws Exception {
+        Path dbPath = tempDir.resolve("links.sqlite");
+        createVersionOneDatabaseWithoutHidden(dbPath, "existing-item");
+        try (Connection connection = openSqlite(dbPath);
+            var statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE idx_feed_items_hidden_recent (id TEXT)");
+        }
+
+        LinksSqliteDatabase failed = new LinksSqliteDatabase(dbPath);
+        assertThat(failed.isAvailable()).isFalse();
+        failed.destroy();
+        assertThat(dbPath).exists();
+        assertThat(countRows(dbPath, "link_feed_items")).isOne();
+
+        try (Connection connection = openSqlite(dbPath);
+            var statement = connection.createStatement()) {
+            statement.execute("DROP TABLE idx_feed_items_hidden_recent");
+        }
+        LinksSqliteDatabase retried = new LinksSqliteDatabase(dbPath);
+        try {
+            assertThat(retried.isAvailable()).isTrue();
+            assertThat(new SqliteLinkFeedItemStore(retried).count()).isOne();
+            assertThat(indexExists(retried, "idx_feed_items_hidden_recent")).isTrue();
+        } finally {
+            retried.destroy();
         }
     }
 
@@ -257,6 +348,74 @@ class LinksSqliteDatabaseTest {
                 return result.next() ? result.getString(1) : null;
             }
         });
+    }
+
+    private static boolean columnExists(LinksSqliteDatabase database, String table,
+        String column) {
+        return database.execute(connection -> {
+            try (var statement = connection.createStatement();
+                ResultSet result = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+                while (result.next()) {
+                    if (column.equals(result.getString("name"))) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+    }
+
+    private static boolean indexExists(LinksSqliteDatabase database, String indexName) {
+        return database.execute(connection -> {
+            try (var statement = connection.prepareStatement(
+                "SELECT count(*) FROM sqlite_master WHERE type = 'index' AND name = ?")) {
+                statement.setString(1, indexName);
+                try (var result = statement.executeQuery()) {
+                    return result.next() && result.getInt(1) == 1;
+                }
+            }
+        });
+    }
+
+    private static void createVersionOneDatabaseWithoutHidden(Path path, String itemId)
+        throws SQLException {
+        try (Connection connection = openSqlite(path);
+            var statement = connection.createStatement()) {
+            statement.execute("""
+                CREATE TABLE link_feed_items (
+                  id TEXT PRIMARY KEY,
+                  link_name TEXT,
+                  feed_url TEXT,
+                  guid TEXT,
+                  url TEXT,
+                  title TEXT,
+                  summary TEXT,
+                  author TEXT,
+                  published_at TEXT,
+                  updated_at TEXT,
+                  first_seen_at TEXT,
+                  fetched_at TEXT,
+                  content_hash TEXT,
+                  read INTEGER NOT NULL DEFAULT 0 CHECK (read IN (0, 1)),
+                  favorite INTEGER NOT NULL DEFAULT 0 CHECK (favorite IN (0, 1)),
+                  read_later INTEGER NOT NULL DEFAULT 0 CHECK (read_later IN (0, 1))
+                )
+                """);
+            statement.execute("INSERT INTO link_feed_items(id) VALUES ('" + itemId + "')");
+            statement.execute("PRAGMA user_version = 1");
+        }
+    }
+
+    private static long countRows(Path path, String table) throws SQLException {
+        try (Connection connection = openSqlite(path);
+            var statement = connection.createStatement();
+            var result = statement.executeQuery("SELECT count(*) FROM " + table)) {
+            return result.next() ? result.getLong(1) : -1;
+        }
+    }
+
+    private static Connection openSqlite(Path path) throws SQLException {
+        return new SQLiteConfig().createConnection("jdbc:sqlite:" + path);
     }
 
     private static long pragmaLong(Connection connection, String name)

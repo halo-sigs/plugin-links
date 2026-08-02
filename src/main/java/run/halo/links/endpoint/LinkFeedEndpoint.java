@@ -2,6 +2,7 @@ package run.halo.links.endpoint;
 
 import static org.springdoc.core.fn.builders.apiresponse.Builder.responseBuilder;
 import static org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder;
+import static org.springdoc.core.fn.builders.requestbody.Builder.requestBodyBuilder;
 import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 import static run.halo.app.extension.index.query.Queries.equal;
 
@@ -31,6 +32,9 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
 import run.halo.links.rss.LinkFeedCleanupResult;
 import run.halo.links.rss.LinkFeedDiscoveryResult;
+import run.halo.links.rss.LinkFeedHiddenCount;
+import run.halo.links.rss.LinkFeedHiddenStateRequest;
+import run.halo.links.rss.LinkFeedHiddenStateResult;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemPage;
 import run.halo.links.rss.LinkFeedItemQuery;
@@ -124,6 +128,13 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                         .required(false)
                     )
                     .parameter(parameterBuilder()
+                        .name("hidden")
+                        .description("Filter items by hidden state; defaults to false.")
+                        .in(ParameterIn.QUERY)
+                        .implementation(Boolean.class)
+                        .required(false)
+                    )
+                    .parameter(parameterBuilder()
                         .name("beforePublishedAt")
                         .description("Cursor published time boundary.")
                         .in(ParameterIn.QUERY)
@@ -146,6 +157,22 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                     )
                     .response(responseBuilder().implementation(LinkFeedItemPage.class));
             })
+            .GET("rss/items/-/hidden-count", this::getHiddenCount, builder -> builder
+                .operationId("getLinkFeedHiddenCount")
+                .description("Return the exact number of hidden cached RSS or Atom feed items.")
+                .tag(tag)
+                .response(responseBuilder().implementation(LinkFeedHiddenCount.class))
+            )
+            .POST("rss/items/-/hidden", this::updateHiddenState, builder -> builder
+                .operationId("updateLinkFeedItemsHiddenState")
+                .description("Set hidden state for explicit cached feed item IDs in one transaction."
+                    + " Duplicate IDs are counted once and missing IDs are ignored.")
+                .tag(tag)
+                .requestBody(requestBodyBuilder()
+                    .required(true)
+                    .implementation(LinkFeedHiddenStateRequest.class))
+                .response(responseBuilder().implementation(LinkFeedHiddenStateResult.class))
+            )
             .GET("rss/items/-/unread-summary", this::getUnreadSummary, builder -> builder
                 .operationId("getLinkFeedUnreadSummary")
                 .description("Summarize unread cached RSS or Atom feed item counts.")
@@ -299,6 +326,25 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             .flatMap(summary -> ServerResponse.ok().bodyValue(summary));
     }
 
+    private Mono<ServerResponse> getHiddenCount(ServerRequest request) {
+        return Mono.fromCallable(() -> new LinkFeedHiddenCount(itemStore.countHidden()))
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap(count -> ServerResponse.ok().bodyValue(count));
+    }
+
+    private Mono<ServerResponse> updateHiddenState(ServerRequest request) {
+        return request.bodyToMono(LinkFeedHiddenStateRequest.class)
+            .switchIfEmpty(Mono.error(new IllegalArgumentException("Request body is required.")))
+            .flatMap(command -> {
+                validateHiddenStateRequest(command);
+                return Mono.fromCallable(
+                        () -> itemStore.updateHidden(command.getIds(), command.getHidden()))
+                    .subscribeOn(Schedulers.boundedElastic());
+            })
+            .flatMap(result -> ServerResponse.ok().bodyValue(result))
+            .onErrorResume(IllegalArgumentException.class, LinkFeedEndpoint::badRequest);
+    }
+
     private Mono<ServerResponse> markUnreadItemsRead(ServerRequest request) {
         String linkName = request.queryParam("linkName")
             .filter(StringUtils::hasText)
@@ -380,6 +426,7 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             linkQuery.setRead(query.getRead());
             linkQuery.setFavorite(query.getFavorite());
             linkQuery.setReadLater(query.getReadLater());
+            linkQuery.setHidden(query.getHidden());
             linkQuery.setLimit(limit + 1);
             items.addAll(itemStore.listRecent(linkQuery));
         }
@@ -422,6 +469,9 @@ public class LinkFeedEndpoint implements CustomEndpoint {
         request.queryParam("readLater")
             .filter(StringUtils::hasText)
             .ifPresent(value -> query.setReadLater(parseBoolean(value, "readLater")));
+        request.queryParam("hidden")
+            .filter(StringUtils::hasText)
+            .ifPresent(value -> query.setHidden(parseBoolean(value, "hidden")));
         request.queryParam("limit")
             .filter(StringUtils::hasText)
             .ifPresent(value -> {
@@ -442,6 +492,18 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             return false;
         }
         throw new IllegalArgumentException("Invalid " + parameterName + ".");
+    }
+
+    private static void validateHiddenStateRequest(LinkFeedHiddenStateRequest request) {
+        if (request.getIds() == null || request.getIds().isEmpty()) {
+            throw new IllegalArgumentException("Feed item ids must not be empty.");
+        }
+        if (request.getHidden() == null) {
+            throw new IllegalArgumentException("Hidden state is required.");
+        }
+        if (request.getIds().stream().anyMatch(id -> !StringUtils.hasText(id))) {
+            throw new IllegalArgumentException("Feed item ids must not contain blank values.");
+        }
     }
 
     private static Comparator<LinkFeedItem> recentComparator() {

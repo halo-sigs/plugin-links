@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { VButton, VLoading } from "@halo-dev/components";
 import { useIntersectionObserver } from "@vueuse/core";
@@ -11,12 +12,24 @@ const props = withDefaults(
     sourceName: (linkName?: string) => string;
     emptyText: string;
     compact?: boolean;
-    itemActionMode?: "all" | "favorite-only";
+    itemActionMode?: "all" | "favorite-only" | "hidden";
+    selectable?: boolean;
+    selectedIds?: string[];
+    hideable?: boolean;
   }>(),
   {
     itemActionMode: "all",
+    selectedIds: () => [],
   },
 );
+
+const emit = defineEmits<{
+  (event: "toggle-select", item: LinkFeedItem): void;
+  (event: "hide", item: LinkFeedItem): void;
+  (event: "unhide", item: LinkFeedItem): void;
+}>();
+
+const selectedIdSet = computed(() => new Set(props.selectedIds));
 
 const loadMoreTrigger = useTemplateRef<HTMLElement>("loadMoreTrigger");
 const isLoadMoreTriggerVisible = shallowRef(false);
@@ -59,6 +72,12 @@ watch([isLoadMoreTriggerVisible, hasNext, isLoading, isLoadingMore], () => {
       :item="item"
       :item-action-mode="itemActionMode"
       :source-name="sourceName(item.linkName)"
+      :selectable="selectable"
+      :selected="!!item.id && selectedIdSet.has(item.id)"
+      :hideable="hideable"
+      @toggle-select="emit('toggle-select', item)"
+      @hide="emit('hide', item)"
+      @unhide="emit('unhide', item)"
     />
 
     <div v-if="hasNext || isLoadingMore" ref="loadMoreTrigger" class=":uno: feed-stream__footer">

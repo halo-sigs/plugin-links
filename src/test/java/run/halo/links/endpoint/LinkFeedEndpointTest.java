@@ -1,7 +1,10 @@
 package run.halo.links.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -9,6 +12,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -18,6 +22,10 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.links.rss.LinkFeedDiscoveryResult;
+import run.halo.links.rss.LinkFeedHiddenStateRequest;
+import run.halo.links.rss.LinkFeedHiddenStateResult;
+import run.halo.links.rss.LinkFeedItemPage;
+import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedService;
@@ -133,6 +141,107 @@ class LinkFeedEndpointTest {
         verify(itemStore).countUnreadByLinkName();
     }
 
+    @Test
+    void shouldListHiddenItemsWithCombinedFilters() {
+        LinkFeedService feedService = mock(LinkFeedService.class);
+        when(feedService.listItems(any())).thenReturn(new LinkFeedItemPage(List.of(), null, null,
+            false));
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(feedService, null, null, null, null);
+        MockServerRequest request = MockServerRequest.builder()
+            .method(HttpMethod.GET)
+            .uri(URI.create("/rss/items"))
+            .queryParam("linkName", "link-a")
+            .queryParam("hidden", "true")
+            .queryParam("read", "false")
+            .queryParam("favorite", "true")
+            .queryParam("readLater", "true")
+            .exchange(MockServerWebExchange.from(MockServerHttpRequest.get("/rss/items").build()))
+            .build();
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
+            .verifyComplete();
+
+        ArgumentCaptor<LinkFeedItemQuery> queryCaptor =
+            ArgumentCaptor.forClass(LinkFeedItemQuery.class);
+        verify(feedService).listItems(queryCaptor.capture());
+        assertThat(queryCaptor.getValue()).satisfies(query -> {
+            assertThat(query.getLinkName()).isEqualTo("link-a");
+            assertThat(query.getHidden()).isTrue();
+            assertThat(query.getRead()).isFalse();
+            assertThat(query.getFavorite()).isTrue();
+            assertThat(query.getReadLater()).isTrue();
+        });
+    }
+
+    @Test
+    void shouldReturnExactHiddenCount() {
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        when(itemStore.countHidden()).thenReturn(7L);
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
+        MockServerRequest request = request(HttpMethod.GET, "/rss/items/-/hidden-count");
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
+            .verifyComplete();
+
+        verify(itemStore).countHidden();
+    }
+
+    @Test
+    void shouldDelegateBatchHiddenStateUpdate() {
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        when(itemStore.updateHidden(List.of("item-1", "missing"), true))
+            .thenReturn(new LinkFeedHiddenStateResult(2, 1));
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
+        LinkFeedHiddenStateRequest body = new LinkFeedHiddenStateRequest();
+        body.setIds(List.of("item-1", "missing"));
+        body.setHidden(true);
+        MockServerRequest request = postRequest("/rss/items/-/hidden", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
+            .verifyComplete();
+
+        verify(itemStore).updateHidden(List.of("item-1", "missing"), true);
+    }
+
+    @Test
+    void shouldRejectEmptyHiddenStateRequest() {
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
+        LinkFeedHiddenStateRequest body = new LinkFeedHiddenStateRequest();
+        body.setIds(List.of());
+        MockServerRequest request = postRequest("/rss/items/-/hidden", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(400))
+            .verifyComplete();
+
+        verify(itemStore, never()).updateHidden(any(), anyBoolean());
+    }
+
+    @Test
+    void shouldReturnServiceUnavailableWhenHiddenStateUpdateFails() {
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        when(itemStore.updateHidden(List.of("item-1"), true))
+            .thenThrow(new LinkFeedStorageUnavailableException("unavailable"));
+        LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
+        LinkFeedHiddenStateRequest body = new LinkFeedHiddenStateRequest();
+        body.setIds(List.of("item-1"));
+        body.setHidden(true);
+        MockServerRequest request = postRequest("/rss/items/-/hidden", body);
+
+        StepVerifier.create(endpoint.endpoint().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(503))
+            .verifyComplete();
+    }
+
     private static MockServerRequest buildRequest(HttpMethod method, String path, String id,
         String queryParam) {
         var httpRequest = MockServerHttpRequest.method(method, path).build();
@@ -178,5 +287,15 @@ class LinkFeedEndpointTest {
             .pathVariable(variableName, value)
             .exchange(exchange)
             .build();
+    }
+
+    private static MockServerRequest postRequest(String path, Object body) {
+        var httpRequest = MockServerHttpRequest.post(path).build();
+        var exchange = MockServerWebExchange.from(httpRequest);
+        return MockServerRequest.builder()
+            .method(HttpMethod.POST)
+            .uri(URI.create(path))
+            .exchange(exchange)
+            .body(Mono.just(body));
     }
 }

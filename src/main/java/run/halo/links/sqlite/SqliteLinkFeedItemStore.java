@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import org.springframework.util.StringUtils;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedHiddenStateResult;
 
 @Slf4j
 @Component
@@ -80,6 +82,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
         appendBooleanFilter(sql, params, "read", normalized.getRead());
         appendBooleanFilter(sql, params, "favorite", normalized.getFavorite());
         appendBooleanFilter(sql, params, "read_later", normalized.getReadLater());
+        appendBooleanFilter(sql, params, "hidden", Boolean.TRUE.equals(normalized.getHidden()));
         sql.append(" ORDER BY published_at DESC, id DESC LIMIT ?");
         params.add(limit);
 
@@ -105,7 +108,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
 
     @Override
     public long markUnreadAsRead(String linkName) {
-        String sql = "UPDATE " + TABLE + " SET read = 1 WHERE read = 0"
+        String sql = "UPDATE " + TABLE + " SET read = 1 WHERE read = 0 AND hidden = 0"
             + (StringUtils.hasText(linkName) ? " AND link_name = ?" : "");
         return database.inTransaction(connection -> {
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -119,7 +122,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
 
     @Override
     public long countUnread() {
-        return queryForLong("SELECT count(*) FROM " + TABLE + " WHERE read = 0");
+        return queryForLong("SELECT count(*) FROM " + TABLE + " WHERE read = 0 AND hidden = 0");
     }
 
     @Override
@@ -130,7 +133,8 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
                 ResultSet rows = statement.executeQuery("""
                     SELECT link_name, count(*)
                     FROM link_feed_items
-                    WHERE read = 0 AND link_name IS NOT NULL AND link_name != ''
+                    WHERE read = 0 AND hidden = 0
+                      AND link_name IS NOT NULL AND link_name != ''
                     GROUP BY link_name
                     """)) {
                 while (rows.next()) {
@@ -149,6 +153,30 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
     @Override
     public boolean updateReadLater(String id, boolean readLater) {
         return updateBooleanState(id, "read_later", readLater);
+    }
+
+    @Override
+    public LinkFeedHiddenStateResult updateHidden(List<String> ids, boolean hidden) {
+        LinkedHashSet<String> distinctIds = validateHiddenIds(ids);
+        return database.inTransaction(connection -> {
+            long updatedCount = 0;
+            try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE " + TABLE + " SET hidden = ? WHERE id = ? AND hidden != ?")) {
+                int state = hidden ? 1 : 0;
+                for (String id : distinctIds) {
+                    statement.setInt(1, state);
+                    statement.setString(2, id);
+                    statement.setInt(3, state);
+                    updatedCount += statement.executeUpdate();
+                }
+            }
+            return new LinkFeedHiddenStateResult(distinctIds.size(), updatedCount);
+        });
+    }
+
+    @Override
+    public long countHidden() {
+        return queryForLong("SELECT count(*) FROM " + TABLE + " WHERE hidden = 1");
     }
 
     @Override
@@ -175,7 +203,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
         database.inTransaction(connection -> {
             try (PreparedStatement statement = connection.prepareStatement("""
                 DELETE FROM link_feed_items
-                WHERE first_seen_at < ? AND favorite = 0 AND read_later = 0
+                WHERE first_seen_at < ? AND favorite = 0 AND read_later = 0 AND hidden = 0
                 """)) {
                 statement.setString(1, toString(cutoff));
                 statement.executeUpdate();
@@ -194,7 +222,8 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
             if (total <= keepCount) {
                 return null;
             }
-            long deletable = countWhere(connection, "favorite = 0 AND read_later = 0");
+            long deletable = countWhere(connection,
+                "favorite = 0 AND read_later = 0 AND hidden = 0");
             deleteOldestUnsaved(connection, null, Math.min(total - keepCount, deletable));
             return null;
         });
@@ -211,7 +240,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
                 return null;
             }
             long deletable = countWhere(connection,
-                "link_name = ? AND favorite = 0 AND read_later = 0", linkName);
+                "link_name = ? AND favorite = 0 AND read_later = 0 AND hidden = 0", linkName);
             deleteOldestUnsaved(connection, linkName,
                 Math.min(total - keepCount, deletable));
             return null;
@@ -275,7 +304,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
             DELETE FROM link_feed_items
             WHERE id IN (
               SELECT id FROM link_feed_items
-              WHERE favorite = 0 AND read_later = 0
+              WHERE favorite = 0 AND read_later = 0 AND hidden = 0
             """ + (StringUtils.hasText(linkName) ? " AND link_name = ?" : "") + """
               ORDER BY published_at ASC, id ASC
               LIMIT ?
@@ -319,8 +348,8 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
             INSERT INTO link_feed_items (
               id, link_name, feed_url, guid, url, title, summary, author,
               published_at, updated_at, first_seen_at, fetched_at, content_hash,
-              read, favorite, read_later
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              read, favorite, read_later, hidden
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               link_name = excluded.link_name,
               feed_url = excluded.feed_url,
@@ -359,6 +388,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
         statement.setInt(14, Boolean.TRUE.equals(item.getRead()) ? 1 : 0);
         statement.setInt(15, Boolean.TRUE.equals(item.getFavorite()) ? 1 : 0);
         statement.setInt(16, Boolean.TRUE.equals(item.getReadLater()) ? 1 : 0);
+        statement.setInt(17, Boolean.TRUE.equals(item.getHidden()) ? 1 : 0);
     }
 
     private static void bindParams(PreparedStatement statement, List<Object> params)
@@ -395,6 +425,7 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
             item.setRead(result.getInt("read") == 1);
             item.setFavorite(result.getInt("favorite") == 1);
             item.setReadLater(result.getInt("read_later") == 1);
+            item.setHidden(result.getInt("hidden") == 1);
             return Optional.of(item);
         } catch (Exception e) {
             log.warn("[plugin-links] Failed to parse RSS SQLite row", e);
@@ -447,5 +478,19 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
         if (item == null || !StringUtils.hasText(item.getId())) {
             throw new IllegalArgumentException("Feed item id must not be blank.");
         }
+    }
+
+    private static LinkedHashSet<String> validateHiddenIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("Feed item ids must not be empty.");
+        }
+        LinkedHashSet<String> distinctIds = new LinkedHashSet<>();
+        for (String id : ids) {
+            if (!StringUtils.hasText(id)) {
+                throw new IllegalArgumentException("Feed item ids must not contain blank values.");
+            }
+            distinctIds.add(id);
+        }
+        return distinctIds;
     }
 }

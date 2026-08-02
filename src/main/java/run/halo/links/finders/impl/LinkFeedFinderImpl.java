@@ -71,6 +71,7 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
         var query = Optional.ofNullable(params)
             .map(map -> JsonMapper.shared().convertValue(map, LinkFeedItemQuery.class))
             .orElseGet(LinkFeedItemQuery::new);
+        query.setHidden(false);
         String groupName = Optional.ofNullable(params)
             .map(map -> (String) map.get("groupName"))
             .orElse(null);
@@ -143,6 +144,7 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
                 LinkFeedVo linkFeed = LinkFeedVo.from(link);
                 LinkFeedItemQuery storeQuery = new LinkFeedItemQuery();
                 storeQuery.setLinkName(link.getMetadata().getName());
+                storeQuery.setHidden(false);
                 storeQuery.setLimit(limit);
 
                 List<LinkFeedItemVo> linkFeedItemVos = new ArrayList<>();

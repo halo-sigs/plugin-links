@@ -447,7 +447,7 @@ Finder API 由两个独立对象提供，可在主题模板的任意位置使用
 
 `linkFeedFinder` 对应当前实现中的 `@Finder("linkFeedFinder")`，用于查询已抓取的链接 RSS 条目。它不返回普通的 `LinkVo` 分组，而是返回 RSS 条目分页或带 `feeds` 的 `LinkFeedVo` 分组。
 
-此 Finder 默认不公开数据。需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，`linkFeedFinder.list(params)` 才会返回条目，`linkFeedFinder.groupBy(limit)` 才会返回分组。关闭时，前者返回空分页，后者返回空列表。公开返回值不会包含 RSS 订阅地址。
+此 Finder 默认不公开数据。需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，`linkFeedFinder.list(params)` 才会返回条目，`linkFeedFinder.groupBy(limit)` 才会返回分组。关闭时，前者返回空分页，后者返回空列表。公开返回值不会包含 RSS 订阅地址，也不会返回已在 Console 隐藏的条目或暴露条目的隐藏状态；主题参数不能请求隐藏条目。
 
 #### linkFeedFinder.list(params)
 

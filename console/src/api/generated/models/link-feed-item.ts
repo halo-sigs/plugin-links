@@ -63,6 +63,12 @@ export interface LinkFeedItem {
      */
     'guid'?: string;
     /**
+     * Whether this cached item is hidden from normal and public feed lists.
+     * @type {boolean}
+     * @memberof LinkFeedItem
+     */
+    'hidden'?: boolean;
+    /**
      * 
      * @type {string}
      * @memberof LinkFeedItem

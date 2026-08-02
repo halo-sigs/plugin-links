@@ -76,6 +76,7 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
         storeQuery.setRead(requested.getRead());
         storeQuery.setFavorite(requested.getFavorite());
         storeQuery.setReadLater(requested.getReadLater());
+        storeQuery.setHidden(false);
         storeQuery.setLimit(limit + 1);
 
         List<LinkFeedItem> items = itemStore.listRecent(storeQuery);
@@ -140,6 +141,7 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
             linkQuery.setRead(query.getRead());
             linkQuery.setFavorite(query.getFavorite());
             linkQuery.setReadLater(query.getReadLater());
+            linkQuery.setHidden(false);
             linkQuery.setLimit(limit + 1);
             List<LinkFeedItemVo> linkFeedItemVos = new ArrayList<>();
             List<LinkFeedItem> linkFeedItems = itemStore.listRecent(linkQuery);

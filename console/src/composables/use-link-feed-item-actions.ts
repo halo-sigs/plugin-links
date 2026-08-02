@@ -1,6 +1,6 @@
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFeedItem } from "@/api/generated";
-import { QK_LINK_FEED_ITEMS } from "@/composables/use-link-feed";
+import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "@/composables/use-link-feed";
 import { invalidateLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
@@ -41,7 +41,7 @@ export function useLinkFeedItemActions(item: MaybeRefOrGetter<LinkFeedItem | und
     mutationFn: async ({ id, readLater }) => {
       await linksConsoleApiClient.feed.markLinkFeedItemReadLater({ id, readLater });
     },
-    onSuccess: invalidateFeedItems,
+    onSuccess: invalidateFeedItemCollections,
   });
 
   const isMarkingRead = computed(() => readMutation.isPending.value);
@@ -52,8 +52,15 @@ export function useLinkFeedItemActions(item: MaybeRefOrGetter<LinkFeedItem | und
     await queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] });
   }
 
+  async function invalidateFeedItemCollections() {
+    await Promise.all([
+      invalidateFeedItems(),
+      queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_HIDDEN_ITEMS] }),
+    ]);
+  }
+
   async function invalidateFeedReadState() {
-    await Promise.all([invalidateFeedItems(), invalidateLinkFeedUnreadSummary(queryClient)]);
+    await Promise.all([invalidateFeedItemCollections(), invalidateLinkFeedUnreadSummary(queryClient)]);
   }
 
   async function markRead(read: boolean) {
