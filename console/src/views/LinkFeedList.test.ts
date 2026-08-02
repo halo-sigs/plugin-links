@@ -80,11 +80,14 @@ describe("LinkFeedList hidden workflows", () => {
     viewMocks.setHiddenState.mockResolvedValue({ requestedCount: 2, updatedCount: 2 });
   });
 
-  it("shows the exact hidden count in the header entry", () => {
+  it("shows the exact hidden count immediately after the favorite entry", () => {
     mountView();
 
     const entry = viewButton("已隐藏");
+    const favoriteEntry = viewButton("收藏");
     expect(entry?.textContent).toContain("已隐藏 (3)");
+    const buttons = Array.from(viewRoot().querySelectorAll<HTMLButtonElement>("button"));
+    expect(buttons.indexOf(entry!)).toBe(buttons.indexOf(favoriteEntry!) + 1);
   });
 
   it("hides a single item after confirmation", async () => {
@@ -117,7 +120,9 @@ describe("LinkFeedList hidden workflows", () => {
 
     expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
 
-    viewButton("批量隐藏")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(viewButton("批量选择")).toBeDefined();
+    expect(viewButton("批量隐藏")).toBeUndefined();
+    viewButton("批量选择")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
 
     expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
@@ -143,7 +148,7 @@ describe("LinkFeedList hidden workflows", () => {
 
     expect(viewMocks.setHiddenState).toHaveBeenCalledWith(["item-1", "item-2"], true);
     expect(toastSpy).toHaveBeenCalledWith("已隐藏 2 篇文章");
-    expect(viewButton("批量隐藏")).toBeDefined();
+    expect(viewButton("批量选择")).toBeDefined();
     expect(document.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
   });
 
@@ -152,7 +157,7 @@ describe("LinkFeedList hidden workflows", () => {
     mountView();
     await nextTick();
 
-    viewButton("批量隐藏")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    viewButton("批量选择")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
     viewButton("取消")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
@@ -166,7 +171,7 @@ describe("LinkFeedList hidden workflows", () => {
     mountView();
     await nextTick();
 
-    viewButton("批量隐藏")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    viewButton("批量选择")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
     viewButton("全选已加载")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
@@ -187,7 +192,7 @@ describe("LinkFeedList hidden workflows", () => {
     mountView();
     await nextTick();
 
-    viewButton("批量隐藏")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    viewButton("批量选择")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
     viewButton("全选已加载")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();

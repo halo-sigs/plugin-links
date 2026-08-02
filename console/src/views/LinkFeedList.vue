@@ -405,12 +405,6 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
     </template>
     <template #actions>
       <VSpace>
-        <VButton size="sm" @click="openHiddenModal">
-          <template #icon>
-            <EyeCloseLineIcon />
-          </template>
-          已隐藏{{ hiddenCount ? ` (${hiddenCount})` : "" }}
-        </VButton>
         <VButton size="sm" @click="openReadLaterModal">
           <template #icon>
             <CalendarTimeAddLineIcon />
@@ -422,6 +416,12 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
             <StarLineIcon />
           </template>
           收藏
+        </VButton>
+        <VButton size="sm" @click="openHiddenModal">
+          <template #icon>
+            <EyeCloseLineIcon />
+          </template>
+          已隐藏{{ hiddenCount ? ` (${hiddenCount})` : "" }}
         </VButton>
         <VButton size="sm" @click="router.push({ name: 'Links' })">
           <template #icon>
@@ -514,7 +514,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                 <template #icon>
                   <EyeCloseLineIcon />
                 </template>
-                批量隐藏
+                批量选择
               </VButton>
             </VSpace>
             <VButton size="sm" ghost :loading="isFetching" @click="reloadMainFeed()">
