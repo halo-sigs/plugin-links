@@ -144,11 +144,23 @@ describe("LinkFeedHiddenItemsModal", () => {
     expect((modalButton("恢复所选") as HTMLButtonElement).disabled).toBe(true);
     expect((modalButton("取消选择") as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("keeps hidden items read-only without manage permission", async () => {
+    mountModal(fakeFeed({ items: [feedItem({ favorite: true, readLater: true })] }), false);
+    await nextTick();
+
+    expect(modalRoot().querySelector('input[type="checkbox"]')).toBeNull();
+    expect(modalButton("恢复显示")).toBeUndefined();
+    expect(modalButton("恢复所选")).toBeUndefined();
+    expect(modalRoot().textContent).toContain("已收藏");
+    expect(modalRoot().textContent).toContain("稍后阅读");
+    expect(modalRoot().querySelector("a.feed-item__title--link")).not.toBeNull();
+  });
 });
 
 let mountedWrapper: VueWrapper | undefined;
 
-function mountModal(feed: LinkFeedItems) {
+function mountModal(feed: LinkFeedItems, canManage = true) {
   mountedWrapper?.unmount();
   document.body.innerHTML = "";
   const host = document.createElement("div");
@@ -157,6 +169,7 @@ function mountModal(feed: LinkFeedItems) {
     props: {
       feed,
       sourceName: () => "Example source",
+      canManage,
     },
     attachTo: host,
   });

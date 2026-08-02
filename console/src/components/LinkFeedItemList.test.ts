@@ -76,7 +76,7 @@ describe("LinkFeedItemList", () => {
     await wrapper.get('[aria-label="隐藏文章"]').trigger("click");
     expect(wrapper.emitted("hide")).toEqual([[items[0]]]);
 
-    const hiddenWrapper = mountList({ feed: fakeFeed({ items }), itemActionMode: "hidden" });
+    const hiddenWrapper = mountList({ feed: fakeFeed({ items }), itemActionMode: "hidden", unhideable: true });
     await hiddenWrapper.get('[aria-label="恢复显示"]').trigger("click");
     expect(hiddenWrapper.emitted("unhide")).toEqual([[items[0]]]);
   });
@@ -99,6 +99,7 @@ function mountList(options: {
   selectable?: boolean;
   selectedIds?: string[];
   hideable?: boolean;
+  unhideable?: boolean;
   itemActionMode?: "all" | "favorite-only" | "hidden";
 }) {
   return mount(LinkFeedItemList, {
@@ -109,6 +110,7 @@ function mountList(options: {
       selectable: options.selectable,
       selectedIds: options.selectedIds,
       hideable: options.hideable,
+      unhideable: options.unhideable,
       itemActionMode: options.itemActionMode,
     },
     global: {

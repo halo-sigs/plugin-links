@@ -22,6 +22,7 @@ const props = withDefaults(
     selectable?: boolean;
     selected?: boolean;
     hideable?: boolean;
+    unhideable?: boolean;
   }>(),
   {
     itemActionMode: "all",
@@ -84,7 +85,7 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
 
         <div class=":uno: feed-item__actions">
           <VButton
-            v-if="isHiddenMode"
+            v-if="isHiddenMode && unhideable"
             size="sm"
             ghost
             class=":uno: feed-item__action"

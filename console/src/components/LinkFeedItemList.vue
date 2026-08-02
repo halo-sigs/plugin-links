@@ -16,6 +16,7 @@ const props = withDefaults(
     selectable?: boolean;
     selectedIds?: string[];
     hideable?: boolean;
+    unhideable?: boolean;
   }>(),
   {
     itemActionMode: "all",
@@ -75,6 +76,7 @@ watch([isLoadMoreTriggerVisible, hasNext, isLoading, isLoadingMore], () => {
       :selectable="selectable"
       :selected="!!item.id && selectedIdSet.has(item.id)"
       :hideable="hideable"
+      :unhideable="unhideable"
       @toggle-select="emit('toggle-select', item)"
       @hide="emit('hide', item)"
       @unhide="emit('unhide', item)"

@@ -54,6 +54,7 @@ describe("LinkFeedItemCard", () => {
   it("keeps hidden mode free of state toggles and offers direct unhide", async () => {
     const wrapper = mountCard({
       itemActionMode: "hidden",
+      unhideable: true,
       item: feedItem({ read: true, favorite: true, readLater: true }),
     });
 
@@ -106,6 +107,7 @@ function mountCard(
     selectable?: boolean;
     selected?: boolean;
     hideable?: boolean;
+    unhideable?: boolean;
   } = {},
 ) {
   return mount(LinkFeedItemCard, {
@@ -116,6 +118,7 @@ function mountCard(
       selectable: options.selectable,
       selected: options.selected,
       hideable: options.hideable,
+      unhideable: options.unhideable,
     },
     global: {
       plugins: [[VueQueryPlugin, { queryClient: createFeedTestQueryClient() }]],

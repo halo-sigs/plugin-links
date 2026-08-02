@@ -11,10 +11,16 @@ const emit = defineEmits<{
 }>();
 
 const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
-const props = defineProps<{
-  feed: LinkFeedItems;
-  sourceName: (linkName?: string) => string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    feed: LinkFeedItems;
+    sourceName: (linkName?: string) => string;
+    canManage?: boolean;
+  }>(),
+  {
+    canManage: false,
+  },
+);
 
 const { isUpdating, setHiddenState } = useLinkFeedHiddenState();
 
@@ -46,7 +52,7 @@ function clearSelection() {
 }
 
 async function handleUnhide(item: LinkFeedItem) {
-  if (!item.id || isUpdating.value) {
+  if (!props.canManage || !item.id || isUpdating.value) {
     return;
   }
   const result = await setHiddenState([item.id], false);
@@ -58,7 +64,7 @@ async function handleUnhide(item: LinkFeedItem) {
 }
 
 function handleBatchUnhide() {
-  if (!selectedCount.value || isUpdating.value) {
+  if (!props.canManage || !selectedCount.value || isUpdating.value) {
     return;
   }
 
@@ -94,7 +100,7 @@ async function handleReload() {
 <template>
   <VModal ref="modal" :centered="false" title="已隐藏文章" :mount-to-body="true" :width="860" @close="emit('close')">
     <div class=":uno: hidden-feed">
-      <div class=":uno: hidden-feed__toolbar">
+      <div v-if="canManage" class=":uno: hidden-feed__toolbar">
         <span class=":uno: hidden-feed__selection" role="status">
           {{ selectedCount ? `已选 ${selectedCount} 篇` : "勾选文章后可批量恢复" }}
         </span>
@@ -114,7 +120,8 @@ async function handleReload() {
         :source-name="sourceName"
         empty-text="暂无已隐藏文章"
         item-action-mode="hidden"
-        selectable
+        :selectable="canManage"
+        :unhideable="canManage"
         :selected-ids="selectedIds"
         @toggle-select="toggleSelect"
         @unhide="handleUnhide"

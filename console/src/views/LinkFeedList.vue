@@ -14,6 +14,7 @@ import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/u
 import { linkFeedUnreadCount, useLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
 import { Dialog, IconArrowLeft, IconRefreshLine, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
+import { utils } from "@halo-dev/ui-shared";
 import { computed, defineAsyncComponent, shallowRef, watch } from "vue";
 import { useRouter } from "vue-router";
 import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
@@ -76,6 +77,7 @@ const selectionMode = shallowRef(false);
 const selectedIds = shallowRef<string[]>([]);
 const mainItems = computed(() => mainFeed.items.value);
 const selectedCount = computed(() => selectedIds.value.length);
+const canManageHiddenState = computed(() => utils.permission.has(["plugin:links:manage"]));
 const allLoadedSelected = computed(() => {
   return mainItems.value.length > 0 && mainItems.value.every((item) => item.id && selectedIds.value.includes(item.id));
 });
@@ -189,7 +191,7 @@ const refreshProgressText = computed(() => {
 });
 
 const hiddenCount = computed(() => {
-  return hiddenCountData.value?.hiddenCount || 0;
+  return hiddenCountData.value?.hiddenCount;
 });
 
 function sourceLink(linkName?: string): Link | undefined {
@@ -232,6 +234,9 @@ async function reloadMainFeed() {
 }
 
 function enterSelectionMode() {
+  if (!canManageHiddenState.value) {
+    return;
+  }
   selectedIds.value = [];
   selectionMode.value = true;
 }
@@ -257,7 +262,7 @@ function selectAllLoaded() {
 }
 
 function handleHideItem(item: LinkFeedItem) {
-  if (!item.id || isUpdatingHiddenState.value) {
+  if (!canManageHiddenState.value || !item.id || isUpdatingHiddenState.value) {
     return;
   }
   const title = item.title || item.url || "未命名文章";
@@ -279,7 +284,7 @@ function handleHideItem(item: LinkFeedItem) {
 }
 
 function handleBatchHide() {
-  if (!selectedCount.value || isUpdatingHiddenState.value) {
+  if (!canManageHiddenState.value || !selectedCount.value || isUpdatingHiddenState.value) {
     return;
   }
 
@@ -422,7 +427,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
           <template #icon>
             <EyeCloseLineIcon />
           </template>
-          已隐藏{{ hiddenCount ? ` (${hiddenCount})` : "" }}
+          已隐藏{{ hiddenCount !== undefined ? ` (${hiddenCount})` : "" }}
         </VButton>
         <VButton size="sm" @click="router.push({ name: 'Links' })">
           <template #icon>
@@ -467,7 +472,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
         <div class=":uno: feed-toolbar">
           <LinkFeedReadStatusTabs :selected-status="selectedReadStatus" @select="selectReadStatus" />
           <div class=":uno: feed-toolbar__actions">
-            <VSpace v-if="selectionMode" class=":uno: flex-wrap">
+            <VSpace v-if="selectionMode && canManageHiddenState" class=":uno: flex-wrap">
               <span class=":uno: feed-selection-status" role="status">已选 {{ selectedCount }} 篇</span>
               <VButton size="sm" ghost :disabled="!mainItems.length || allLoadedSelected" @click="selectAllLoaded">
                 全选已加载
@@ -511,7 +516,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                 </template>
                 全部标为已读
               </VButton>
-              <VButton size="sm" :disabled="!mainItems.length" @click="enterSelectionMode">
+              <VButton v-if="canManageHiddenState" size="sm" :disabled="!mainItems.length" @click="enterSelectionMode">
                 <template #icon>
                   <MultiselectLineIcon />
                 </template>
@@ -531,9 +536,9 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
           :feed="mainFeed"
           :source-name="sourceName"
           empty-text="暂无订阅动态"
-          :selectable="selectionMode"
+          :selectable="selectionMode && canManageHiddenState"
           :selected-ids="selectedIds"
-          hideable
+          :hideable="canManageHiddenState"
           @toggle-select="toggleSelect"
           @hide="handleHideItem"
         />
@@ -566,6 +571,7 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
     v-if="hiddenModalVisible"
     :feed="hiddenFeed"
     :source-name="sourceName"
+    :can-manage="canManageHiddenState"
     @close="hiddenModalVisible = false"
   />
 

@@ -1,6 +1,7 @@
 import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { Dialog, Toast } from "@halo-dev/components";
+import { utils } from "@halo-dev/ui-shared";
 import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { computed, nextTick, shallowRef, type ShallowRef } from "vue";
@@ -13,6 +14,7 @@ const viewMocks = rstest.hoisted(() => ({
   setHiddenState: rstest.fn(),
   useLinkFeedItemsCalls: { count: 0 },
 }));
+const permissionSpy = rstest.spyOn(utils.permission, "has");
 
 rstest.mock("@/composables/use-link-feed", () => ({
   useLinkFeedItems: () => {
@@ -75,7 +77,9 @@ rstest.mock("@vueuse/core", () => ({
 
 describe("LinkFeedList hidden workflows", () => {
   beforeEach(() => {
+    permissionSpy.mockReturnValue(true);
     viewMocks.useLinkFeedItemsCalls.count = 0;
+    viewMocks.hiddenCount.value = { hiddenCount: 3 };
     viewMocks.mainFeed = createFeed([feedItem({ id: "item-1" }), feedItem({ id: "item-2", title: "Second" })]);
     viewMocks.setHiddenState.mockResolvedValue({ requestedCount: 2, updatedCount: 2 });
   });
@@ -88,6 +92,25 @@ describe("LinkFeedList hidden workflows", () => {
     expect(entry?.textContent).toContain("已隐藏 (3)");
     const buttons = Array.from(viewRoot().querySelectorAll<HTMLButtonElement>("button"));
     expect(buttons.indexOf(entry!)).toBe(buttons.indexOf(favoriteEntry!) + 1);
+  });
+
+  it("shows an exact zero hidden count after the query resolves", () => {
+    viewMocks.hiddenCount.value = { hiddenCount: 0 };
+
+    mountView();
+
+    expect(viewButton("已隐藏")?.textContent).toContain("已隐藏 (0)");
+  });
+
+  it("keeps hidden items visible but hides mutation controls without manage permission", async () => {
+    permissionSpy.mockReturnValue(false);
+
+    mountView();
+    await nextTick();
+
+    expect(viewButton("已隐藏")).toBeDefined();
+    expect(viewButton("批量选择")).toBeUndefined();
+    expect(viewButton("隐藏文章")).toBeUndefined();
   });
 
   it("hides a single item after confirmation", async () => {
