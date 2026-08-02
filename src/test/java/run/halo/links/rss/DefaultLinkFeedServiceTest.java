@@ -504,6 +504,7 @@ class DefaultLinkFeedServiceTest {
         query.setRead(false);
         query.setFavorite(true);
         query.setReadLater(true);
+        query.setHidden(true);
         service.listItems(query);
 
         ArgumentCaptor<LinkFeedItemQuery> queryCaptor =
@@ -514,6 +515,7 @@ class DefaultLinkFeedServiceTest {
                 assertThat(actual.getRead()).isFalse();
                 assertThat(actual.getFavorite()).isTrue();
                 assertThat(actual.getReadLater()).isTrue();
+                assertThat(actual.getHidden()).isTrue();
             });
     }
 

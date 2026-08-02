@@ -6,6 +6,8 @@ import { utils } from "@halo-dev/ui-shared";
 import { computed } from "vue";
 import CalendarTimeAddFillIcon from "~icons/mingcute/calendar-time-add-fill?width=unset&height=unset";
 import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
+import EyeCloseLineIcon from "~icons/mingcute/eye-close-line?width=unset&height=unset";
+import EyeLineIcon from "~icons/mingcute/eye-line?width=unset&height=unset";
 import MailLineIcon from "~icons/mingcute/mail-line?width=unset&height=unset";
 import MailOpenLineIcon from "~icons/mingcute/mail-open-line?width=unset&height=unset";
 import StarFillIcon from "~icons/mingcute/star-fill?width=unset&height=unset";
@@ -16,12 +18,24 @@ const props = withDefaults(
     item: LinkFeedItem;
     sourceName: string;
     compact?: boolean;
-    itemActionMode?: "all" | "favorite-only";
+    itemActionMode?: "all" | "favorite-only" | "hidden";
+    selectable?: boolean;
+    selected?: boolean;
+    hideable?: boolean;
+    unhideable?: boolean;
   }>(),
   {
     itemActionMode: "all",
   },
 );
+
+const emit = defineEmits<{
+  (event: "toggle-select"): void;
+  (event: "hide"): void;
+  (event: "unhide"): void;
+}>();
+
+const isHiddenMode = computed(() => props.itemActionMode === "hidden");
 
 function articleTitle(item: LinkFeedItem) {
   return item.title || item.url || "未命名文章";
@@ -45,10 +59,19 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
     :class="{
       ':uno: feed-item--read': item.read,
       ':uno: feed-item--compact': compact,
+      ':uno: feed-item--selected': selected,
     }"
   >
     <div class=":uno: feed-item__rail">
-      <span class=":uno: feed-item__dot" :class="{ ':uno: feed-item__dot--read': item.read }"></span>
+      <input
+        v-if="selectable"
+        type="checkbox"
+        class=":uno: feed-item__checkbox"
+        :checked="selected"
+        :aria-label="`选择文章 ${articleTitle(item)}`"
+        @change="emit('toggle-select')"
+      />
+      <span v-else class=":uno: feed-item__dot" :class="{ ':uno: feed-item__dot--read': item.read }"></span>
     </div>
 
     <div class=":uno: feed-item__content">
@@ -62,52 +85,83 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
 
         <div class=":uno: feed-item__actions">
           <VButton
+            v-if="isHiddenMode && unhideable"
             size="sm"
             ghost
             class=":uno: feed-item__action"
-            :aria-label="item.favorite ? '取消收藏' : '收藏'"
+            aria-label="恢复显示"
             v-tooltip="{
-              content: item.favorite ? '取消收藏' : '收藏',
+              content: '恢复显示',
             }"
-            @click="toggleFavorite()"
-            :disabled="isMarkingFavorite"
+            @click="emit('unhide')"
           >
-            <StarFillIcon v-if="item.favorite" class=":uno: feed-item__action-icon feed-item__action-icon--favorite" />
-            <StarLineIcon v-else class=":uno: feed-item__action-icon" />
+            <EyeLineIcon class=":uno: feed-item__action-icon" />
           </VButton>
-          <VButton
-            v-if="itemActionMode === 'all'"
-            size="sm"
-            ghost
-            class=":uno: feed-item__action"
-            :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
-            :disabled="isMarkingReadLater"
-            v-tooltip="{
-              content: item.readLater ? '移出稍后阅读' : '稍后阅读',
-            }"
-            @click="toggleReadLater()"
-          >
-            <CalendarTimeAddFillIcon
-              v-if="item.readLater"
-              class=":uno: feed-item__action-icon feed-item__action-icon--read-later"
-            />
-            <CalendarTimeAddLineIcon v-else class=":uno: feed-item__action-icon" />
-          </VButton>
-          <VButton
-            v-if="itemActionMode === 'all'"
-            size="sm"
-            ghost
-            class=":uno: feed-item__action"
-            :aria-label="readActionLabel"
-            :disabled="isMarkingRead"
-            v-tooltip="{
-              content: readActionLabel,
-            }"
-            @click="toggleRead()"
-          >
-            <MailOpenLineIcon v-if="item.read" class=":uno: feed-item__action-icon" />
-            <MailLineIcon v-else class=":uno: feed-item__action-icon feed-item__action-icon--unread" />
-          </VButton>
+          <template v-if="!isHiddenMode">
+            <VButton
+              size="sm"
+              ghost
+              class=":uno: feed-item__action"
+              :aria-label="item.favorite ? '取消收藏' : '收藏'"
+              v-tooltip="{
+                content: item.favorite ? '取消收藏' : '收藏',
+              }"
+              @click="toggleFavorite()"
+              :disabled="isMarkingFavorite"
+            >
+              <StarFillIcon
+                v-if="item.favorite"
+                class=":uno: feed-item__action-icon feed-item__action-icon--favorite"
+              />
+              <StarLineIcon v-else class=":uno: feed-item__action-icon" />
+            </VButton>
+            <VButton
+              v-if="itemActionMode === 'all'"
+              size="sm"
+              ghost
+              class=":uno: feed-item__action"
+              :aria-label="item.readLater ? '移出稍后阅读' : '稍后阅读'"
+              :disabled="isMarkingReadLater"
+              v-tooltip="{
+                content: item.readLater ? '移出稍后阅读' : '稍后阅读',
+              }"
+              @click="toggleReadLater()"
+            >
+              <CalendarTimeAddFillIcon
+                v-if="item.readLater"
+                class=":uno: feed-item__action-icon feed-item__action-icon--read-later"
+              />
+              <CalendarTimeAddLineIcon v-else class=":uno: feed-item__action-icon" />
+            </VButton>
+            <VButton
+              v-if="itemActionMode === 'all'"
+              size="sm"
+              ghost
+              class=":uno: feed-item__action"
+              :aria-label="readActionLabel"
+              :disabled="isMarkingRead"
+              v-tooltip="{
+                content: readActionLabel,
+              }"
+              @click="toggleRead()"
+            >
+              <MailOpenLineIcon v-if="item.read" class=":uno: feed-item__action-icon" />
+              <MailLineIcon v-else class=":uno: feed-item__action-icon feed-item__action-icon--unread" />
+            </VButton>
+            <VButton
+              v-if="hideable && itemActionMode === 'all'"
+              size="sm"
+              ghost
+              class=":uno: feed-item__action"
+              aria-label="隐藏文章"
+              v-tooltip="{
+                content: '隐藏文章',
+              }"
+              @click="emit('hide')"
+            >
+              <EyeCloseLineIcon class=":uno: feed-item__action-icon" />
+            </VButton>
+          </template>
         </div>
       </div>
 
@@ -169,6 +223,18 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
 
 .feed-item--compact {
   padding: 0.75rem;
+}
+
+.feed-item--selected {
+  background: rgb(239 246 255 / 0.55);
+}
+
+.feed-item__checkbox {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  accent-color: rgb(24 24 27);
+  cursor: pointer;
 }
 
 .feed-item__rail {
@@ -352,8 +418,13 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
     gap: 0.625rem;
   }
 
-  .feed-item__rail {
+  .feed-item__dot {
     display: none;
+  }
+
+  .feed-item__rail {
+    justify-content: flex-start;
+    padding-top: 0;
   }
 
   .feed-item__header {

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.links.rss.LinkFeedItemQuery;
@@ -47,6 +48,24 @@ class LinkFeedFinderImplTest {
         StepVerifier.create(finder.list(Map.of("limit", 10)))
             .expectNext(page)
             .verifyComplete();
+    }
+
+    @Test
+    void shouldDiscardHiddenFilterFromFinderParameters() {
+        LinkFeedPublicQueryService service = mock(LinkFeedPublicQueryService.class);
+        LinkFeedItemPageVo page = new LinkFeedItemPageVo(List.of(), null, null, false);
+        when(service.isPublicEnabled()).thenReturn(Mono.just(true));
+        when(service.listFeeds(isNull(), any(LinkFeedItemQuery.class))).thenReturn(Mono.just(page));
+        LinkFeedFinderImpl finder = new LinkFeedFinderImpl(null, service, null);
+
+        StepVerifier.create(finder.list(Map.of("limit", 10, "hidden", true)))
+            .expectNext(page)
+            .verifyComplete();
+
+        ArgumentCaptor<LinkFeedItemQuery> queryCaptor =
+            ArgumentCaptor.forClass(LinkFeedItemQuery.class);
+        verify(service).listFeeds(isNull(), queryCaptor.capture());
+        assertThat(queryCaptor.getValue().getHidden()).isFalse();
     }
 
     @Test

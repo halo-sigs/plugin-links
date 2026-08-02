@@ -6,6 +6,7 @@ import { useRouteQuery } from "@vueuse/router";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
 export const QK_LINK_FEED_ITEMS = "plugin:links:feed-items";
+export const QK_LINK_FEED_HIDDEN_ITEMS = "plugin:links:feed-hidden-items";
 const LINK_FEED_PAGE_SIZE = 30;
 
 export type LinkFeedReadStatus = "" | "unread" | "read";
@@ -16,6 +17,7 @@ export interface LinkFeedItemsFilter {
   read?: boolean;
   favorite?: boolean;
   readLater?: boolean;
+  hidden?: boolean;
 }
 
 export interface UseLinkFeedItemsOptions {
@@ -54,7 +56,9 @@ export function useLinkFeedItems(options: UseLinkFeedItemsOptions = {}) {
     ...toValue(options.fixedFilter),
   }));
 
-  const queryKey = computed(() => [QK_LINK_FEED_ITEMS, activeFilter.value] as const);
+  const queryKey = computed(
+    () => [activeFilter.value.hidden ? QK_LINK_FEED_HIDDEN_ITEMS : QK_LINK_FEED_ITEMS, activeFilter.value] as const,
+  );
 
   const query = useInfiniteQuery<LinkFeedItemPage>({
     queryKey,

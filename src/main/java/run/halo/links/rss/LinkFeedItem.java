@@ -1,5 +1,6 @@
 package run.halo.links.rss;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import lombok.Data;
 
@@ -24,4 +25,6 @@ public class LinkFeedItem {
     private Boolean read;
     private Boolean favorite;
     private Boolean readLater;
+    @Schema(description = "Whether this cached item is hidden from normal and public feed lists.")
+    private Boolean hidden;
 }

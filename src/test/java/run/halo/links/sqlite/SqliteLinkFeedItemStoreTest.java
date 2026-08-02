@@ -1,9 +1,12 @@
 package run.halo.links.sqlite;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import run.halo.links.rss.LinkFeedItem;
@@ -183,6 +186,183 @@ class SqliteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldHideByExactStableIdAndFilterBeforePagination() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("visible-new", "link-a", "Visible", "2026-05-23T10:00:00Z"));
+            store.upsert(item("hidden-middle", "link-a", "Hidden", "2026-05-22T10:00:00Z"));
+            store.upsert(item("visible-old", "link-a", "Visible", "2026-05-21T10:00:00Z"));
+
+            assertThat(store.updateHidden(List.of("hidden-middle"), true))
+                .satisfies(result -> {
+                    assertThat(result.getRequestedCount()).isOne();
+                    assertThat(result.getUpdatedCount()).isOne();
+                });
+
+            LinkFeedItemQuery visibleQuery = new LinkFeedItemQuery();
+            visibleQuery.setLimit(2);
+            assertThat(store.listRecent(visibleQuery))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("visible-new", "visible-old");
+
+            LinkFeedItemQuery hiddenQuery = new LinkFeedItemQuery();
+            hiddenQuery.setHidden(true);
+            assertThat(store.listRecent(hiddenQuery))
+                .singleElement()
+                .satisfies(hidden -> {
+                    assertThat(hidden.getId()).isEqualTo("hidden-middle");
+                    assertThat(hidden.getHidden()).isTrue();
+                });
+            assertThat(store.countHidden()).isOne();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldCombineHiddenAndSavedStateFilters() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("hidden-favorite", "link-a", "Favorite",
+                "2026-05-22T10:00:00Z", true, false));
+            store.upsert(item("hidden-unsaved", "link-a", "Unsaved",
+                "2026-05-21T10:00:00Z"));
+            store.upsert(item("visible-favorite", "link-a", "Visible",
+                "2026-05-20T10:00:00Z", true, false));
+            store.updateHidden(List.of("hidden-favorite", "hidden-unsaved"), true);
+
+            LinkFeedItemQuery query = new LinkFeedItemQuery();
+            query.setLinkName("link-a");
+            query.setHidden(true);
+            query.setFavorite(true);
+
+            assertThat(store.listRecent(query))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("hidden-favorite");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldDeduplicateIgnoreMissingAndCountOnlyActualHiddenChanges() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("item-1", "link-a", "One", "2026-05-22T10:00:00Z"));
+            store.upsert(item("item-2", "link-a", "Two", "2026-05-21T10:00:00Z",
+                true, true));
+            store.updateRead("item-2", true);
+
+            assertThat(store.updateHidden(List.of("item-1", "item-1", "missing"), true))
+                .satisfies(result -> {
+                    assertThat(result.getRequestedCount()).isEqualTo(2);
+                    assertThat(result.getUpdatedCount()).isOne();
+                });
+            assertThat(store.updateHidden(List.of("item-1"), true).getUpdatedCount()).isZero();
+            assertThat(store.updateHidden(List.of("item-2"), true).getUpdatedCount()).isOne();
+
+            LinkFeedItemQuery hiddenQuery = new LinkFeedItemQuery();
+            hiddenQuery.setHidden(true);
+            assertThat(store.listRecent(hiddenQuery))
+                .filteredOn(item -> item.getId().equals("item-2"))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.getRead()).isTrue();
+                    assertThat(item.getFavorite()).isTrue();
+                    assertThat(item.getReadLater()).isTrue();
+                });
+
+            assertThat(store.updateHidden(List.of("item-2"), false).getUpdatedCount()).isOne();
+            LinkFeedItemQuery visibleSavedQuery = new LinkFeedItemQuery();
+            visibleSavedQuery.setFavorite(true);
+            assertThat(store.listRecent(visibleSavedQuery))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.getId()).isEqualTo("item-2");
+                    assertThat(item.getRead()).isTrue();
+                    assertThat(item.getReadLater()).isTrue();
+                });
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldRejectEmptyOrBlankHiddenStateIds() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+
+            assertThatThrownBy(() -> store.updateHidden(List.of(), true))
+                .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> store.updateHidden(List.of(" "), true))
+                .isInstanceOf(IllegalArgumentException.class);
+            assertThat(store.count()).isZero();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldRollbackEntireHiddenBatchWhenOneUpdateFails() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("item-1", "link-a", "One", "2026-05-22T10:00:00Z"));
+            store.upsert(item("item-2", "link-a", "Two", "2026-05-21T10:00:00Z"));
+            database.execute(connection -> {
+                try (var statement = connection.createStatement()) {
+                    statement.execute("""
+                        CREATE TRIGGER fail_second_hidden_update
+                        BEFORE UPDATE OF hidden ON link_feed_items
+                        WHEN OLD.id = 'item-2'
+                        BEGIN
+                          SELECT RAISE(ABORT, 'test failure');
+                        END
+                        """);
+                }
+                return null;
+            });
+
+            assertThatThrownBy(() -> store.updateHidden(List.of("item-1", "item-2"), true))
+                .isInstanceOf(IllegalStateException.class);
+            assertThat(store.countHidden()).isZero();
+            assertThat(store.listRecent(new LinkFeedItemQuery()))
+                .extracting(LinkFeedItem::getId)
+                .containsExactly("item-1", "item-2");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldPreserveHiddenStateDuringRefreshUpsert() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("item-1", "link-a", "Original", "2026-05-20T10:00:00Z"));
+            store.updateHidden(List.of("item-1"), true);
+
+            store.upsert(item("item-1", "link-a", "Updated", "2026-05-20T10:00:00Z"));
+
+            LinkFeedItemQuery hiddenQuery = new LinkFeedItemQuery();
+            hiddenQuery.setHidden(true);
+            assertThat(store.listRecent(hiddenQuery))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.getTitle()).isEqualTo("Updated");
+                    assertThat(item.getHidden()).isTrue();
+                });
+            assertThat(store.count()).isOne();
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldMarkAllUnreadItemsAsRead() {
         LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
@@ -290,6 +470,32 @@ class SqliteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldExcludeHiddenItemsFromUnreadCountsAndBulkMarkRead() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("visible-unread", "link-a", "Visible",
+                "2026-05-22T10:00:00Z"));
+            store.upsert(item("hidden-unread", "link-a", "Hidden",
+                "2026-05-21T10:00:00Z"));
+            store.updateHidden(List.of("hidden-unread"), true);
+
+            assertThat(store.countUnread()).isOne();
+            assertThat(store.countUnreadByLinkName())
+                .containsExactlyEntriesOf(Map.of("link-a", 1L));
+            assertThat(store.markUnreadAsRead(null)).isOne();
+
+            LinkFeedItemQuery hiddenQuery = new LinkFeedItemQuery();
+            hiddenQuery.setHidden(true);
+            assertThat(store.listRecent(hiddenQuery))
+                .singleElement()
+                .satisfies(item -> assertThat(item.getRead()).isFalse());
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldPreserveFirstSeenAtWhenRefreshingExistingItem() {
         LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
@@ -377,6 +583,38 @@ class SqliteLinkFeedItemStoreTest {
             assertThat(store.listRecent(new LinkFeedItemQuery()))
                 .extracting(LinkFeedItem::getId)
                 .containsExactly("new-unsaved", "old-later", "old-favorite");
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
+    void shouldProtectHiddenItemsFromRetentionButDeleteThemWithLink() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+            store.upsert(item("hidden-old", "link-a", "Hidden", "2026-05-18T10:00:00Z",
+                "2026-05-18T12:00:00Z", "2026-05-22T12:00:00Z"));
+            store.upsert(item("visible-new", "link-a", "Visible", "2026-05-22T10:00:00Z"));
+            store.updateHidden(List.of("hidden-old"), true);
+
+            store.deleteOlderThan(Instant.parse("2026-05-21T00:00:00Z"));
+            store.deleteExcessByLinkName("link-a", 0);
+
+            assertThat(store.count()).isOne();
+            store.upsert(item("visible-again", "link-a", "Visible again",
+                "2026-05-23T10:00:00Z"));
+            store.deleteExcess(0);
+
+            assertThat(store.count()).isOne();
+            assertThat(store.countByLinkName("link-a")).isOne();
+            assertThat(store.countByLinkNameAndFeedUrl("link-a",
+                "https://example.com/feed.xml")).isOne();
+            assertThat(store.countHidden()).isOne();
+
+            store.deleteByLinkName("link-a");
+            assertThat(store.count()).isZero();
+            assertThat(store.countHidden()).isZero();
         } finally {
             database.destroy();
         }

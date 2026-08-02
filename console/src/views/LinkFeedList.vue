@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Link } from "@/api/generated";
+import type { Link, LinkFeedItem } from "@/api/generated";
 import LinkFeedBackToTopButton from "@/components/LinkFeedBackToTopButton.vue";
 import LinkFeedItemList from "@/components/LinkFeedItemList.vue";
 import LinkFeedReadStatusTabs from "@/components/LinkFeedReadStatusTabs.vue";
@@ -8,20 +8,27 @@ import LinkFeedStatusModal from "@/components/LinkFeedStatusModal.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
 import { aggregateLinkFeedStatusMeta, linkFeedStatusMeta } from "@/composables/link-feed-status";
 import { useLinkFeedItems } from "@/composables/use-link-feed";
+import { useLinkFeedHiddenCount, useLinkFeedHiddenState } from "@/composables/use-link-feed-hidden-state";
 import { useLinkFeedMarkAllRead, type LinkFeedMarkAllReadSummary } from "@/composables/use-link-feed-mark-all-read";
 import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
 import { linkFeedUnreadCount, useLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { useRssLinksFetch } from "@/composables/use-link-fetch";
 import { Dialog, IconArrowLeft, IconRefreshLine, Toast, VButton, VPageHeader, VSpace } from "@halo-dev/components";
-import { computed, defineAsyncComponent, shallowRef } from "vue";
+import { utils } from "@halo-dev/ui-shared";
+import { computed, defineAsyncComponent, shallowRef, watch } from "vue";
 import { useRouter } from "vue-router";
 import CalendarTimeAddLineIcon from "~icons/mingcute/calendar-time-add-line?width=unset&height=unset";
+import EyeCloseLineIcon from "~icons/mingcute/eye-close-line?width=unset&height=unset";
 import MailOpenLineIcon from "~icons/mingcute/mail-open-line?width=unset&height=unset";
+import MultiselectLineIcon from "~icons/mingcute/multiselect-line?width=unset&height=unset";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
 const LinkFeedItemsModal = defineAsyncComponent(
   () => import(/* webpackChunkName: "link-feed-items-modal" */ "@/components/LinkFeedItemsModal.vue"),
+);
+const LinkFeedHiddenItemsModal = defineAsyncComponent(
+  () => import(/* webpackChunkName: "link-feed-hidden-items-modal" */ "@/components/LinkFeedHiddenItemsModal.vue"),
 );
 
 const router = useRouter();
@@ -30,8 +37,11 @@ const { data: groupsWithLinks, isLoading: isLoadingLinks } = useRssLinksFetch();
 const favoriteModalVisible = shallowRef(false);
 const readLaterModalVisible = shallowRef(false);
 const statusModalVisible = shallowRef(false);
+const hiddenModalVisible = shallowRef(false);
 const mainFeed = useLinkFeedItems();
 const { data: unreadSummary } = useLinkFeedUnreadSummary();
+const { data: hiddenCountData } = useLinkFeedHiddenCount();
+const { isUpdating: isUpdatingHiddenState, setHiddenState } = useLinkFeedHiddenState();
 
 const readLaterFeed = useLinkFeedItems({
   enabled: readLaterModalVisible,
@@ -51,8 +61,30 @@ const favoriteFeed = useLinkFeedItems({
   useRouteLinkFilter: false,
 });
 
-const { selectedLinkName, selectedReadStatus, isFetching, reload, selectLink, selectReadStatus } = mainFeed;
+const hiddenFeed = useLinkFeedItems({
+  enabled: hiddenModalVisible,
+  fixedFilter: {
+    hidden: true,
+  },
+  useReadStatusFilter: false,
+  useRouteLinkFilter: false,
+});
+
+const { selectedLinkName, selectedReadStatus, isFetching, selectLink, selectReadStatus } = mainFeed;
 const { isMarkingAllRead, markAllRead } = useLinkFeedMarkAllRead();
+
+const selectionMode = shallowRef(false);
+const selectedIds = shallowRef<string[]>([]);
+const mainItems = computed(() => mainFeed.items.value);
+const selectedCount = computed(() => selectedIds.value.length);
+const canManageHiddenState = computed(() => utils.permission.has(["plugin:links:manage"]));
+const allLoadedSelected = computed(() => {
+  return mainItems.value.length > 0 && mainItems.value.every((item) => item.id && selectedIds.value.includes(item.id));
+});
+
+watch([selectedLinkName, selectedReadStatus], () => {
+  selectedIds.value = [];
+});
 
 const {
   isRefreshing: isRefreshingCurrentSubscription,
@@ -158,6 +190,10 @@ const refreshProgressText = computed(() => {
   return "";
 });
 
+const hiddenCount = computed(() => {
+  return hiddenCountData.value?.hiddenCount;
+});
+
 function sourceLink(linkName?: string): Link | undefined {
   if (!linkName) {
     return undefined;
@@ -188,12 +224,99 @@ function openStatusModal() {
   statusModalVisible.value = true;
 }
 
+function openHiddenModal() {
+  hiddenModalVisible.value = true;
+}
+
+async function reloadMainFeed() {
+  selectedIds.value = [];
+  await mainFeed.reload();
+}
+
+function enterSelectionMode() {
+  if (!canManageHiddenState.value) {
+    return;
+  }
+  selectedIds.value = [];
+  selectionMode.value = true;
+}
+
+function exitSelectionMode() {
+  selectedIds.value = [];
+  selectionMode.value = false;
+}
+
+function toggleSelect(item: LinkFeedItem) {
+  if (!item.id) {
+    return;
+  }
+  if (selectedIds.value.includes(item.id)) {
+    selectedIds.value = selectedIds.value.filter((id) => id !== item.id);
+  } else {
+    selectedIds.value = [...selectedIds.value, item.id];
+  }
+}
+
+function selectAllLoaded() {
+  selectedIds.value = mainItems.value.map((item) => item.id).filter((id): id is string => !!id);
+}
+
+function handleHideItem(item: LinkFeedItem) {
+  if (!canManageHiddenState.value || !item.id || isUpdatingHiddenState.value) {
+    return;
+  }
+  const title = item.title || item.url || "未命名文章";
+  const itemId = item.id;
+
+  Dialog.warning({
+    title: "隐藏文章",
+    description: `确认隐藏「${title}」吗？隐藏后将从正常列表和公开订阅中移除，可在「已隐藏」中恢复。`,
+    confirmType: "primary",
+    onConfirm: async () => {
+      const result = await setHiddenState([itemId], true);
+      if (!result) {
+        return;
+      }
+      selectedIds.value = selectedIds.value.filter((id) => id !== itemId);
+      showHideSummary(result.updatedCount);
+    },
+  });
+}
+
+function handleBatchHide() {
+  if (!canManageHiddenState.value || !selectedCount.value || isUpdatingHiddenState.value) {
+    return;
+  }
+
+  Dialog.warning({
+    title: "隐藏所选文章",
+    description: `确认隐藏所选的 ${selectedCount.value} 篇文章吗？隐藏后将从正常列表和公开订阅中移除，可在「已隐藏」中恢复。`,
+    confirmType: "primary",
+    onConfirm: async () => {
+      const result = await setHiddenState(selectedIds.value, true);
+      if (!result) {
+        return;
+      }
+      exitSelectionMode();
+      showHideSummary(result.updatedCount);
+    },
+  });
+}
+
+function showHideSummary(updatedCount: number) {
+  if (!updatedCount) {
+    Toast.info("所选文章已处于隐藏状态");
+    return;
+  }
+  Toast.success(`已隐藏 ${updatedCount} 篇文章`);
+}
+
 async function handleRefreshCurrentSubscription() {
   if (!selectedLink.value || isRemoteRefreshing.value) {
     return;
   }
   const summary = await refreshCurrentSubscriptions(selectedLink.value);
-  await reload();
+  await reloadMainFeed();
   showRefreshSummary(summary, "当前订阅");
 }
 
@@ -202,7 +325,7 @@ async function handleRefreshAllSubscriptions() {
     return;
   }
   const summary = await refreshAllSubscriptions(allLinks.value);
-  await reload();
+  await reloadMainFeed();
   showRefreshSummary(summary, "全部订阅");
 }
 
@@ -218,7 +341,7 @@ function handleMarkAllRead() {
     onConfirm: async () => {
       const scopeLabel = markAllReadScopeLabel.value;
       const summary = await markAllRead(selectedLinkName.value);
-      await reload();
+      await reloadMainFeed();
       showMarkAllReadSummary(summary, scopeLabel);
     },
   });
@@ -300,6 +423,12 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
           </template>
           收藏
         </VButton>
+        <VButton size="sm" @click="openHiddenModal">
+          <template #icon>
+            <EyeCloseLineIcon />
+          </template>
+          已隐藏{{ hiddenCount !== undefined ? ` (${hiddenCount})` : "" }}
+        </VButton>
         <VButton size="sm" @click="router.push({ name: 'Links' })">
           <template #icon>
             <IconArrowLeft />
@@ -343,7 +472,17 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
         <div class=":uno: feed-toolbar">
           <LinkFeedReadStatusTabs :selected-status="selectedReadStatus" @select="selectReadStatus" />
           <div class=":uno: feed-toolbar__actions">
-            <VSpace class=":uno: flex-wrap">
+            <VSpace v-if="selectionMode && canManageHiddenState" class=":uno: flex-wrap">
+              <span class=":uno: feed-selection-status" role="status">已选 {{ selectedCount }} 篇</span>
+              <VButton size="sm" ghost :disabled="!mainItems.length || allLoadedSelected" @click="selectAllLoaded">
+                全选已加载
+              </VButton>
+              <VButton size="sm" ghost @click="exitSelectionMode">取消</VButton>
+              <VButton size="sm" :disabled="!selectedCount" :loading="isUpdatingHiddenState" @click="handleBatchHide">
+                隐藏所选{{ selectedCount ? ` (${selectedCount})` : "" }}
+              </VButton>
+            </VSpace>
+            <VSpace v-else class=":uno: flex-wrap">
               <VButton
                 size="sm"
                 :disabled="!selectedLink || isRemoteRefreshing"
@@ -377,17 +516,32 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
                 </template>
                 全部标为已读
               </VButton>
-              <VButton size="sm" ghost :loading="isFetching" @click="reload()">
+              <VButton v-if="canManageHiddenState" size="sm" :disabled="!mainItems.length" @click="enterSelectionMode">
                 <template #icon>
-                  <IconRefreshLine />
+                  <MultiselectLineIcon />
                 </template>
-                刷新列表
+                批量选择
               </VButton>
             </VSpace>
+            <VButton size="sm" ghost :loading="isFetching" @click="reloadMainFeed()">
+              <template #icon>
+                <IconRefreshLine />
+              </template>
+              刷新列表
+            </VButton>
           </div>
         </div>
 
-        <LinkFeedItemList :feed="mainFeed" :source-name="sourceName" empty-text="暂无订阅动态" />
+        <LinkFeedItemList
+          :feed="mainFeed"
+          :source-name="sourceName"
+          empty-text="暂无订阅动态"
+          :selectable="selectionMode && canManageHiddenState"
+          :selected-ids="selectedIds"
+          :hideable="canManageHiddenState"
+          @toggle-select="toggleSelect"
+          @hide="handleHideItem"
+        />
       </div>
     </div>
   </div>
@@ -411,6 +565,14 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
     empty-text="暂无收藏文章"
     item-action-mode="favorite-only"
     @close="favoriteModalVisible = false"
+  />
+
+  <LinkFeedHiddenItemsModal
+    v-if="hiddenModalVisible"
+    :feed="hiddenFeed"
+    :source-name="sourceName"
+    :can-manage="canManageHiddenState"
+    @close="hiddenModalVisible = false"
   />
 
   <LinkFeedStatusModal
@@ -496,6 +658,14 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
   border-radius: 999px;
   background: rgb(255 255 255 / 0.76);
   padding: 0.375rem 0.625rem;
+}
+
+.feed-selection-status {
+  align-self: center;
+  color: rgb(113 113 122);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  white-space: nowrap;
 }
 
 .feed-toolbar {

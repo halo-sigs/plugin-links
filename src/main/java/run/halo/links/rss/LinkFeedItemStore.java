@@ -24,6 +24,10 @@ public interface LinkFeedItemStore {
 
     boolean updateReadLater(String id, boolean readLater);
 
+    LinkFeedHiddenStateResult updateHidden(List<String> ids, boolean hidden);
+
+    long countHidden();
+
     long count();
 
     long countByLinkName(String linkName);

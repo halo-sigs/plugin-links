@@ -34,7 +34,7 @@ https://raw.githubusercontent.com/halo-sigs/plugin-links/refs/heads/main/api-doc
 
 该角色**不会**授予 `console.api.link.halo.run` 或 `core.halo.run` 的访问权限，Console API 和标准 CRUD 端点仍需认证。
 
-`linkfeeds` 会公开已抓取的 RSS 条目内容，因此默认关闭。站点管理员需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，匿名访问者和主题才能读取该接口。公开返回值不会包含 RSS 订阅地址。
+`linkfeeds` 会公开已抓取的 RSS 条目内容，因此默认关闭。站点管理员需要在插件设置的 **RSS 订阅** 中开启 **公开 RSS 订阅动态** 后，匿名访问者和主题才能读取该接口。公开返回值不会包含 RSS 订阅地址，也不会返回已在 Console 隐藏的条目或暴露条目的隐藏状态。
 
 友链申请的请求体、成功响应、Problem Details 错误、CORS 和 CAPTCHA 生命周期请参考
 [主题 API 文档中的“访客友链申请”](./theme-api.md#访客友链申请)。
@@ -62,6 +62,22 @@ Console API 位于 `console.api.link.halo.run/v1alpha1`，供 Console 前端使�
 | `/apis/console.api.link.halo.run/v1alpha1/links/-/sort` | `POST` | 按请求体中的链接 `metadata.name` 顺序更新链接 `spec.priority` |
 | `/apis/console.api.link.halo.run/v1alpha1/linkgroups/-/sort` | `POST` | 按请求体中的分组 `metadata.name` 顺序更新分组 `spec.priority` |
 | `/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}` | `DELETE` | 删除指定分组；可选查询参数 `deleteLinks` 控制是否同时删除组内链接，默认 `false`，此时组内链接会变为未分组 |
+| `/apis/console.api.link.halo.run/v1alpha1/rss/items` | `GET` | 游标分页查询 RSS 条目；支持 `linkName`、`groupName`、`read`、`favorite`、`readLater`、`hidden`、`beforePublishedAt`、`beforeId`、`limit`，省略 `hidden` 时仅返回未隐藏条目 |
+| `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden-count` | `GET` | 返回隐藏 RSS 条目的精确总数 |
+| `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden` | `POST` | 按稳定 ID 批量设置 RSS 条目的隐藏状态；重复 ID 只计算一次，不存在的 ID 会被忽略 |
+
+隐藏状态更新请求示例：
+
+```json
+{
+  "ids": ["stable-item-id-1", "stable-item-id-2"],
+  "hidden": true
+}
+```
+
+成功响应中的 `requestedCount` 是去重后的请求 ID 数量，`updatedCount` 只统计实际发生
+状态变化的条目。隐藏是 Console 管理状态：条目仍保留在本地缓存中，但不会进入普通、
+收藏、稍后阅读、公共 REST 或主题 Finder 结果。
 
 ### 排序请求体
 
