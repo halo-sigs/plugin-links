@@ -244,13 +244,13 @@ hiding and restoring cached feed items.
 The system SHALL expose a Console API operation that marks visible cached unread RSS/Atom feed items
 as read without requiring the Console to provide individual item IDs.
 
-#### Scenario: All visible unread items are marked read
+#### Scenario: All unread items are marked read
 - **WHEN** the Console submits the bulk mark-read operation without a link scope
 - **THEN** the system marks every visible cached feed item whose read state is false as read
 - **AND** hidden items keep their existing read state
 - **AND** the system returns the number of visible items updated
 
-#### Scenario: Selected link visible unread items are marked read
+#### Scenario: Selected link unread items are marked read
 - **WHEN** the Console submits the bulk mark-read operation with a link metadata name
 - **THEN** the system marks every visible cached feed item for that link whose read state is false as
   read
@@ -262,7 +262,7 @@ as read without requiring the Console to provide individual item IDs.
 - **THEN** those items remain read
 - **AND** they are not included in the returned updated count
 
-#### Scenario: Empty visible bulk mark-read scope is a no-op
+#### Scenario: Empty bulk mark-read scope is a no-op
 - **WHEN** the bulk mark-read operation matches no visible unread cached feed items
 - **THEN** the system does not create feed item records
 - **AND** the system returns an updated count of 0
@@ -271,20 +271,20 @@ as read without requiring the Console to provide individual item IDs.
 The system SHALL expose a lightweight Console API operation that reports visible unread RSS/Atom
 feed item counts without requiring the Console to load feed item pages.
 
-#### Scenario: Aggregate visible unread count is returned
+#### Scenario: Aggregate unread count is returned
 - **WHEN** the Console requests the RSS unread summary
 - **THEN** the system returns the number of non-hidden cached feed items whose read state is false
   across all RSS subscriptions
 
-#### Scenario: Per-link visible unread counts are returned
+#### Scenario: Per-link unread counts are returned
 - **WHEN** the Console requests the RSS unread summary
 - **THEN** the system returns non-hidden unread cached feed item counts keyed by link metadata name
 - **AND** each per-link count includes only non-hidden cached feed items associated with that link
 
-#### Scenario: Read and hidden items are excluded
+#### Scenario: Read items are excluded
 - **WHEN** cached feed items for a link include read, unread, visible, and hidden states
 - **THEN** the unread summary counts only items whose read state and hidden state are both false
 
-#### Scenario: Missing visible unread items produce zero counts
+#### Scenario: Missing unread items produce zero counts
 - **WHEN** the unread summary does not include a per-link count for a subscribed link
 - **THEN** the Console treats that link's visible unread count as zero
