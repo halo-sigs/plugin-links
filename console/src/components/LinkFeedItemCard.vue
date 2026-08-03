@@ -145,7 +145,7 @@ const { isMarkingFavorite, isMarkingRead, isMarkingReadLater, openItem, toggleFa
               }"
               @click="toggleRead()"
             >
-              <MailOpenLineIcon v-if="item.read" class=":uno: feed-item__action-icon" />
+              <MailOpenLineIcon v-if="!item.read" class=":uno: feed-item__action-icon" />
               <MailLineIcon v-else class=":uno: feed-item__action-icon feed-item__action-icon--unread" />
             </VButton>
             <VButton
