@@ -26,7 +26,7 @@ public interface LinkFeedItemStore {
 
     LinkFeedHiddenStateResult updateHidden(List<String> ids, boolean hidden);
 
-    long countHidden();
+    LinkFeedItemSummary countSummary();
 
     long count();
 

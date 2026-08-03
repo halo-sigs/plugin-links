@@ -1,6 +1,7 @@
 import { linksConsoleApiClient } from "@/api";
 import type { LinkFeedItem } from "@/api/generated";
 import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "@/composables/use-link-feed";
+import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
 import { invalidateLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
@@ -34,14 +35,14 @@ export function useLinkFeedItemActions(item: MaybeRefOrGetter<LinkFeedItem | und
     mutationFn: async ({ id, favorite }) => {
       await linksConsoleApiClient.feed.markLinkFeedItemFavorite({ id, favorite });
     },
-    onSuccess: invalidateFeedItems,
+    onSuccess: invalidateFavoriteQueries,
   });
 
   const readLaterMutation = useMutation<void, unknown, MarkReadLaterVariables>({
     mutationFn: async ({ id, readLater }) => {
       await linksConsoleApiClient.feed.markLinkFeedItemReadLater({ id, readLater });
     },
-    onSuccess: invalidateFeedItemCollections,
+    onSuccess: invalidateReadLaterQueries,
   });
 
   const isMarkingRead = computed(() => readMutation.isPending.value);
@@ -57,6 +58,14 @@ export function useLinkFeedItemActions(item: MaybeRefOrGetter<LinkFeedItem | und
       invalidateFeedItems(),
       queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_HIDDEN_ITEMS] }),
     ]);
+  }
+
+  async function invalidateFavoriteQueries() {
+    await Promise.all([invalidateFeedItems(), invalidateLinkFeedItemSummary(queryClient)]);
+  }
+
+  async function invalidateReadLaterQueries() {
+    await Promise.all([invalidateFeedItemCollections(), invalidateLinkFeedItemSummary(queryClient)]);
   }
 
   async function invalidateFeedReadState() {

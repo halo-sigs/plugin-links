@@ -25,7 +25,8 @@ class LinkApplicationRoleTemplateTest {
 
         assertThat(allows(viewRules, "GET", "rss/discovery")).isTrue();
         assertThat(allows(viewRules, "GET", "rss/items")).isTrue();
-        assertThat(allows(viewRules, "GET", "rss/items/-/hidden-count")).isTrue();
+        assertThat(allows(viewRules, "GET", "rss/items/-/summary")).isTrue();
+        assertThat(allows(viewRules, "GET", "rss/items/-/hidden-count")).isFalse();
         assertThat(allows(viewRules, "GET", "rss/items/-/unread-summary")).isTrue();
         assertThat(allows(viewRules, "POST", "rss/items/-/read")).isTrue();
         assertThat(allows(viewRules, "POST", "rss/items/item-a/read")).isTrue();

@@ -22,6 +22,7 @@ import org.springframework.util.StringUtils;
 import run.halo.links.rss.LinkFeedHiddenStateResult;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemQuery;
+import run.halo.links.rss.LinkFeedItemSummary;
 import run.halo.links.rss.LinkFeedItemStore;
 
 @Slf4j
@@ -175,8 +176,23 @@ public class SqliteLinkFeedItemStore implements LinkFeedItemStore {
     }
 
     @Override
-    public long countHidden() {
-        return queryForLong("SELECT count(*) FROM " + TABLE + " WHERE hidden = 1");
+    public LinkFeedItemSummary countSummary() {
+        return database.execute(connection -> {
+            try (Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery("""
+                    SELECT
+                      count(CASE WHEN hidden = 1 THEN 1 END),
+                      count(CASE WHEN hidden = 0 AND favorite = 1 THEN 1 END),
+                      count(CASE WHEN hidden = 0 AND read_later = 1 THEN 1 END)
+                    FROM link_feed_items
+                    """)) {
+                if (!result.next()) {
+                    return new LinkFeedItemSummary();
+                }
+                return new LinkFeedItemSummary(result.getLong(1), result.getLong(2),
+                    result.getLong(3));
+            }
+        });
     }
 
     @Override

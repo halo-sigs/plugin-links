@@ -32,13 +32,13 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
 import run.halo.links.rss.LinkFeedCleanupResult;
 import run.halo.links.rss.LinkFeedDiscoveryResult;
-import run.halo.links.rss.LinkFeedHiddenCount;
 import run.halo.links.rss.LinkFeedHiddenStateRequest;
 import run.halo.links.rss.LinkFeedHiddenStateResult;
 import run.halo.links.rss.LinkFeedItem;
 import run.halo.links.rss.LinkFeedItemPage;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedItemSummary;
 import run.halo.links.rss.LinkFeedMarkReadResult;
 import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedRetentionPolicy;
@@ -157,11 +157,12 @@ public class LinkFeedEndpoint implements CustomEndpoint {
                     )
                     .response(responseBuilder().implementation(LinkFeedItemPage.class));
             })
-            .GET("rss/items/-/hidden-count", this::getHiddenCount, builder -> builder
-                .operationId("getLinkFeedHiddenCount")
-                .description("Return the exact number of hidden cached RSS or Atom feed items.")
+            .GET("rss/items/-/summary", this::getItemSummary, builder -> builder
+                .operationId("getLinkFeedItemSummary")
+                .description("Return exact global counts for hidden, visible favorite, and visible "
+                    + "read-later cached RSS or Atom feed items.")
                 .tag(tag)
-                .response(responseBuilder().implementation(LinkFeedHiddenCount.class))
+                .response(responseBuilder().implementation(LinkFeedItemSummary.class))
             )
             .POST("rss/items/-/hidden", this::updateHiddenState, builder -> builder
                 .operationId("updateLinkFeedItemsHiddenState")
@@ -326,10 +327,10 @@ public class LinkFeedEndpoint implements CustomEndpoint {
             .flatMap(summary -> ServerResponse.ok().bodyValue(summary));
     }
 
-    private Mono<ServerResponse> getHiddenCount(ServerRequest request) {
-        return Mono.fromCallable(() -> new LinkFeedHiddenCount(itemStore.countHidden()))
+    private Mono<ServerResponse> getItemSummary(ServerRequest request) {
+        return Mono.fromCallable(itemStore::countSummary)
             .subscribeOn(Schedulers.boundedElastic())
-            .flatMap(count -> ServerResponse.ok().bodyValue(count));
+            .flatMap(summary -> ServerResponse.ok().bodyValue(summary));
     }
 
     private Mono<ServerResponse> updateHiddenState(ServerRequest request) {

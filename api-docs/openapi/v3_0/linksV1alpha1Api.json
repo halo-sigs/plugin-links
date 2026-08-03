@@ -1150,25 +1150,6 @@
         "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
       }
     },
-    "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden-count" : {
-      "get" : {
-        "description" : "Return the exact number of hidden cached RSS or Atom feed items.",
-        "operationId" : "getLinkFeedHiddenCount",
-        "responses" : {
-          "default" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/LinkFeedHiddenCount"
-                }
-              }
-            },
-            "description" : "default response"
-          }
-        },
-        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
-      }
-    },
     "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/read" : {
       "post" : {
         "description" : "Mark all unread cached RSS or Atom feed items as read.",
@@ -1187,6 +1168,25 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/LinkFeedMarkReadResult"
+                }
+              }
+            },
+            "description" : "default response"
+          }
+        },
+        "tags" : [ "console.api.link.halo.run/v1alpha1/LinkFeed" ]
+      }
+    },
+    "/apis/console.api.link.halo.run/v1alpha1/rss/items/-/summary" : {
+      "get" : {
+        "description" : "Return exact global counts for hidden, visible favorite, and visible read-later cached RSS or Atom feed items.",
+        "operationId" : "getLinkFeedItemSummary",
+        "responses" : {
+          "default" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkFeedItemSummary"
                 }
               }
             },
@@ -2461,16 +2461,6 @@
           }
         }
       },
-      "LinkFeedHiddenCount" : {
-        "type" : "object",
-        "properties" : {
-          "hiddenCount" : {
-            "type" : "integer",
-            "description" : "Exact number of hidden cached feed items.",
-            "format" : "int64"
-          }
-        }
-      },
       "LinkFeedHiddenStateRequest" : {
         "required" : [ "hidden", "ids" ],
         "type" : "object",
@@ -2602,6 +2592,27 @@
           },
           "nextBeforePublishedAt" : {
             "type" : "string"
+          }
+        }
+      },
+      "LinkFeedItemSummary" : {
+        "required" : [ "favoriteCount", "hiddenCount", "readLaterCount" ],
+        "type" : "object",
+        "properties" : {
+          "favoriteCount" : {
+            "type" : "integer",
+            "description" : "Number of cached RSS or Atom feed items where hidden = 0 and favorite = 1.",
+            "format" : "int64"
+          },
+          "hiddenCount" : {
+            "type" : "integer",
+            "description" : "Number of all cached RSS or Atom feed items where hidden = 1.",
+            "format" : "int64"
+          },
+          "readLaterCount" : {
+            "type" : "integer",
+            "description" : "Number of cached RSS or Atom feed items where hidden = 0 and read_later = 1.",
+            "format" : "int64"
           }
         }
       },

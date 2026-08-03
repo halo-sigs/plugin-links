@@ -1,26 +1,13 @@
 import { linksConsoleApiClient } from "@/api";
-import type { LinkFeedHiddenCount } from "@/api/generated";
 import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "@/composables/use-link-feed";
+import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
 import { invalidateLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/vue-query";
-import { shallowRef, toValue, type MaybeRefOrGetter } from "vue";
-
-export const QK_LINK_FEED_HIDDEN_COUNT = "plugin:links:feed-hidden-count";
+import { useQueryClient, type QueryClient } from "@tanstack/vue-query";
+import { shallowRef } from "vue";
 
 export interface LinkFeedHiddenStateSummary {
   requestedCount: number;
   updatedCount: number;
-}
-
-export function useLinkFeedHiddenCount(enabled?: MaybeRefOrGetter<boolean>) {
-  return useQuery<LinkFeedHiddenCount>({
-    queryKey: [QK_LINK_FEED_HIDDEN_COUNT],
-    enabled: enabled === undefined ? true : () => Boolean(toValue(enabled)),
-    queryFn: async () => {
-      const { data } = await linksConsoleApiClient.feed.getLinkFeedHiddenCount();
-      return data;
-    },
-  });
 }
 
 export function useLinkFeedHiddenState() {
@@ -63,7 +50,7 @@ export function invalidateLinkFeedHiddenStateQueries(queryClient: QueryClient) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] }),
     queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_HIDDEN_ITEMS] }),
-    queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_HIDDEN_COUNT] }),
+    invalidateLinkFeedItemSummary(queryClient),
     invalidateLinkFeedUnreadSummary(queryClient),
   ]);
 }

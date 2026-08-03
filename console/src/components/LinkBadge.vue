@@ -7,6 +7,7 @@ import {
   type LinkVerificationTone,
 } from "@/composables/link-verification-status";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import { Dialog, IconExternalLinkLine, Toast } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
@@ -246,6 +247,7 @@ function handleDelete() {
 
       Toast.success("删除成功");
       invalidateLinkQueries();
+      await invalidateLinkFeedItemSummary(queryClient);
     },
   });
 }

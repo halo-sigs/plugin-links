@@ -67,6 +67,40 @@ class SqliteLinkFeedItemStoreTest {
     }
 
     @Test
+    void shouldCountSummaryIndependentlyByVisibility() {
+        LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
+        try {
+            SqliteLinkFeedItemStore store = new SqliteLinkFeedItemStore(database);
+
+            assertThat(store.countSummary())
+                .satisfies(summary -> {
+                    assertThat(summary.getHiddenCount()).isZero();
+                    assertThat(summary.getFavoriteCount()).isZero();
+                    assertThat(summary.getReadLaterCount()).isZero();
+                });
+
+            store.upsert(item("visible-both", "link-a", "Both", "2026-05-20T10:00:00Z",
+                true, true));
+            store.upsert(item("visible-favorite", "link-a", "Favorite",
+                "2026-05-21T10:00:00Z", true, false));
+            store.upsert(item("visible-later", "link-a", "Later", "2026-05-22T10:00:00Z",
+                false, true));
+            store.upsert(item("hidden-both", "link-a", "Hidden", "2026-05-23T10:00:00Z",
+                true, true));
+            store.updateHidden(List.of("hidden-both"), true);
+
+            assertThat(store.countSummary())
+                .satisfies(summary -> {
+                    assertThat(summary.getHiddenCount()).isEqualTo(1);
+                    assertThat(summary.getFavoriteCount()).isEqualTo(2);
+                    assertThat(summary.getReadLaterCount()).isEqualTo(2);
+                });
+        } finally {
+            database.destroy();
+        }
+    }
+
+    @Test
     void shouldDeleteExcessItemsByLinkName() {
         LinksSqliteDatabase database = new LinksSqliteDatabase(tempDir.resolve("links.sqlite"));
         try {
@@ -214,7 +248,7 @@ class SqliteLinkFeedItemStoreTest {
                     assertThat(hidden.getId()).isEqualTo("hidden-middle");
                     assertThat(hidden.getHidden()).isTrue();
                 });
-            assertThat(store.countHidden()).isOne();
+            assertThat(store.countSummary().getHiddenCount()).isOne();
         } finally {
             database.destroy();
         }
@@ -329,7 +363,7 @@ class SqliteLinkFeedItemStoreTest {
 
             assertThatThrownBy(() -> store.updateHidden(List.of("item-1", "item-2"), true))
                 .isInstanceOf(IllegalStateException.class);
-            assertThat(store.countHidden()).isZero();
+            assertThat(store.countSummary().getHiddenCount()).isZero();
             assertThat(store.listRecent(new LinkFeedItemQuery()))
                 .extracting(LinkFeedItem::getId)
                 .containsExactly("item-1", "item-2");
@@ -610,11 +644,11 @@ class SqliteLinkFeedItemStoreTest {
             assertThat(store.countByLinkName("link-a")).isOne();
             assertThat(store.countByLinkNameAndFeedUrl("link-a",
                 "https://example.com/feed.xml")).isOne();
-            assertThat(store.countHidden()).isOne();
+            assertThat(store.countSummary().getHiddenCount()).isOne();
 
             store.deleteByLinkName("link-a");
             assertThat(store.count()).isZero();
-            assertThat(store.countHidden()).isZero();
+            assertThat(store.countSummary().getHiddenCount()).isZero();
         } finally {
             database.destroy();
         }

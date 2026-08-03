@@ -23,7 +23,7 @@ rules:
     verbs: [ "get" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "rss/-" ]
-    resourceNames: [ "items/hidden-count" ]
+    resourceNames: [ "items/summary" ]
     verbs: [ "get" ]
   - apiGroups: [ "console.api.link.halo.run" ]
     resources: [ "rss/-" ]
