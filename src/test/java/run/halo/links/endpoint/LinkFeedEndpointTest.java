@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.reactive.function.server.MockServerRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -27,6 +28,7 @@ import run.halo.links.rss.LinkFeedHiddenStateResult;
 import run.halo.links.rss.LinkFeedItemPage;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedItemSummary;
 import run.halo.links.rss.LinkFeedRefreshResult;
 import run.halo.links.rss.LinkFeedService;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
@@ -176,18 +178,27 @@ class LinkFeedEndpointTest {
     }
 
     @Test
-    void shouldReturnExactHiddenCount() {
+    void shouldReturnItemSummaryAndRemoveHiddenCountRoute() {
         LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
-        when(itemStore.countHidden()).thenReturn(7L);
+        when(itemStore.countSummary()).thenReturn(new LinkFeedItemSummary(7L, 5L, 4L));
         LinkFeedEndpoint endpoint = new LinkFeedEndpoint(null, null, itemStore, null, null);
-        MockServerRequest request = request(HttpMethod.GET, "/rss/items/-/hidden-count");
+        WebTestClient client = WebTestClient.bindToRouterFunction(endpoint.endpoint()).build();
 
-        StepVerifier.create(endpoint.endpoint().route(request)
-                .flatMap(handler -> handler.handle(request)))
-            .assertNext(response -> assertThat(response.statusCode().value()).isEqualTo(200))
-            .verifyComplete();
+        client.get()
+            .uri("/rss/items/-/summary")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.hiddenCount").isEqualTo(7)
+            .jsonPath("$.favoriteCount").isEqualTo(5)
+            .jsonPath("$.readLaterCount").isEqualTo(4);
 
-        verify(itemStore).countHidden();
+        client.get()
+            .uri("/rss/items/-/hidden-count")
+            .exchange()
+            .expectStatus().isNotFound();
+
+        verify(itemStore).countSummary();
     }
 
     @Test

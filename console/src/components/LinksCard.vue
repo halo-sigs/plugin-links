@@ -3,8 +3,8 @@ import { linksConsoleApiClient, linksCoreApiClient } from "@/api";
 import type { Link, LinkGroupVo } from "@/api/generated";
 import { runLinkVerification } from "@/composables/link-verification";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
-import type { GroupWithLinks } from "@/composables/use-link-fetch";
-import { QK_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
+import { QK_GROUPS_WITH_LINKS, type GroupWithLinks } from "@/composables/use-link-fetch";
 import {
   Dialog,
   IconArrowLeft,
@@ -158,6 +158,7 @@ function handleDeleteInBatch() {
 
       Toast.success("删除成功");
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+      await invalidateLinkFeedItemSummary(queryClient);
       enabledSelect.value = false;
       selectedLinkNames.value.length = 0;
     },
@@ -217,6 +218,9 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
       Toast.success("删除成功");
       queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
+      if (deleteLinks) {
+        await invalidateLinkFeedItemSummary(queryClient);
+      }
     },
   });
 }

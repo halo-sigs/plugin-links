@@ -76,7 +76,8 @@ class LinksSqliteDatabaseTest {
         LinksSqliteDatabase restarted = new LinksSqliteDatabase(dbPath);
         try {
             assertThat(restarted.isAvailable()).isTrue();
-            assertThat(new SqliteLinkFeedItemStore(restarted).countHidden()).isOne();
+            assertThat(new SqliteLinkFeedItemStore(restarted).countSummary().getHiddenCount())
+                .isOne();
             assertThat(pragma(restarted, "user_version")).isEqualTo("1");
         } finally {
             restarted.destroy();
@@ -94,7 +95,8 @@ class LinksSqliteDatabaseTest {
             assertThat(database.isAvailable()).isTrue();
             assertThat(columnExists(database, "link_feed_items", "hidden")).isTrue();
             assertThat(new SqliteLinkFeedItemStore(database).count()).isOne();
-            assertThat(new SqliteLinkFeedItemStore(database).countHidden()).isZero();
+            assertThat(new SqliteLinkFeedItemStore(database).countSummary().getHiddenCount())
+                .isZero();
         } finally {
             database.destroy();
         }

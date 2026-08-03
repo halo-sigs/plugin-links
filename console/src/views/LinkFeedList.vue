@@ -8,7 +8,8 @@ import LinkFeedStatusModal from "@/components/LinkFeedStatusModal.vue";
 import LinkFeedSubscriptionSidebar from "@/components/LinkFeedSubscriptionSidebar.vue";
 import { aggregateLinkFeedStatusMeta, linkFeedStatusMeta } from "@/composables/link-feed-status";
 import { useLinkFeedItems } from "@/composables/use-link-feed";
-import { useLinkFeedHiddenCount, useLinkFeedHiddenState } from "@/composables/use-link-feed-hidden-state";
+import { useLinkFeedHiddenState } from "@/composables/use-link-feed-hidden-state";
+import { useLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
 import { useLinkFeedMarkAllRead, type LinkFeedMarkAllReadSummary } from "@/composables/use-link-feed-mark-all-read";
 import { useLinkFeedRefresh, type LinkFeedRefreshSummary } from "@/composables/use-link-feed-refresh";
 import { linkFeedUnreadCount, useLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
@@ -40,7 +41,7 @@ const statusModalVisible = shallowRef(false);
 const hiddenModalVisible = shallowRef(false);
 const mainFeed = useLinkFeedItems();
 const { data: unreadSummary } = useLinkFeedUnreadSummary();
-const { data: hiddenCountData } = useLinkFeedHiddenCount();
+const { data: itemSummary, isError: isItemSummaryError } = useLinkFeedItemSummary();
 const { isUpdating: isUpdatingHiddenState, setHiddenState } = useLinkFeedHiddenState();
 
 const readLaterFeed = useLinkFeedItems({
@@ -190,9 +191,21 @@ const refreshProgressText = computed(() => {
   return "";
 });
 
-const hiddenCount = computed(() => {
-  return hiddenCountData.value?.hiddenCount;
+const resolvedItemSummary = computed(() => {
+  if (itemSummary.value === undefined || isItemSummaryError.value) {
+    return undefined;
+  }
+  return itemSummary.value;
 });
+const summaryCount = (count: number | undefined) => {
+  if (isItemSummaryError.value) {
+    return undefined;
+  }
+  return resolvedItemSummary.value ? count : 0;
+};
+const readLaterCount = computed(() => summaryCount(resolvedItemSummary.value?.readLaterCount));
+const favoriteCount = computed(() => summaryCount(resolvedItemSummary.value?.favoriteCount));
+const hiddenCount = computed(() => summaryCount(resolvedItemSummary.value?.hiddenCount));
 
 function sourceLink(linkName?: string): Link | undefined {
   if (!linkName) {
@@ -415,13 +428,13 @@ function refreshSummaryText(summary: LinkFeedRefreshSummary) {
           <template #icon>
             <CalendarTimeAddLineIcon />
           </template>
-          稍后阅读
+          稍后阅读{{ readLaterCount !== undefined ? ` (${readLaterCount})` : "" }}
         </VButton>
         <VButton size="sm" @click="openFavoriteModal">
           <template #icon>
             <StarLineIcon />
           </template>
-          收藏
+          收藏{{ favoriteCount !== undefined ? ` (${favoriteCount})` : "" }}
         </VButton>
         <VButton size="sm" @click="openHiddenModal">
           <template #icon>

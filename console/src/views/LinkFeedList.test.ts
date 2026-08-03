@@ -10,7 +10,11 @@ import LinkFeedList from "./LinkFeedList.vue";
 
 const viewMocks = rstest.hoisted(() => ({
   mainFeed: undefined as LinkFeedItems | undefined,
-  hiddenCount: { value: { hiddenCount: 3 } },
+  itemSummary: {
+    value: undefined as { hiddenCount: number; favoriteCount: number; readLaterCount: number } | undefined,
+  },
+  itemSummaryError: { value: false },
+  itemSummaryFetching: { value: false },
   setHiddenState: rstest.fn(),
   useLinkFeedItemsCalls: { count: 0 },
 }));
@@ -27,10 +31,17 @@ rstest.mock("@/composables/use-link-feed", () => ({
 }));
 
 rstest.mock("@/composables/use-link-feed-hidden-state", () => ({
-  useLinkFeedHiddenCount: () => ({ data: viewMocks.hiddenCount }),
   useLinkFeedHiddenState: () => ({
     isUpdating: shallowRef(false),
     setHiddenState: viewMocks.setHiddenState,
+  }),
+}));
+
+rstest.mock("@/composables/use-link-feed-item-summary", () => ({
+  useLinkFeedItemSummary: () => ({
+    data: viewMocks.itemSummary,
+    isError: viewMocks.itemSummaryError,
+    isFetching: viewMocks.itemSummaryFetching,
   }),
 }));
 
@@ -79,27 +90,65 @@ describe("LinkFeedList hidden workflows", () => {
   beforeEach(() => {
     permissionSpy.mockReturnValue(true);
     viewMocks.useLinkFeedItemsCalls.count = 0;
-    viewMocks.hiddenCount.value = { hiddenCount: 3 };
+    viewMocks.itemSummary.value = { hiddenCount: 3, favoriteCount: 5, readLaterCount: 4 };
+    viewMocks.itemSummaryError.value = false;
+    viewMocks.itemSummaryFetching.value = false;
     viewMocks.mainFeed = createFeed([feedItem({ id: "item-1" }), feedItem({ id: "item-2", title: "Second" })]);
     viewMocks.setHiddenState.mockResolvedValue({ requestedCount: 2, updatedCount: 2 });
   });
 
-  it("shows the exact hidden count immediately after the favorite entry", () => {
+  it("shows all exact item counts in the existing header order", () => {
     mountView();
 
     const entry = viewButton("已隐藏");
     const favoriteEntry = viewButton("收藏");
+    const readLaterEntry = viewButton("稍后阅读");
+    expect(readLaterEntry?.textContent).toContain("稍后阅读 (4)");
+    expect(favoriteEntry?.textContent).toContain("收藏 (5)");
     expect(entry?.textContent).toContain("已隐藏 (3)");
     const buttons = Array.from(viewRoot().querySelectorAll<HTMLButtonElement>("button"));
-    expect(buttons.indexOf(entry!)).toBe(buttons.indexOf(favoriteEntry!) + 1);
+    expect(buttons.indexOf(readLaterEntry!)).toBeLessThan(buttons.indexOf(favoriteEntry!));
+    expect(buttons.indexOf(favoriteEntry!)).toBeLessThan(buttons.indexOf(entry!));
   });
 
-  it("shows an exact zero hidden count after the query resolves", () => {
-    viewMocks.hiddenCount.value = { hiddenCount: 0 };
+  it("shows exact zero counts after the query resolves", () => {
+    viewMocks.itemSummary.value = { hiddenCount: 0, favoriteCount: 0, readLaterCount: 0 };
 
     mountView();
 
+    expect(viewButton("稍后阅读")?.textContent).toContain("稍后阅读 (0)");
+    expect(viewButton("收藏")?.textContent).toContain("收藏 (0)");
     expect(viewButton("已隐藏")?.textContent).toContain("已隐藏 (0)");
+  });
+
+  it("shows zero placeholders while pending and keeps labels usable when unavailable", () => {
+    viewMocks.itemSummary.value = undefined;
+    viewMocks.itemSummaryFetching.value = true;
+
+    mountView();
+
+    expect(viewButton("稍后阅读")?.textContent?.trim()).toBe("稍后阅读 (0)");
+    expect(viewButton("收藏")?.textContent?.trim()).toBe("收藏 (0)");
+    expect(viewButton("已隐藏")?.textContent?.trim()).toBe("已隐藏 (0)");
+
+    mountedWrapper?.unmount();
+    viewMocks.itemSummaryFetching.value = false;
+    viewMocks.itemSummaryError.value = true;
+    mountView();
+
+    expect(viewButton("稍后阅读")?.textContent?.trim()).toBe("稍后阅读");
+    expect(viewButton("收藏")?.textContent?.trim()).toBe("收藏");
+    expect(viewButton("已隐藏")?.textContent?.trim()).toBe("已隐藏");
+  });
+
+  it("preserves resolved counts during a background refetch", () => {
+    viewMocks.itemSummaryFetching.value = true;
+
+    mountView();
+
+    expect(viewButton("稍后阅读")?.textContent?.trim()).toBe("稍后阅读 (4)");
+    expect(viewButton("收藏")?.textContent?.trim()).toBe("收藏 (5)");
+    expect(viewButton("已隐藏")?.textContent?.trim()).toBe("已隐藏 (3)");
   });
 
   it("keeps hidden items visible but hides mutation controls without manage permission", async () => {

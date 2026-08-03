@@ -63,8 +63,12 @@ Console API 位于 `console.api.link.halo.run/v1alpha1`，供 Console 前端使�
 | `/apis/console.api.link.halo.run/v1alpha1/linkgroups/-/sort` | `POST` | 按请求体中的分组 `metadata.name` 顺序更新分组 `spec.priority` |
 | `/apis/console.api.link.halo.run/v1alpha1/linkgroups/{name}` | `DELETE` | 删除指定分组；可选查询参数 `deleteLinks` 控制是否同时删除组内链接，默认 `false`，此时组内链接会变为未分组 |
 | `/apis/console.api.link.halo.run/v1alpha1/rss/items` | `GET` | 游标分页查询 RSS 条目；支持 `linkName`、`groupName`、`read`、`favorite`、`readLater`、`hidden`、`beforePublishedAt`、`beforeId`、`limit`，省略 `hidden` 时仅返回未隐藏条目 |
-| `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden-count` | `GET` | 返回隐藏 RSS 条目的精确总数 |
+| `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/summary` | `GET` | 返回全局隐藏、可见收藏和可见稍后阅读 RSS 条目的精确总数 |
 | `/apis/console.api.link.halo.run/v1alpha1/rss/items/-/hidden` | `POST` | 按稳定 ID 批量设置 RSS 条目的隐藏状态；重复 ID 只计算一次，不存在的 ID 会被忽略 |
+
+`rss/items/-/summary` 返回 `hiddenCount`、`favoriteCount` 和 `readLaterCount` 三个数值字段：
+`hiddenCount` 统计所有 `hidden = 1` 的条目，另外两个字段分别统计同时满足
+`hidden = 0 AND favorite = 1`、`hidden = 0 AND read_later = 1` 的条目。
 
 隐藏状态更新请求示例：
 

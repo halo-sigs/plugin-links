@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@rstest/core";
 import { refreshInitialLinkFeed, startInitialLinkFeedRefresh } from "./link-feed-initial-refresh";
 import { QK_LINK_FEED_ITEMS } from "./use-link-feed";
+import { QK_LINK_FEED_ITEM_SUMMARY } from "./use-link-feed-item-summary";
 import { QK_LINK_FEED_UNREAD_SUMMARY } from "./use-link-feed-unread-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "./use-link-fetch";
 
@@ -75,6 +76,7 @@ describe("startInitialLinkFeedRefresh", () => {
       [QK_GROUPS_WITH_LINKS],
       [QK_RSS_GROUPS_WITH_LINKS],
       [QK_LINK_FEED_ITEMS],
+      [QK_LINK_FEED_ITEM_SUMMARY],
       [QK_LINK_FEED_UNREAD_SUMMARY],
     ]);
   });
@@ -112,6 +114,7 @@ describe("refreshInitialLinkFeed", () => {
       [QK_GROUPS_WITH_LINKS],
       [QK_RSS_GROUPS_WITH_LINKS],
       [QK_LINK_FEED_ITEMS],
+      [QK_LINK_FEED_ITEM_SUMMARY],
       [QK_LINK_FEED_UNREAD_SUMMARY],
     ]);
   });

@@ -1,47 +1,21 @@
 import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
-import { flushPromises } from "@vue/test-utils";
 import { createFeedTestQueryClient, runWithFeedTestApp } from "./link-feed-test-utils";
 import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "./use-link-feed";
-import {
-  QK_LINK_FEED_HIDDEN_COUNT,
-  useLinkFeedHiddenCount,
-  useLinkFeedHiddenState,
-} from "./use-link-feed-hidden-state";
+import { useLinkFeedHiddenState } from "./use-link-feed-hidden-state";
+import { QK_LINK_FEED_ITEM_SUMMARY } from "./use-link-feed-item-summary";
 import { QK_LINK_FEED_UNREAD_SUMMARY } from "./use-link-feed-unread-summary";
 
 const apiMocks = rstest.hoisted(() => ({
-  getLinkFeedHiddenCount: rstest.fn(),
   updateLinkFeedItemsHiddenState: rstest.fn(),
 }));
 
 rstest.mock("@/api", () => ({
   linksConsoleApiClient: {
     feed: {
-      getLinkFeedHiddenCount: apiMocks.getLinkFeedHiddenCount,
       updateLinkFeedItemsHiddenState: apiMocks.updateLinkFeedItemsHiddenState,
     },
   },
 }));
-
-describe("useLinkFeedHiddenCount", () => {
-  it("returns the exact hidden item count", async () => {
-    apiMocks.getLinkFeedHiddenCount.mockResolvedValue({ data: { hiddenCount: 7 } });
-
-    const { result } = runWithFeedTestApp(() => useLinkFeedHiddenCount());
-    await flushPromises();
-
-    expect(apiMocks.getLinkFeedHiddenCount).toHaveBeenCalledTimes(1);
-    expect(result.data.value?.hiddenCount).toBe(7);
-  });
-
-  it("stays idle when disabled", async () => {
-    const { result } = runWithFeedTestApp(() => useLinkFeedHiddenCount(false));
-    await flushPromises();
-
-    expect(apiMocks.getLinkFeedHiddenCount).not.toHaveBeenCalled();
-    expect(result.data.value).toBeUndefined();
-  });
-});
 
 describe("useLinkFeedHiddenState", () => {
   beforeEach(() => {
@@ -73,7 +47,7 @@ describe("useLinkFeedHiddenState", () => {
     expect(apiMocks.updateLinkFeedItemsHiddenState).not.toHaveBeenCalled();
   });
 
-  it("invalidates normal items, hidden items, hidden count and unread summary after success", async () => {
+  it("invalidates normal items, hidden items, item summary and unread summary after success", async () => {
     const queryClient = createFeedTestQueryClient();
     const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
     const { result } = runWithFeedTestApp(() => useLinkFeedHiddenState(), queryClient);
@@ -85,7 +59,7 @@ describe("useLinkFeedHiddenState", () => {
     );
     expect(invalidatedRoots).toContain(QK_LINK_FEED_ITEMS);
     expect(invalidatedRoots).toContain(QK_LINK_FEED_HIDDEN_ITEMS);
-    expect(invalidatedRoots).toContain(QK_LINK_FEED_HIDDEN_COUNT);
+    expect(invalidatedRoots).toContain(QK_LINK_FEED_ITEM_SUMMARY);
     expect(invalidatedRoots).toContain(QK_LINK_FEED_UNREAD_SUMMARY);
   });
 

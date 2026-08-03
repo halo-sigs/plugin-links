@@ -3,6 +3,7 @@ import type { Link, LinkFeedRefreshResult } from "@/api/generated";
 import { useQueryClient } from "@tanstack/vue-query";
 import { shallowRef } from "vue";
 import { classifyLinkFeedRefreshResult } from "./link-feed-refresh-summary";
+import { invalidateLinkFeedItemSummary } from "./use-link-feed-item-summary";
 import { invalidateLinkFeedUnreadSummary } from "./use-link-feed-unread-summary";
 
 export interface LinkFeedRefreshFailure {
@@ -74,7 +75,7 @@ export function useLinkFeedRefresh() {
         }
       }
 
-      await invalidateLinkFeedUnreadSummary(queryClient);
+      await Promise.all([invalidateLinkFeedItemSummary(queryClient), invalidateLinkFeedUnreadSummary(queryClient)]);
       return summary;
     } finally {
       isRefreshing.value = false;

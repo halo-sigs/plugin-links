@@ -46,11 +46,11 @@ models/link-comment-summary-dto.ts
 models/link-detail-dto.ts
 models/link-feed-cleanup-result.ts
 models/link-feed-discovery-result.ts
-models/link-feed-hidden-count.ts
 models/link-feed-hidden-state-request.ts
 models/link-feed-hidden-state-result.ts
 models/link-feed-item-page-vo.ts
 models/link-feed-item-page.ts
+models/link-feed-item-summary.ts
 models/link-feed-item-vo.ts
 models/link-feed-item.ts
 models/link-feed-mark-read-result.ts

@@ -4,6 +4,7 @@ import type { JsonPatchInner, Link } from "@/api/generated";
 import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
 import { startLinkVerification } from "@/composables/link-verification";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
@@ -157,6 +158,7 @@ function handleDelete() {
       modal.value?.close();
       queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
       queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+      await invalidateLinkFeedItemSummary(queryClient);
     },
   });
 }
