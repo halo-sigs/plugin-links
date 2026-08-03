@@ -700,10 +700,15 @@ their header entries SHALL display exact global counts of visible saved items.
   updates list
 - **AND** the header entry displays the exact global count of non-hidden favorite items
 
-#### Scenario: Saved-item counts stay stable while loading
-- **WHEN** the shared RSS item count summary is initially loading or refetching
+#### Scenario: Saved-item counts show a stable placeholder before the first response
+- **WHEN** the shared RSS item count summary is initially loading without resolved data
 - **THEN** the read-later, favorite, and hidden header entries each display `(0)`
-- **AND** the entries remain usable without changing their layout when the summary resolves
+- **AND** the entries remain usable while the summary resolves
+
+#### Scenario: Saved-item counts stay stable during background refetch
+- **WHEN** the shared RSS item count summary is refetching after a resolved response
+- **THEN** the read-later, favorite, and hidden header entries retain their last resolved counts
+- **AND** the entries replace those counts with the refreshed values when the refetch resolves
 
 #### Scenario: User toggles read-later from the updates list
 - **WHEN** the user toggles read-later on a feed item in the RSS updates view

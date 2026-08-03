@@ -122,6 +122,7 @@ describe("LinkFeedList hidden workflows", () => {
   });
 
   it("shows zero placeholders while pending and keeps labels usable when unavailable", () => {
+    viewMocks.itemSummary.value = undefined;
     viewMocks.itemSummaryFetching.value = true;
 
     mountView();
@@ -138,6 +139,16 @@ describe("LinkFeedList hidden workflows", () => {
     expect(viewButton("稍后阅读")?.textContent?.trim()).toBe("稍后阅读");
     expect(viewButton("收藏")?.textContent?.trim()).toBe("收藏");
     expect(viewButton("已隐藏")?.textContent?.trim()).toBe("已隐藏");
+  });
+
+  it("preserves resolved counts during a background refetch", () => {
+    viewMocks.itemSummaryFetching.value = true;
+
+    mountView();
+
+    expect(viewButton("稍后阅读")?.textContent?.trim()).toBe("稍后阅读 (4)");
+    expect(viewButton("收藏")?.textContent?.trim()).toBe("收藏 (5)");
+    expect(viewButton("已隐藏")?.textContent?.trim()).toBe("已隐藏 (3)");
   });
 
   it("keeps hidden items visible but hides mutation controls without manage permission", async () => {

@@ -41,7 +41,7 @@ const statusModalVisible = shallowRef(false);
 const hiddenModalVisible = shallowRef(false);
 const mainFeed = useLinkFeedItems();
 const { data: unreadSummary } = useLinkFeedUnreadSummary();
-const { data: itemSummary, isError: isItemSummaryError, isFetching: isFetchingItemSummary } = useLinkFeedItemSummary();
+const { data: itemSummary, isError: isItemSummaryError } = useLinkFeedItemSummary();
 const { isUpdating: isUpdatingHiddenState, setHiddenState } = useLinkFeedHiddenState();
 
 const readLaterFeed = useLinkFeedItems({
@@ -192,7 +192,7 @@ const refreshProgressText = computed(() => {
 });
 
 const resolvedItemSummary = computed(() => {
-  if (isFetchingItemSummary.value || isItemSummaryError.value) {
+  if (itemSummary.value === undefined || isItemSummaryError.value) {
     return undefined;
   }
   return itemSummary.value;
