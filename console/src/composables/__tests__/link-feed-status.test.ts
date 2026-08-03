@@ -1,6 +1,6 @@
 import type { Link } from "@/api/generated";
 import { describe, expect, it } from "@rstest/core";
-import { aggregateLinkFeedStatusMeta, classifyLinkFeedStatus, linkFeedStatusMeta } from "./link-feed-status";
+import { aggregateLinkFeedStatusMeta, classifyLinkFeedStatus, linkFeedStatusMeta } from "../link-feed-status";
 
 describe("linkFeedStatusMeta", () => {
   it("classifies successful links", () => {

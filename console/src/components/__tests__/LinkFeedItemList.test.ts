@@ -5,8 +5,8 @@ import { describe, expect, it, rstest } from "@rstest/core";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { mount } from "@vue/test-utils";
 import { computed, shallowRef } from "vue";
-import { createFeedTestQueryClient } from "../composables/link-feed-test-utils";
-import LinkFeedItemList from "./LinkFeedItemList.vue";
+import { createFeedTestQueryClient } from "../../composables/link-feed-test-utils";
+import LinkFeedItemList from "../LinkFeedItemList.vue";
 
 rstest.mock("@vueuse/core", () => ({
   useIntersectionObserver: () => ({

@@ -5,7 +5,7 @@ import {
   linkApplicationCommentRoute,
   linkApplicationSourceMeta,
   linkApplicationSubjectMeta,
-} from "./link-application-origin";
+} from "../link-application-origin";
 
 describe("link application source presentation", () => {
   it("labels form and comment applications", () => {

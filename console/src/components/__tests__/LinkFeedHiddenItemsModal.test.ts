@@ -4,7 +4,7 @@ import { Dialog, Toast } from "@halo-dev/components";
 import { describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { computed, nextTick, shallowRef } from "vue";
-import LinkFeedHiddenItemsModal from "./LinkFeedHiddenItemsModal.vue";
+import LinkFeedHiddenItemsModal from "../LinkFeedHiddenItemsModal.vue";
 
 const hiddenStateMocks = rstest.hoisted(() => ({
   setHiddenState: rstest.fn(),

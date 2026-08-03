@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { computed, nextTick, shallowRef, type ShallowRef } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
-import LinkFeedList from "./LinkFeedList.vue";
+import LinkFeedList from "../LinkFeedList.vue";
 
 const viewMocks = rstest.hoisted(() => ({
   mainFeed: undefined as LinkFeedItems | undefined,

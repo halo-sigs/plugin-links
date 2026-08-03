@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { commentPlainText, htmlToPlainText } from "./comment-content";
+import { commentPlainText, htmlToPlainText } from "../comment-content";
 
 describe("htmlToPlainText", () => {
   it("removes html tags and keeps readable block breaks", () => {

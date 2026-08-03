@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises } from "@vue/test-utils";
-import { runWithFeedTestApp } from "./link-feed-test-utils";
-import { useLinkFeedItemSummary } from "./use-link-feed-item-summary";
+import { runWithFeedTestApp } from "../link-feed-test-utils";
+import { useLinkFeedItemSummary } from "../use-link-feed-item-summary";
 
 const apiMocks = rstest.hoisted(() => ({
   getLinkFeedItemSummary: rstest.fn(),

@@ -11,7 +11,7 @@ import {
   linkApplicationRejectDescription,
   linkApplicationReviewMode,
   linkApplicationStatusMeta,
-} from "./link-application-review";
+} from "../link-application-review";
 
 describe("buildLinkApplicationQuery", () => {
   it("passes pagination through and drops empty filters", () => {

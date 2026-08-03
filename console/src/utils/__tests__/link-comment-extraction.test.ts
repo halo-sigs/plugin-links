@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { applyLinkCommentExtraction } from "./link-comment-extraction";
+import { applyLinkCommentExtraction } from "../link-comment-extraction";
 
 describe("applyLinkCommentExtraction", () => {
   it("prefills the link form from a successful extraction", () => {

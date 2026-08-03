@@ -6,8 +6,8 @@ import {
   runLinkVerification,
   startLinkVerification,
   type LinkVerificationApi,
-} from "./link-verification";
-import { QK_GROUPS_WITH_LINKS } from "./use-link-fetch";
+} from "../link-verification";
+import { QK_GROUPS_WITH_LINKS } from "../use-link-fetch";
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;

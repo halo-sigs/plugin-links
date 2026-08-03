@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { classifyLinkFeedRefreshResult } from "./link-feed-refresh-summary";
+import { classifyLinkFeedRefreshResult } from "../link-feed-refresh-summary";
 
 describe("classifyLinkFeedRefreshResult", () => {
   it("treats all successful feed results as success", () => {

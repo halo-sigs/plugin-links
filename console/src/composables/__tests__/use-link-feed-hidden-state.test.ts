@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
-import { createFeedTestQueryClient, runWithFeedTestApp } from "./link-feed-test-utils";
-import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "./use-link-feed";
-import { useLinkFeedHiddenState } from "./use-link-feed-hidden-state";
-import { QK_LINK_FEED_ITEM_SUMMARY } from "./use-link-feed-item-summary";
-import { QK_LINK_FEED_UNREAD_SUMMARY } from "./use-link-feed-unread-summary";
+import { createFeedTestQueryClient, runWithFeedTestApp } from "../link-feed-test-utils";
+import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "../use-link-feed";
+import { useLinkFeedHiddenState } from "../use-link-feed-hidden-state";
+import { QK_LINK_FEED_ITEM_SUMMARY } from "../use-link-feed-item-summary";
+import { QK_LINK_FEED_UNREAD_SUMMARY } from "../use-link-feed-unread-summary";
 
 const apiMocks = rstest.hoisted(() => ({
   updateLinkFeedItemsHiddenState: rstest.fn(),

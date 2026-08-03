@@ -1,8 +1,8 @@
 import type { LinkFeedItemPage } from "@/api/generated";
 import { describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises } from "@vue/test-utils";
-import { runWithFeedTestApp } from "./link-feed-test-utils";
-import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS, useLinkFeedItems } from "./use-link-feed";
+import { runWithFeedTestApp } from "../link-feed-test-utils";
+import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS, useLinkFeedItems } from "../use-link-feed";
 
 const apiMocks = rstest.hoisted(() => ({
   listLinkFeedItems: rstest.fn(),

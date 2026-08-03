@@ -2,8 +2,8 @@ import type { LinkFeedItem } from "@/api/generated";
 import { describe, expect, it, rstest } from "@rstest/core";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount } from "@vue/test-utils";
-import { createFeedTestQueryClient } from "../composables/link-feed-test-utils";
-import LinkFeedItemCard from "./LinkFeedItemCard.vue";
+import { createFeedTestQueryClient } from "../../composables/link-feed-test-utils";
+import LinkFeedItemCard from "../LinkFeedItemCard.vue";
 
 const actionMocks = rstest.hoisted(() => ({
   openItem: rstest.fn(),

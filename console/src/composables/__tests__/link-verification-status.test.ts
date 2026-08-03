@@ -6,7 +6,7 @@ import {
   hasRunningLinkVerification,
   isLinkVerificationChecking,
   matchesLinkVerificationStatusFilter,
-} from "./link-verification-status";
+} from "../link-verification-status";
 
 describe("accessVerificationStatusMeta", () => {
   it("classifies successful and failed access checks", () => {
