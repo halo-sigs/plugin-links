@@ -5,8 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import run.halo.aifoundation.AiModelService;
 import run.halo.aifoundation.chat.GenerateTextRequest;
@@ -19,14 +17,11 @@ import run.halo.app.plugin.extensionpoint.ExtensionGetter;
 import run.halo.links.dto.LinkCommentExtractionResult;
 import run.halo.links.dto.LinkCommentRecognitionRequest;
 import run.halo.links.dto.LinkCommentRecognitionResult;
-import run.halo.links.endpoint.AiFoundationAvailableCondition;
 
 /**
  * AI Foundation implementation isolated behind an optional classpath condition.
  */
-@Component
 @RequiredArgsConstructor
-@Conditional(AiFoundationAvailableCondition.class)
 public class AiFoundationLinkAiService implements LinkAiService {
 
     static final Duration RECOGNITION_TIMEOUT = Duration.ofSeconds(30);

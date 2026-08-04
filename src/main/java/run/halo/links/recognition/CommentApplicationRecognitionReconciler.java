@@ -3,22 +3,17 @@ package run.halo.links.recognition;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.stereotype.Component;
 import run.halo.app.core.extension.content.Comment;
 import run.halo.app.extension.ExtensionClient;
 import run.halo.app.extension.controller.Controller;
 import run.halo.app.extension.controller.ControllerBuilder;
 import run.halo.app.extension.controller.Reconciler;
-import run.halo.links.endpoint.AiFoundationAvailableCondition;
 
 /**
  * Add-event-only controller for automatic comment application recognition.
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
-@Conditional(AiFoundationAvailableCondition.class)
 public class CommentApplicationRecognitionReconciler
     implements Reconciler<Reconciler.Request> {
 
