@@ -6,9 +6,7 @@ import static org.springdoc.webflux.core.fn.SpringdocRouteBuilder.route;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -24,14 +22,10 @@ import java.util.Map;
 
 /**
  * Console endpoint for AI-powered comment analysis.
- * This endpoint is registered only when the conditional AI adapter is available.
- * If AI Foundation is missing, this bean is skipped and the status endpoint in
- * {@link LinkAiStatusEndpoint} remains functional.
+ * Registered with the complete conditional AI integration when AI Foundation is available.
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
-@Conditional(AiFoundationAvailableCondition.class)
 public class LinkAiExtractEndpoint implements CustomEndpoint {
 
     private final LinkAiService aiService;

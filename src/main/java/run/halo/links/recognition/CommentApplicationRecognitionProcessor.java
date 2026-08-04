@@ -8,8 +8,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.Plugin;
 import run.halo.app.core.extension.content.Comment;
@@ -23,7 +21,6 @@ import run.halo.app.plugin.ReactiveSettingFetcher;
 import run.halo.links.dto.LinkApplicationSettings;
 import run.halo.links.dto.LinkCommentRecognitionRequest;
 import run.halo.links.dto.LinkCommentRecognitionResult;
-import run.halo.links.endpoint.AiFoundationAvailableCondition;
 import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.route.LinkBaseSettings;
@@ -35,9 +32,7 @@ import run.halo.links.service.ai.LinkAiService;
 /**
  * Converts one eligible new Comment into a pending LinkApplication when AI recognizes it.
  */
-@Component
 @RequiredArgsConstructor
-@Conditional(AiFoundationAvailableCondition.class)
 @Slf4j
 public class CommentApplicationRecognitionProcessor {
 
