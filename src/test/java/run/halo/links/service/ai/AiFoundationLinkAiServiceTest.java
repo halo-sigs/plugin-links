@@ -59,6 +59,7 @@ class AiFoundationLinkAiServiceTest {
             .verifyComplete();
 
         var request = capturedRequest();
+        assertThat(request.getMaxOutputTokens()).isNull();
         assertThat(request.getOutput().getSchema()).doesNotContainKey("required");
     }
 
@@ -87,6 +88,7 @@ class AiFoundationLinkAiServiceTest {
             .verifyComplete();
 
         var request = capturedRequest();
+        assertThat(request.getMaxOutputTokens()).isNull();
         assertThat(request.getMaxRetries()).isEqualTo(2);
         assertThat(request.getTimeouts().getTotalTimeout()).isEqualTo(Duration.ofSeconds(30));
         assertThat(request.getOutput().getSchema().get("required"))

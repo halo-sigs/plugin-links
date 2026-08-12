@@ -53,7 +53,6 @@ public class AiFoundationLinkAiService implements LinkAiService {
                     %s
                     """.formatted(content))
                 .output(manualExtractionOutput())
-                .maxOutputTokens(500)
                 .build()))
             .map(result -> toExtractionResult(result.getOutput()))
             .onErrorMap(StructuredOutputValidationException.class, LinkAiOutputException::new);
@@ -67,7 +66,6 @@ public class AiFoundationLinkAiService implements LinkAiService {
                 .system(RECOGNITION_SYSTEM_PROMPT_V1)
                 .prompt(recognitionPrompt(request))
                 .output(recognitionOutput())
-                .maxOutputTokens(800)
                 .maxRetries(RECOGNITION_MAX_RETRIES)
                 .timeouts(GenerationTimeouts.total(RECOGNITION_TIMEOUT))
                 .build()))
