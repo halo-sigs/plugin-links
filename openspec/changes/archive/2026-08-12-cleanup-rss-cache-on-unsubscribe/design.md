@@ -53,6 +53,10 @@ a refresh that fetched the Link while enabled and completes after it has been di
    leaves `status.rss` clear, and does not publish the stale refresh result. This second guard makes
    the final state independent of whether reconciliation or the refresh finishes first.
 
+   Cache writes and cleanup are serialized by Link name across refresh and reconciliation. This
+   ensures cleanup based on a disabled Link snapshot finishes before a newly re-enabled subscription
+   can write its initial cache, without serializing operations for unrelated Links.
+
    **Alternative considered:** rely only on the next reconciliation event. That is eventually
    consistent in the common case, but a refresh could recreate rows after cleanup and then fail to
    update the Link, leaving no later event guaranteed to remove them.

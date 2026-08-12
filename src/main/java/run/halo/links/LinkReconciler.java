@@ -1,7 +1,7 @@
 package run.halo.links;
 
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import run.halo.app.extension.ExtensionClient;
 import run.halo.app.extension.ExtensionUtil;
@@ -10,9 +10,9 @@ import run.halo.app.extension.controller.ControllerBuilder;
 import run.halo.app.extension.controller.Reconciler;
 import run.halo.links.extension.Link;
 import run.halo.links.rss.LinkFeedItemStore;
+import run.halo.links.rss.LinkFeedOperationCoordinator;
 
 @Component
-@RequiredArgsConstructor
 public class LinkReconciler implements Reconciler<Reconciler.Request> {
 
     static final String FINALIZER = "link.halo.run/rss-cache-cleanup";
@@ -21,8 +21,27 @@ public class LinkReconciler implements Reconciler<Reconciler.Request> {
 
     private final LinkFeedItemStore itemStore;
 
+    private final LinkFeedOperationCoordinator operationCoordinator;
+
+    @Autowired
+    public LinkReconciler(ExtensionClient client, LinkFeedItemStore itemStore,
+        LinkFeedOperationCoordinator operationCoordinator) {
+        this.client = client;
+        this.itemStore = itemStore;
+        this.operationCoordinator = operationCoordinator;
+    }
+
+    LinkReconciler(ExtensionClient client, LinkFeedItemStore itemStore) {
+        this(client, itemStore, new LinkFeedOperationCoordinator());
+    }
+
     @Override
     public Result reconcile(Request request) {
+        return operationCoordinator.coordinateBlocking(request.name(),
+            () -> reconcileLocked(request));
+    }
+
+    private Result reconcileLocked(Request request) {
         client.fetch(Link.class, request.name()).ifPresent(link -> {
             var metadata = link.getMetadata();
             if (metadata == null) {

@@ -1,11 +1,13 @@
 package run.halo.links.rss;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -18,6 +20,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -446,20 +453,40 @@ class DefaultLinkFeedServiceTest {
         Link disabledLink = rssLink("link-a", "https://example.com/feed.xml");
         disabledLink.getSpec().getRss().setEnabled(false);
         disabledLink.getStatus().setRss(new Link.RssStatus());
+        AtomicReference<Link> currentLink = new AtomicReference<>(initialLink);
+        CountDownLatch refreshStarted = new CountDownLatch(1);
+        CountDownLatch continueRefresh = new CountDownLatch(1);
 
         when(client.fetch(Link.class, "link-a"))
-            .thenReturn(Mono.just(initialLink), Mono.just(disabledLink));
+            .thenAnswer(invocation -> Mono.defer(() -> Mono.just(currentLink.get())));
         when(client.update(any(Link.class))).thenAnswer(invocation ->
             Mono.just(invocation.getArgument(0)));
         when(itemStore.upsertAll(anyList())).thenReturn(1);
         when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
             .thenReturn(1L);
         when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
-            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXml()));
+            .thenAnswer(invocation -> {
+                refreshStarted.countDown();
+                assertThat(continueRefresh.await(5, TimeUnit.SECONDS)).isTrue();
+                return feedResult("https://example.com/feed.xml", 200, feedXml());
+            });
 
         StepVerifier.create(service.refresh("link-a"))
-            .assertNext(result -> assertThat(result.getFetchedItemCount()).isEqualTo(1))
-            .verifyComplete();
+            .then(() -> {
+                try {
+                    assertThat(refreshStarted.await(5, TimeUnit.SECONDS)).isTrue();
+                } catch (InterruptedException error) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(error);
+                }
+                currentLink.set(disabledLink);
+                continueRefresh.countDown();
+            })
+            .expectErrorSatisfies(error -> assertThat(error)
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(candidate -> ((ResponseStatusException) candidate).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT))
+            .verify();
 
         verify(itemStore).deleteByLinkName("link-a");
         assertThat(disabledLink.getStatus().getRss()).isNull();
@@ -476,24 +503,123 @@ class DefaultLinkFeedServiceTest {
         LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
         DefaultLinkFeedService service =
             new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
-        Link initialLink = rssLink("link-a", "ftp://example.com/feed.xml");
+        Link initialLink = rssLink("link-a", "https://example.com/feed.xml");
         Link unsubscribedLink = rssLink("link-a", "https://example.com/feed.xml");
         unsubscribedLink.getSpec().setRss(null);
         unsubscribedLink.getStatus().setRss(new Link.RssStatus());
+        AtomicReference<Link> currentLink = new AtomicReference<>(initialLink);
+        CountDownLatch refreshStarted = new CountDownLatch(1);
+        CountDownLatch continueRefresh = new CountDownLatch(1);
 
         when(client.fetch(Link.class, "link-a"))
-            .thenReturn(Mono.just(initialLink), Mono.just(unsubscribedLink));
+            .thenAnswer(invocation -> Mono.defer(() -> Mono.just(currentLink.get())));
         when(client.update(any(Link.class))).thenAnswer(invocation ->
             Mono.just(invocation.getArgument(0)));
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenAnswer(invocation -> {
+                refreshStarted.countDown();
+                assertThat(continueRefresh.await(5, TimeUnit.SECONDS)).isTrue();
+                throw new IllegalArgumentException(
+                    "RSS feed URL must be an absolute HTTP or HTTPS URL.");
+            });
 
         StepVerifier.create(service.refresh("link-a"))
+            .then(() -> {
+                try {
+                    assertThat(refreshStarted.await(5, TimeUnit.SECONDS)).isTrue();
+                } catch (InterruptedException error) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(error);
+                }
+                currentLink.set(unsubscribedLink);
+                continueRefresh.countDown();
+            })
             .expectErrorSatisfies(error -> assertThat(error)
-                .hasMessageContaining("absolute HTTP or HTTPS URL"))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(candidate -> ((ResponseStatusException) candidate).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT))
             .verify();
 
         verify(itemStore).deleteByLinkName("link-a");
         assertThat(unsubscribedLink.getStatus().getRss()).isNull();
         verify(client).update(unsubscribedLink);
+    }
+
+    @Test
+    void shouldFinishUnsubscribeCleanupBeforeRefreshingReenabledSubscription() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        LinkFeedOperationCoordinator operationCoordinator = new LinkFeedOperationCoordinator();
+        DefaultLinkFeedService service = new DefaultLinkFeedService(client, itemStore,
+            retentionService, feedFetcher, operationCoordinator);
+        Link initialLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link disabledLink = rssLink("link-a", "https://example.com/feed.xml");
+        disabledLink.getSpec().getRss().setEnabled(false);
+        disabledLink.getStatus().setRss(new Link.RssStatus());
+        Link reenabledLink = rssLink("link-a", "https://example.com/feed.xml");
+        AtomicReference<Link> currentLink = new AtomicReference<>(initialLink);
+        AtomicInteger fetchCount = new AtomicInteger();
+        CountDownLatch firstRefreshStarted = new CountDownLatch(1);
+        CountDownLatch continueFirstRefresh = new CountDownLatch(1);
+        CountDownLatch cleanupStarted = new CountDownLatch(1);
+        CountDownLatch continueCleanup = new CountDownLatch(1);
+        CountDownLatch secondRefreshStarted = new CountDownLatch(1);
+
+        when(client.fetch(Link.class, "link-a"))
+            .thenAnswer(invocation -> Mono.defer(() -> Mono.just(currentLink.get())));
+        when(client.update(any(Link.class))).thenAnswer(invocation -> {
+            Link updatedLink = invocation.getArgument(0);
+            if (!Boolean.TRUE.equals(updatedLink.getSpec().getRss().getEnabled())) {
+                return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                    "resource version conflict"));
+            }
+            return Mono.just(updatedLink);
+        });
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenAnswer(invocation -> {
+                if (fetchCount.incrementAndGet() == 1) {
+                    firstRefreshStarted.countDown();
+                    assertThat(continueFirstRefresh.await(5, TimeUnit.SECONDS)).isTrue();
+                } else {
+                    secondRefreshStarted.countDown();
+                }
+                return feedResult("https://example.com/feed.xml", 200, feedXml());
+            });
+        doAnswer(invocation -> {
+            cleanupStarted.countDown();
+            assertThat(continueCleanup.await(5, TimeUnit.SECONDS)).isTrue();
+            return null;
+        }).when(itemStore).deleteByLinkName("link-a");
+
+        CompletableFuture<LinkFeedRefreshResult> firstRefresh =
+            service.refresh("link-a").toFuture();
+        assertThat(firstRefreshStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        currentLink.set(disabledLink);
+        continueFirstRefresh.countDown();
+        assertThat(cleanupStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+        currentLink.set(reenabledLink);
+        CompletableFuture<LinkFeedRefreshResult> secondRefresh =
+            service.refresh("link-a").toFuture();
+        boolean secondRefreshStartedBeforeCleanup =
+            secondRefreshStarted.await(300, TimeUnit.MILLISECONDS);
+        continueCleanup.countDown();
+
+        assertThat(secondRefreshStartedBeforeCleanup).isFalse();
+        assertThatThrownBy(() -> firstRefresh.get(5, TimeUnit.SECONDS))
+            .cause()
+            .isInstanceOf(ResponseStatusException.class)
+            .extracting(error -> ((ResponseStatusException) error).getStatusCode())
+            .isEqualTo(HttpStatus.CONFLICT);
+        assertThat(secondRefresh.get(5, TimeUnit.SECONDS)).isNotNull();
+        verify(itemStore, times(2)).upsertAll(anyList());
+        verify(itemStore).deleteByLinkName("link-a");
+        verify(client, times(2)).update(any(Link.class));
     }
 
     @Test

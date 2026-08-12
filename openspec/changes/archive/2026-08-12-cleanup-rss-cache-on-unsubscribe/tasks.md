@@ -6,6 +6,7 @@
   Links that are not enabled subscriptions, without changing Link deletion finalizer behavior.
 - [x] 1.3 Add RSS service tests that pause an enabled refresh, disable or remove RSS before refresh
   completion, and verify both successful and failed refresh paths leave no cache or RSS status.
+  Cover immediate re-enablement while cleanup is still running.
 - [x] 1.4 Recheck the latest Link subscription state before publishing refresh success or failure;
   run unsubscribe cleanup and discard the stale refresh result when RSS is no longer enabled.
 

@@ -42,6 +42,11 @@ as an enabled RSS subscription.
 - **THEN** the existing initial refresh flow fetches the subscription into an empty Link cache
 - **AND** the system derives new RSS runtime status from that refresh
 
+#### Scenario: Subscription is re-enabled while cleanup is completing
+- **WHEN** an unsubscribed Link is enabled again while its previous RSS cleanup is still running
+- **THEN** cleanup completes before the re-enabled subscription writes new cached feed items
+- **AND** cleanup does not remove items or runtime status produced by the new refresh
+
 ### Requirement: Console RSS unsubscribe confirmation
 The Console SHALL warn administrators before saving a Link change that ends an enabled RSS
 subscription.
