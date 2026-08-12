@@ -21,11 +21,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -36,7 +36,6 @@ import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.extension.Link;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class DefaultLinkFeedService implements LinkFeedService {
 
@@ -53,6 +52,23 @@ public class DefaultLinkFeedService implements LinkFeedService {
     private final LinkFeedItemStore itemStore;
     private final LinkFeedRetentionService retentionService;
     private final LinkFeedFetcher feedFetcher;
+    private final LinkFeedOperationCoordinator operationCoordinator;
+
+    @Autowired
+    public DefaultLinkFeedService(ReactiveExtensionClient client, LinkFeedItemStore itemStore,
+        LinkFeedRetentionService retentionService, LinkFeedFetcher feedFetcher,
+        LinkFeedOperationCoordinator operationCoordinator) {
+        this.client = client;
+        this.itemStore = itemStore;
+        this.retentionService = retentionService;
+        this.feedFetcher = feedFetcher;
+        this.operationCoordinator = operationCoordinator;
+    }
+
+    DefaultLinkFeedService(ReactiveExtensionClient client, LinkFeedItemStore itemStore,
+        LinkFeedRetentionService retentionService, LinkFeedFetcher feedFetcher) {
+        this(client, itemStore, retentionService, feedFetcher, new LinkFeedOperationCoordinator());
+    }
 
     @Override
     public Mono<LinkFeedDiscoveryResult> discover(String websiteUrl) {
@@ -62,6 +78,10 @@ public class DefaultLinkFeedService implements LinkFeedService {
 
     @Override
     public Mono<LinkFeedRefreshResult> refresh(String linkName) {
+        return operationCoordinator.coordinate(linkName, () -> refreshCoordinated(linkName));
+    }
+
+    private Mono<LinkFeedRefreshResult> refreshCoordinated(String linkName) {
         return client.fetch(Link.class, linkName)
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Link not found: " + linkName)))
@@ -76,8 +96,14 @@ public class DefaultLinkFeedService implements LinkFeedService {
                         .doOnError(statusError -> log.warn("[plugin-links] Failed to update RSS "
                             + "failure status for link {}", linkName, statusError))
                         .onErrorResume(statusError -> Mono.empty())
-                        .then(Mono.error(error)))
-                    .flatMap(result -> updateStatus(linkName, result).thenReturn(result));
+                        .flatMap(published -> published
+                            ? Mono.<LinkFeedRefreshResult>error(error)
+                            : DefaultLinkFeedService.<LinkFeedRefreshResult>staleRefreshError())
+                        .switchIfEmpty(Mono.error(error)))
+                    .flatMap(result -> updateStatus(linkName, result)
+                        .flatMap(published -> published
+                            ? Mono.just(result)
+                            : staleRefreshError()));
             });
     }
 
@@ -342,20 +368,24 @@ public class DefaultLinkFeedService implements LinkFeedService {
         return result;
     }
 
-    private Mono<Link> updateStatus(String linkName, LinkFeedRefreshResult result) {
+    private Mono<Boolean> updateStatus(String linkName, LinkFeedRefreshResult result) {
         return updateStatus(linkName, result, MAX_STATUS_UPDATE_ATTEMPTS);
     }
 
-    private Mono<Link> updateStatus(String linkName, LinkFeedRefreshResult result,
+    private Mono<Boolean> updateStatus(String linkName, LinkFeedRefreshResult result,
         int attemptsRemaining) {
         return fetchLatestLink(linkName)
             .flatMap(link -> {
+                if (!isRssEnabled(link)) {
+                    return cleanupUnsubscribedLink(linkName, link, attemptsRemaining);
+                }
                 applyStatus(link, result);
-                return client.update(link);
-            })
-            .onErrorResume(error -> shouldRetryStatusUpdate(error, attemptsRemaining)
-                ? updateStatus(linkName, result, attemptsRemaining - 1)
-                : Mono.error(error));
+                return client.update(link)
+                    .thenReturn(true)
+                    .onErrorResume(error -> shouldRetryStatusUpdate(error, attemptsRemaining)
+                        ? updateStatus(linkName, result, attemptsRemaining - 1)
+                        : Mono.error(error));
+            });
     }
 
     private Mono<Link> fetchLatestLink(String linkName) {
@@ -391,14 +421,17 @@ public class DefaultLinkFeedService implements LinkFeedService {
         link.getStatus().setRss(status);
     }
 
-    private Mono<Link> updateFailureStatus(String linkName, Throwable error) {
+    private Mono<Boolean> updateFailureStatus(String linkName, Throwable error) {
         return updateFailureStatus(linkName, error, MAX_STATUS_UPDATE_ATTEMPTS);
     }
 
-    private Mono<Link> updateFailureStatus(String linkName, Throwable error,
+    private Mono<Boolean> updateFailureStatus(String linkName, Throwable error,
         int attemptsRemaining) {
         return fetchLatestLink(linkName)
             .flatMap(link -> {
+                if (!isRssEnabled(link)) {
+                    return cleanupUnsubscribedLink(linkName, link, attemptsRemaining);
+                }
                 Link.RssStatus status = Optional.ofNullable(link.getStatus().getRss())
                     .orElseGet(Link.RssStatus::new);
                 status.setLastFetchedAt(Instant.now());
@@ -406,11 +439,43 @@ public class DefaultLinkFeedService implements LinkFeedService {
                 status.setFailureCount(Optional.ofNullable(status.getFailureCount()).orElse(0)
                     + 1);
                 link.getStatus().setRss(status);
-                return client.update(link);
-            })
-            .onErrorResume(statusError -> shouldRetryStatusUpdate(statusError, attemptsRemaining)
-                ? updateFailureStatus(linkName, error, attemptsRemaining - 1)
-                : Mono.error(statusError));
+                return client.update(link)
+                    .thenReturn(true)
+                    .onErrorResume(statusError -> shouldRetryStatusUpdate(statusError,
+                            attemptsRemaining)
+                        ? updateFailureStatus(linkName, error, attemptsRemaining - 1)
+                        : Mono.error(statusError));
+            });
+    }
+
+    private Mono<Boolean> cleanupUnsubscribedLink(String linkName, Link link,
+        int attemptsRemaining) {
+        return cleanupUnsubscribedLink(link)
+            .thenReturn(false)
+            .onErrorResume(error -> {
+                if (!shouldRetryStatusUpdate(error, attemptsRemaining)) {
+                    return Mono.error(error);
+                }
+                return fetchLatestLink(linkName)
+                    .flatMap(latestLink -> isRssEnabled(latestLink)
+                        ? Mono.just(false)
+                        : cleanupUnsubscribedLink(linkName, latestLink,
+                            attemptsRemaining - 1));
+            });
+    }
+
+    private Mono<Link> cleanupUnsubscribedLink(Link link) {
+        itemStore.deleteByLinkName(link.getMetadata().getName());
+        if (link.getStatus().getRss() == null) {
+            return Mono.just(link);
+        }
+        link.getStatus().setRss(null);
+        return client.update(link);
+    }
+
+    private static <T> Mono<T> staleRefreshError() {
+        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+            "RSS subscription changed while refresh was running."));
     }
 
     private static boolean shouldRetryStatusUpdate(Throwable error, int attemptsRemaining) {

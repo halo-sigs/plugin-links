@@ -4,7 +4,9 @@ import type { JsonPatchInner, Link } from "@/api/generated";
 import { startInitialLinkFeedRefresh } from "@/composables/link-feed-initial-refresh";
 import { startLinkVerification } from "@/composables/link-verification";
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
+import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "@/composables/use-link-feed";
 import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
+import { invalidateLinkFeedUnreadSummary } from "@/composables/use-link-feed-unread-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
 import type { LinkFormState } from "@/types";
 import { Dialog, Toast, VButton, VModal, VSpace } from "@halo-dev/components";
@@ -109,6 +111,12 @@ const { mutate, isPending } = useMutation({
     queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
     queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
     queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
+    if (isUnsubscribe(data)) {
+      queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_ITEMS] });
+      queryClient.invalidateQueries({ queryKey: [QK_LINK_FEED_HIDDEN_ITEMS] });
+      invalidateLinkFeedUnreadSummary(queryClient);
+      invalidateLinkFeedItemSummary(queryClient);
+    }
     startLinkVerification({ request: { names: [props.link.metadata.name] }, queryClient });
     if (shouldRefreshFeedAfterSave(data)) {
       startInitialLinkFeedRefresh({ linkName: props.link.metadata.name, queryClient });
@@ -117,7 +125,20 @@ const { mutate, isPending } = useMutation({
 });
 
 function onSubmit(data: LinkFormState) {
+  if (isUnsubscribe(data)) {
+    Dialog.warning({
+      title: "是否确认关闭 RSS 订阅？",
+      description: "关闭后将永久删除该链接的全部 RSS 缓存，包括收藏、稍后阅读和已隐藏的文章，且无法恢复。",
+      confirmType: "danger",
+      onConfirm: () => mutate(data),
+    });
+    return;
+  }
   mutate(data);
+}
+
+function isUnsubscribe(data: LinkFormState) {
+  return Boolean(props.link.spec?.rss?.enabled && !data.rss?.enabled);
 }
 
 function linkRssSpec(data: LinkFormState) {
