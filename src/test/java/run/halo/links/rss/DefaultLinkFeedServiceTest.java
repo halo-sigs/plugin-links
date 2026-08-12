@@ -435,6 +435,68 @@ class DefaultLinkFeedServiceTest {
     }
 
     @Test
+    void shouldCleanupSuccessfulRefreshWhenLinkWasDisabledInFlight() throws Exception {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link initialLink = rssLink("link-a", "https://example.com/feed.xml");
+        Link disabledLink = rssLink("link-a", "https://example.com/feed.xml");
+        disabledLink.getSpec().getRss().setEnabled(false);
+        disabledLink.getStatus().setRss(new Link.RssStatus());
+
+        when(client.fetch(Link.class, "link-a"))
+            .thenReturn(Mono.just(initialLink), Mono.just(disabledLink));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+        when(itemStore.upsertAll(anyList())).thenReturn(1);
+        when(itemStore.countByLinkNameAndFeedUrl("link-a", "https://example.com/feed.xml"))
+            .thenReturn(1L);
+        when(feedFetcher.fetchFeed(eq("https://example.com/feed.xml"), any(), any()))
+            .thenReturn(feedResult("https://example.com/feed.xml", 200, feedXml()));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .assertNext(result -> assertThat(result.getFetchedItemCount()).isEqualTo(1))
+            .verifyComplete();
+
+        verify(itemStore).deleteByLinkName("link-a");
+        assertThat(disabledLink.getStatus().getRss()).isNull();
+        assertThat(disabledLink.getSpec().getRss().getFeedUrls())
+            .containsExactly("https://example.com/feed.xml");
+        verify(client).update(disabledLink);
+    }
+
+    @Test
+    void shouldCleanupFailedRefreshWhenRssWasRemovedInFlight() {
+        ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
+        LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
+        LinkFeedRetentionService retentionService = mock(LinkFeedRetentionService.class);
+        LinkFeedFetcher feedFetcher = mock(LinkFeedFetcher.class);
+        DefaultLinkFeedService service =
+            new DefaultLinkFeedService(client, itemStore, retentionService, feedFetcher);
+        Link initialLink = rssLink("link-a", "ftp://example.com/feed.xml");
+        Link unsubscribedLink = rssLink("link-a", "https://example.com/feed.xml");
+        unsubscribedLink.getSpec().setRss(null);
+        unsubscribedLink.getStatus().setRss(new Link.RssStatus());
+
+        when(client.fetch(Link.class, "link-a"))
+            .thenReturn(Mono.just(initialLink), Mono.just(unsubscribedLink));
+        when(client.update(any(Link.class))).thenAnswer(invocation ->
+            Mono.just(invocation.getArgument(0)));
+
+        StepVerifier.create(service.refresh("link-a"))
+            .expectErrorSatisfies(error -> assertThat(error)
+                .hasMessageContaining("absolute HTTP or HTTPS URL"))
+            .verify();
+
+        verify(itemStore).deleteByLinkName("link-a");
+        assertThat(unsubscribedLink.getStatus().getRss()).isNull();
+        verify(client).update(unsubscribedLink);
+    }
+
+    @Test
     void shouldUpdatePerFeedFailureStatusWhenRefreshFails() {
         ReactiveExtensionClient client = mock(ReactiveExtensionClient.class);
         LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);

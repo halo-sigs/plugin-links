@@ -350,6 +350,9 @@ public class DefaultLinkFeedService implements LinkFeedService {
         int attemptsRemaining) {
         return fetchLatestLink(linkName)
             .flatMap(link -> {
+                if (!isRssEnabled(link)) {
+                    return cleanupUnsubscribedLink(link);
+                }
                 applyStatus(link, result);
                 return client.update(link);
             })
@@ -399,6 +402,9 @@ public class DefaultLinkFeedService implements LinkFeedService {
         int attemptsRemaining) {
         return fetchLatestLink(linkName)
             .flatMap(link -> {
+                if (!isRssEnabled(link)) {
+                    return cleanupUnsubscribedLink(link);
+                }
                 Link.RssStatus status = Optional.ofNullable(link.getStatus().getRss())
                     .orElseGet(Link.RssStatus::new);
                 status.setLastFetchedAt(Instant.now());
@@ -411,6 +417,15 @@ public class DefaultLinkFeedService implements LinkFeedService {
             .onErrorResume(statusError -> shouldRetryStatusUpdate(statusError, attemptsRemaining)
                 ? updateFailureStatus(linkName, error, attemptsRemaining - 1)
                 : Mono.error(statusError));
+    }
+
+    private Mono<Link> cleanupUnsubscribedLink(Link link) {
+        itemStore.deleteByLinkName(link.getMetadata().getName());
+        if (link.getStatus().getRss() == null) {
+            return Mono.just(link);
+        }
+        link.getStatus().setRss(null);
+        return client.update(link);
     }
 
     private static boolean shouldRetryStatusUpdate(Throwable error, int attemptsRemaining) {

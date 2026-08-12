@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,104 @@ class LinkReconcilerTest {
         assertThat(result).isEqualTo(Reconciler.Result.doNotRetry());
         verifyNoInteractions(itemStore);
         verify(client).fetch(Link.class, "link-a");
+        verifyNoMoreInteractions(client);
+    }
+
+    @Test
+    void shouldCleanupDisabledSubscriptionAndPreserveFeedUrls() {
+        Link link = disabledLink("link-disabled");
+        link.getMetadata().setFinalizers(Set.of(LinkReconciler.FINALIZER));
+        Link.RssStatus rssStatus = new Link.RssStatus();
+        rssStatus.setItemCount(3L);
+        link.getStatus().setRss(rssStatus);
+        LinkReconciler reconciler = new LinkReconciler(client, itemStore);
+        when(client.fetch(Link.class, "link-disabled")).thenReturn(Optional.of(link));
+
+        Reconciler.Result result = reconciler.reconcile(
+            new Reconciler.Request("link-disabled"));
+
+        assertThat(result).isEqualTo(Reconciler.Result.doNotRetry());
+        assertThat(link.getSpec().getRss().getFeedUrls())
+            .containsExactly("https://example.com/feed.xml");
+        assertThat(link.getStatus().getRss()).isNull();
+        assertThat(link.getMetadata().getFinalizers()).containsExactly(LinkReconciler.FINALIZER);
+        InOrder inOrder = inOrder(itemStore, client);
+        inOrder.verify(itemStore).deleteByLinkName("link-disabled");
+        inOrder.verify(client).update(link);
+    }
+
+    @Test
+    void shouldAddFinalizerBeforeCleaningDisabledSubscription() {
+        Link link = disabledLink("link-unprotected");
+        Link.RssStatus rssStatus = new Link.RssStatus();
+        link.getStatus().setRss(rssStatus);
+        LinkReconciler reconciler = new LinkReconciler(client, itemStore);
+        when(client.fetch(Link.class, "link-unprotected")).thenReturn(Optional.of(link));
+
+        Reconciler.Result result = reconciler.reconcile(
+            new Reconciler.Request("link-unprotected"));
+
+        assertThat(result).isEqualTo(Reconciler.Result.doNotRetry());
+        assertThat(link.getMetadata().getFinalizers()).containsExactly(LinkReconciler.FINALIZER);
+        assertThat(link.getStatus().getRss()).isSameAs(rssStatus);
+        verify(client).update(link);
+        verifyNoInteractions(itemStore);
+    }
+
+    @Test
+    void shouldCleanupLinkWithoutRssConfiguration() {
+        Link link = link("link-without-rss");
+        link.getSpec().setRss(null);
+        link.getMetadata().setFinalizers(Set.of(LinkReconciler.FINALIZER));
+        link.getStatus().setRss(new Link.RssStatus());
+        LinkReconciler reconciler = new LinkReconciler(client, itemStore);
+        when(client.fetch(Link.class, "link-without-rss")).thenReturn(Optional.of(link));
+
+        Reconciler.Result result = reconciler.reconcile(
+            new Reconciler.Request("link-without-rss"));
+
+        assertThat(result).isEqualTo(Reconciler.Result.doNotRetry());
+        assertThat(link.getStatus().getRss()).isNull();
+        InOrder inOrder = inOrder(itemStore, client);
+        inOrder.verify(itemStore).deleteByLinkName("link-without-rss");
+        inOrder.verify(client).update(link);
+    }
+
+    @Test
+    void shouldIdempotentlyRepairDisabledLinkOnStartup() {
+        Link link = disabledLink("link-repaired");
+        link.getMetadata().setFinalizers(Set.of(LinkReconciler.FINALIZER));
+        LinkReconciler reconciler = new LinkReconciler(client, itemStore);
+        when(client.fetch(Link.class, "link-repaired")).thenReturn(Optional.of(link));
+
+        Reconciler.Result result = reconciler.reconcile(
+            new Reconciler.Request("link-repaired"));
+
+        assertThat(result).isEqualTo(Reconciler.Result.doNotRetry());
+        verify(itemStore).deleteByLinkName("link-repaired");
+        verify(client).fetch(Link.class, "link-repaired");
+        verifyNoMoreInteractions(client);
+    }
+
+    @Test
+    void shouldKeepRssStatusWhenDisabledLinkCleanupFails() {
+        Link link = disabledLink("link-pending-cleanup");
+        link.getMetadata().setFinalizers(Set.of(LinkReconciler.FINALIZER));
+        Link.RssStatus rssStatus = new Link.RssStatus();
+        rssStatus.setItemCount(3L);
+        link.getStatus().setRss(rssStatus);
+        LinkReconciler reconciler = new LinkReconciler(client, itemStore);
+        when(client.fetch(Link.class, "link-pending-cleanup")).thenReturn(Optional.of(link));
+        doThrow(new LinkFeedStorageUnavailableException("unavailable"))
+            .when(itemStore).deleteByLinkName("link-pending-cleanup");
+
+        assertThatThrownBy(() -> reconciler.reconcile(
+            new Reconciler.Request("link-pending-cleanup")))
+            .isInstanceOf(LinkFeedStorageUnavailableException.class);
+        assertThat(link.getStatus().getRss()).isSameAs(rssStatus);
+        assertThat(link.getSpec().getRss().getFeedUrls())
+            .containsExactly("https://example.com/feed.xml");
+        verify(client).fetch(Link.class, "link-pending-cleanup");
         verifyNoMoreInteractions(client);
     }
 
@@ -168,6 +267,18 @@ class LinkReconcilerTest {
         Metadata metadata = new Metadata();
         metadata.setName(name);
         link.setMetadata(metadata);
+        Link.LinkSpec spec = new Link.LinkSpec();
+        Link.RssSpec rss = new Link.RssSpec();
+        rss.setEnabled(true);
+        rss.setFeedUrls(List.of("https://example.com/feed.xml"));
+        spec.setRss(rss);
+        link.setSpec(spec);
+        return link;
+    }
+
+    private static Link disabledLink(String name) {
+        Link link = link(name);
+        link.getSpec().getRss().setEnabled(false);
         return link;
     }
 
