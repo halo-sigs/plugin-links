@@ -76,6 +76,7 @@ function reset() {
 
 function open() {
   showPanel.value = true;
+  handleFetchComments();
 }
 </script>
 
