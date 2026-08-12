@@ -28,10 +28,22 @@ import type { Ref } from './ref';
 export interface LinkApplicationOriginComment {
     /**
      * 
+     * @type {boolean}
+     * @memberof LinkApplicationOriginComment
+     */
+    'approved': boolean;
+    /**
+     *
      * @type {string}
      * @memberof LinkApplicationOriginComment
      */
     'creationTime'?: string;
+    /**
+     *
+     * @type {boolean}
+     * @memberof LinkApplicationOriginComment
+     */
+    'hidden': boolean;
     /**
      * 
      * @type {string}

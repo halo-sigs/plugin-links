@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, unref, type MaybeRef } from "vue";
 
 export const QK_LINK_APPLICATIONS = "plugin:links:link-applications";
+export const QK_LINK_APPLICATION_ORIGIN_COMMENT = "plugin:links:link-application-origin-comment";
 
 export function useLinkApplications(params: MaybeRef<LinkApplicationQuery>) {
   const queryParams = computed(() => unref(params));
@@ -27,7 +28,7 @@ export function useLinkApplicationOriginComment(application: MaybeRef<LinkApplic
   const applicationName = computed(() => target.value.metadata?.name);
   const enabled = computed(() => target.value.spec.origin.type === "COMMENT" && !!applicationName.value);
   return useQuery({
-    queryKey: ["plugin:links:link-application-origin-comment", applicationName],
+    queryKey: [QK_LINK_APPLICATION_ORIGIN_COMMENT, applicationName],
     queryFn: async () => {
       if (!applicationName.value) {
         throw new Error("Application name is not available");

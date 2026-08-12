@@ -159,12 +159,16 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
                 spec.getRaw(),
                 spec.getSubjectRef(),
                 spec.getCreationTime(),
+                Boolean.TRUE.equals(spec.getApproved()),
+                Boolean.TRUE.equals(spec.getHidden()),
                 subject))
             .defaultIfEmpty(new LinkApplicationOriginComment(
                 comment.getMetadata().getName(),
                 spec.getRaw(),
                 spec.getSubjectRef(),
                 spec.getCreationTime(),
+                Boolean.TRUE.equals(spec.getApproved()),
+                Boolean.TRUE.equals(spec.getHidden()),
                 null));
     }
 

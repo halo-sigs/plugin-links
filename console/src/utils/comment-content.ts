@@ -4,6 +4,15 @@ export function commentPlainText(comment: Pick<LinkCommentSummaryDTO, "content" 
   return htmlToPlainText(comment.raw || comment.content || "");
 }
 
+export function plainTextToSafeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/\r?\n/g, "<br />");
+}
+
 export function htmlToPlainText(value: string) {
   const htmlWithBreaks = value
     .replace(/<\s*br\s*\/?>/gi, "\n")

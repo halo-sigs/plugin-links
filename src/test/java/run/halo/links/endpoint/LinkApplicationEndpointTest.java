@@ -103,6 +103,8 @@ class LinkApplicationEndpointTest {
         subjectRef.setName("post-a");
         commentSpec.setSubjectRef(subjectRef);
         commentSpec.setCreationTime(Instant.parse("2026-07-25T00:00:00Z"));
+        commentSpec.setApproved(false);
+        commentSpec.setHidden(true);
         comment.setSpec(commentSpec);
         when(client.fetch(LinkApplication.class, "application-a"))
             .thenReturn(Mono.just(application));
@@ -122,6 +124,8 @@ class LinkApplicationEndpointTest {
             .jsonPath("$.name").isEqualTo("comment-a")
             .jsonPath("$.raw").isEqualTo("raw comment")
             .jsonPath("$.creationTime").isEqualTo("2026-07-25T00:00:00Z")
+            .jsonPath("$.approved").isEqualTo(false)
+            .jsonPath("$.hidden").isEqualTo(true)
             .jsonPath("$.subject.title").isEqualTo("Public post")
             .jsonPath("$.subject.url").isEqualTo("https://example.com/posts/public-post")
             .jsonPath("$.subject.kindName").isEqualTo("文章")
@@ -150,6 +154,8 @@ class LinkApplicationEndpointTest {
         subjectRef.setName("post-a");
         commentSpec.setSubjectRef(subjectRef);
         commentSpec.setCreationTime(Instant.parse("2026-07-25T00:00:00Z"));
+        commentSpec.setApproved(true);
+        commentSpec.setHidden(false);
         comment.setSpec(commentSpec);
         when(client.fetch(LinkApplication.class, "application-a"))
             .thenReturn(Mono.just(application));
@@ -167,6 +173,8 @@ class LinkApplicationEndpointTest {
             .jsonPath("$.name").isEqualTo("comment-a")
             .jsonPath("$.raw").isEqualTo("raw comment")
             .jsonPath("$.creationTime").isEqualTo("2026-07-25T00:00:00Z")
+            .jsonPath("$.approved").isEqualTo(true)
+            .jsonPath("$.hidden").isEqualTo(false)
             .jsonPath("$.subject").doesNotExist()
             .jsonPath("$.content").doesNotExist()
             .jsonPath("$.owner").doesNotExist();

@@ -2160,11 +2160,18 @@
         }
       },
       "LinkApplicationOriginComment" : {
+        "required" : [ "approved", "hidden" ],
         "type" : "object",
         "properties" : {
+          "approved" : {
+            "type" : "boolean"
+          },
           "creationTime" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "hidden" : {
+            "type" : "boolean"
           },
           "name" : {
             "type" : "string"

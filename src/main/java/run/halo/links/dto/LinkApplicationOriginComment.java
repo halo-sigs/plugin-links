@@ -10,6 +10,10 @@ public record LinkApplicationOriginComment(
     String raw,
     Ref subjectRef,
     Instant creationTime,
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    boolean approved,
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    boolean hidden,
     LinkApplicationOriginSubject subject
 ) {
 }

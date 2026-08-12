@@ -1,26 +1,40 @@
 <script lang="ts" setup>
-import type { LinkApplication } from "@/api/generated";
+import type { ApproveRequest, LinkApplication } from "@/api/generated";
 import { QK_LINK_GROUPS, useLinkGroupFetch } from "@/composables/use-group-fetch";
 import {
   useApproveLinkApplication,
   useDeleteLinkApplication,
+  useLinkApplicationOriginComment,
   useRejectLinkApplication,
   useVerifyBacklink,
 } from "@/composables/use-link-application";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
+import { approveLinkThenHandleOriginComment, useOriginCommentActions } from "@/composables/use-origin-comment-actions";
+import {
+  linkApplicationCommentActionsView,
+  originCommentActionFailureAlert,
+  originCommentActionSuccessMessage,
+  originCommentOutcomeRequiresReplyConfirmation,
+  type LinkApplicationOriginCommentState,
+  type OriginCommentActionIntent,
+  type OriginCommentActionOutcome,
+} from "@/utils/link-application-comment-actions";
 import {
   buildLinkApplicationApprovalRequest,
-  type LinkApplicationApprovalFormData,
   linkApplicationEffectiveFields,
+  linkApplicationOriginCommentErrorState,
   linkApplicationRejectDescription,
   linkApplicationReviewMode,
   linkApplicationStatusMeta,
+  type LinkApplicationApprovalFormData,
 } from "@/utils/link-application-review";
 import { Dialog, Toast, VAlert, VButton, VLoading, VModal, VSpace, VTag } from "@halo-dev/components";
+import { utils } from "@halo-dev/ui-shared";
 import { useQueryClient } from "@tanstack/vue-query";
-import { computed, reactive, useTemplateRef } from "vue";
+import { computed, reactive, shallowRef, useTemplateRef, watch } from "vue";
 import MingcuteEarth3Line from "~icons/mingcute/earth-3-line";
 import MingcuteMailLine from "~icons/mingcute/mail-line";
+import LinkApplicationOriginCommentActions from "./LinkApplicationOriginCommentActions.vue";
 import LinkApplicationOriginDetails from "./LinkApplicationOriginDetails.vue";
 import LinkApplicationSourceBadge from "./LinkApplicationSourceBadge.vue";
 
@@ -38,14 +52,16 @@ const modal = useTemplateRef<InstanceType<typeof VModal> | null>("modal");
 
 const { data: groups } = useLinkGroupFetch();
 
-const { mutate: approveApplication, isPending: isApproving } = useApproveLinkApplication();
+const { mutateAsync: approveApplication, isPending: isApproving } = useApproveLinkApplication();
 const { mutate: rejectApplication, isPending: isRejecting } = useRejectLinkApplication();
 const { mutate: deleteApplication } = useDeleteLinkApplication();
 const { mutate: verifyApplication, isPending: isVerifying } = useVerifyBacklink();
 
 const reviewMode = computed(() => linkApplicationReviewMode(props.application));
-const statusMeta = computed(() => linkApplicationStatusMeta(props.application.spec.status));
-const frozenFields = computed(() => linkApplicationEffectiveFields(props.application));
+const statusMeta = computed(() => linkApplicationStatusMeta(effectiveStatus.value));
+const frozenFields = computed<ApproveRequest>(
+  () => submittedApprovalRequest.value ?? linkApplicationEffectiveFields(props.application),
+);
 const approvalForm = reactive<LinkApplicationApprovalFormData>({
   url: props.application.spec.url,
   displayName: props.application.spec.displayName,
@@ -57,11 +73,109 @@ const approvalForm = reactive<LinkApplicationApprovalFormData>({
 });
 const verificationBacklink = computed(() => approvalForm.backlink?.trim());
 
+const {
+  data: originComment,
+  isLoading: isOriginCommentLoading,
+  error: originCommentError,
+  refetch: refetchOriginCommentQuery,
+} = useLinkApplicationOriginComment(computed(() => props.application));
+
+// Local approved phase retained when link approval succeeded but Comment handling did not,
+// so the modal stays open in approved mode without mutating the application prop.
+const linkApproved = shallowRef(false);
+// The request submitted from the editable form, so frozen fields reflect what was actually
+// approved instead of pre-review submission data.
+const submittedApprovalRequest = shallowRef<ApproveRequest>();
+const commentOutcome = shallowRef<Exclude<OriginCommentActionOutcome, { type: "completed" }>>();
+const awaitingReplyConfirmation = shallowRef(false);
+// Set when Halo rejects a Comment mutation with 401/403 while the modal is open, so
+// permission-dependent controls stop allowing repeated submissions.
+const commentPermissionLost = shallowRef(false);
+
+const approveOverride = shallowRef<boolean>();
+const replyText = shallowRef("");
+
+watch(
+  () => props.application.metadata.name,
+  () => {
+    linkApproved.value = false;
+    submittedApprovalRequest.value = undefined;
+    commentOutcome.value = undefined;
+    awaitingReplyConfirmation.value = false;
+    commentPermissionLost.value = false;
+    approveOverride.value = undefined;
+    replyText.value = "";
+  },
+);
+
+const effectiveStatus = computed(() => (linkApproved.value ? "APPROVED" : props.application.spec.status));
+const effectiveReviewMode = computed(() => (linkApproved.value ? "readonly" : reviewMode.value));
+
 const modalTitle = computed(() =>
-  reviewMode.value === "editable"
+  effectiveReviewMode.value === "editable"
     ? `审核申请 - ${props.application.spec.displayName}`
     : `申请详情 - ${props.application.spec.displayName}`,
 );
+
+// permission.has defaults to "any", so pass false to require both link and comment management.
+const canManageComments = computed(
+  () => !commentPermissionLost.value && utils.permission.has(["plugin:links:manage", "system:comments:manage"], false),
+);
+
+const originCommentState = computed<LinkApplicationOriginCommentState>(() => {
+  if (isOriginCommentLoading.value) {
+    return "loading";
+  }
+  if (originCommentError.value) {
+    return linkApplicationOriginCommentErrorState(originCommentError.value) === "unavailable" ? "deleted" : "error";
+  }
+  return originComment.value ? "ready" : "deleted";
+});
+
+const commentActionsView = computed(() =>
+  linkApplicationCommentActionsView({
+    originType: props.application.spec.origin.type,
+    applicationStatus: effectiveStatus.value,
+    commentState: originCommentState.value,
+    approved: originComment.value?.approved,
+    hidden: originComment.value?.hidden,
+  }),
+);
+
+const approveCommentSelected = computed({
+  get: () => approveOverride.value ?? commentActionsView.value.approvalDefaultSelected,
+  set: (value: boolean) => {
+    approveOverride.value = value;
+  },
+});
+
+const commentIntent = computed<OriginCommentActionIntent>(() => {
+  if (!commentActionsView.value.controlsEnabled || !canManageComments.value) {
+    return { approve: false, replyText: "" };
+  }
+  return {
+    approve: commentActionsView.value.approvalOffered && approveCommentSelected.value,
+    replyText: replyText.value,
+  };
+});
+
+// While the source Comment state is loading, the intent would degrade to a no-op and bypass the
+// default approval selection, so block link approval until the state is known.
+const linkApprovalDisabled = computed(() => commentActionsView.value.visible && originCommentState.value === "loading");
+
+const commentFailureAlert = computed(() =>
+  commentOutcome.value
+    ? originCommentActionFailureAlert({
+        outcome: commentOutcome.value,
+        includesLinkApproval: linkApproved.value,
+      })
+    : undefined,
+);
+
+const { isProcessing: isHandlingComment, handleOriginComment } = useOriginCommentActions({
+  application: computed(() => props.application),
+  refetchOriginComment: async () => (await refetchOriginCommentQuery()).data,
+});
 
 const frozenGroupLabel = computed(() => {
   const groupName = frozenFields.value.groupName;
@@ -87,12 +201,44 @@ const groupOptions = computed(() => [
   }),
 ]);
 
-function handleApproveSuccess() {
-  Toast.success("已通过申请");
+function invalidateLinkQueries() {
   queryClient.invalidateQueries({ queryKey: [QK_GROUPS_WITH_LINKS] });
   queryClient.invalidateQueries({ queryKey: [QK_RSS_GROUPS_WITH_LINKS] });
   queryClient.invalidateQueries({ queryKey: [QK_LINK_GROUPS] });
-  modal.value?.close();
+}
+
+function handleCommentOutcome(outcome: OriginCommentActionOutcome) {
+  if (outcome.type === "completed") {
+    Toast.success(originCommentActionSuccessMessage(outcome, linkApproved.value));
+    invalidateLinkQueries();
+    modal.value?.close();
+    return;
+  }
+  commentOutcome.value = outcome;
+  if (outcome.type === "failed" && (outcome.status === 401 || outcome.status === 403)) {
+    commentPermissionLost.value = true;
+  }
+  if (originCommentOutcomeRequiresReplyConfirmation(outcome)) {
+    awaitingReplyConfirmation.value = true;
+  }
+  if (linkApproved.value) {
+    invalidateLinkQueries();
+  }
+}
+
+async function approveAndHandleComment(approveLink: () => Promise<unknown>, approvedRequest?: ApproveRequest) {
+  commentOutcome.value = undefined;
+  const result = await approveLinkThenHandleOriginComment({
+    approveLink,
+    handleComment: () => handleOriginComment(commentIntent.value),
+  });
+  if (!result.linkApproved) {
+    // The global interceptor reports the approval failure; no Comment request was sent.
+    return;
+  }
+  linkApproved.value = true;
+  submittedApprovalRequest.value = approvedRequest;
+  handleCommentOutcome(result.commentOutcome ?? { type: "completed", approvedComment: false, replied: false });
 }
 
 function handleApprove(data: LinkApplicationApprovalFormData) {
@@ -104,26 +250,34 @@ function handleApprove(data: LinkApplicationApprovalFormData) {
     Toast.error("链接地址不能为空");
     return;
   }
-  approveApplication(
-    {
-      name: props.application.metadata.name,
-      request: buildLinkApplicationApprovalRequest(data),
-    },
-    {
-      onSuccess: handleApproveSuccess,
-    },
-  );
+  const request = buildLinkApplicationApprovalRequest(data);
+  void approveAndHandleComment(() => approveApplication({ name: props.application.metadata.name, request }), request);
 }
 
 function handleResumeApproval() {
-  approveApplication(
-    {
-      name: props.application.metadata.name,
-    },
-    {
-      onSuccess: handleApproveSuccess,
-    },
-  );
+  void approveAndHandleComment(() => approveApplication({ name: props.application.metadata.name }));
+}
+
+function handleCommentActionSubmit(intent: OriginCommentActionIntent) {
+  if (awaitingReplyConfirmation.value && intent.replyText.trim()) {
+    Dialog.warning({
+      title: "确认重新提交回复？",
+      description: "上次回复请求结果未知，重复提交可能产生重复回复，请确认已核对评论与回复状态。",
+      confirmType: "danger",
+      onConfirm: () => {
+        awaitingReplyConfirmation.value = false;
+        void runStandaloneCommentActions(intent);
+      },
+    });
+    return;
+  }
+  void runStandaloneCommentActions(intent);
+}
+
+async function runStandaloneCommentActions(intent: OriginCommentActionIntent) {
+  commentOutcome.value = undefined;
+  const outcome = await handleOriginComment(intent);
+  handleCommentOutcome(outcome);
 }
 
 function handleReject() {
@@ -195,15 +349,28 @@ function handleDelete() {
         </span>
       </div>
 
-      <VAlert v-if="reviewMode === 'resume'" title="审批已保留" type="info" :closable="false">
+      <VAlert v-if="effectiveReviewMode === 'resume'" title="审批已保留" type="info" :closable="false">
         <template #description> 审批字段已冻结，无法修改、拒绝或删除。点击“继续审批”以完成创建正式链接。 </template>
       </VAlert>
 
       <LinkApplicationOriginDetails :application="application" />
 
+      <VAlert v-if="commentFailureAlert" :title="commentFailureAlert.title" type="error" :closable="false">
+        <template #description>{{ commentFailureAlert.description }}</template>
+      </VAlert>
+
+      <LinkApplicationOriginCommentActions
+        v-model:approve="approveCommentSelected"
+        v-model:reply-text="replyText"
+        :view="commentActionsView"
+        :can-manage-comments="canManageComments"
+        :processing="isHandlingComment"
+        @submit="handleCommentActionSubmit"
+      />
+
       <!-- Editable approval form for pending applications -->
       <FormKit
-        v-if="reviewMode === 'editable'"
+        v-if="effectiveReviewMode === 'editable'"
         id="link-application-form"
         name="link-application-form"
         type="form"
@@ -308,16 +475,28 @@ function handleDelete() {
     </div>
 
     <template #footer>
-      <VSpace v-if="reviewMode === 'editable'">
-        <VButton :loading="isApproving" type="secondary" @click="$formkit.submit('link-application-form')">
+      <VSpace v-if="effectiveReviewMode === 'editable'">
+        <VButton
+          :loading="isApproving || isHandlingComment"
+          :disabled="linkApprovalDisabled"
+          type="secondary"
+          @click="$formkit.submit('link-application-form')"
+        >
           通过
         </VButton>
         <VButton :loading="isRejecting" type="danger" @click="handleReject"> 拒绝 </VButton>
         <VButton type="default" @click="handleDelete">删除</VButton>
         <VButton @click="modal?.close()">取消</VButton>
       </VSpace>
-      <VSpace v-else-if="reviewMode === 'resume'">
-        <VButton :loading="isApproving" type="secondary" @click="handleResumeApproval"> 继续审批 </VButton>
+      <VSpace v-else-if="effectiveReviewMode === 'resume'">
+        <VButton
+          :loading="isApproving || isHandlingComment"
+          :disabled="linkApprovalDisabled"
+          type="secondary"
+          @click="handleResumeApproval"
+        >
+          继续审批
+        </VButton>
         <VButton @click="modal?.close()">取消</VButton>
       </VSpace>
       <VSpace v-else>
