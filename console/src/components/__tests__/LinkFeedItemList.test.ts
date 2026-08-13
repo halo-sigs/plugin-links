@@ -1,29 +1,29 @@
 import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { VLoading } from "@halo-dev/components";
-import { describe, expect, it, rstest } from "@rstest/core";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { mount } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
 import { computed, shallowRef } from "vue";
 import { createFeedTestQueryClient } from "../../composables/link-feed-test-utils";
 import LinkFeedItemList from "../LinkFeedItemList.vue";
 
-rstest.mock("@vueuse/core", () => ({
+vi.mock("@vueuse/core", () => ({
   useIntersectionObserver: () => ({
     isSupported: shallowRef(false),
     stop: () => {},
   }),
 }));
 
-rstest.mock("@/composables/use-link-feed-item-actions", () => ({
+vi.mock("@/composables/use-link-feed-item-actions", () => ({
   useLinkFeedItemActions: () => ({
     isMarkingFavorite: { value: false },
     isMarkingRead: { value: false },
     isMarkingReadLater: { value: false },
-    openItem: rstest.fn(),
-    toggleFavorite: rstest.fn(),
-    toggleRead: rstest.fn(),
-    toggleReadLater: rstest.fn(),
+    openItem: vi.fn(),
+    toggleFavorite: vi.fn(),
+    toggleRead: vi.fn(),
+    toggleReadLater: vi.fn(),
   }),
 }));
 
@@ -136,10 +136,10 @@ function fakeFeed(
     isLoading: computed(() => options.isLoading ?? false),
     isFetching: computed(() => options.isLoading ?? false),
     isLoadingMore: computed(() => options.isLoadingMore ?? false),
-    reload: rstest.fn(),
-    fetchNextPage: rstest.fn(),
-    selectLink: rstest.fn(),
-    selectReadStatus: rstest.fn(),
+    reload: vi.fn(),
+    fetchNextPage: vi.fn(),
+    selectLink: vi.fn(),
+    selectReadStatus: vi.fn(),
   } as unknown as LinkFeedItems;
 }
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, it } from "vitest";
 import { refreshInitialLinkFeed, startInitialLinkFeedRefresh } from "../link-feed-initial-refresh";
 import { QK_LINK_FEED_ITEMS } from "../use-link-feed";
 import { QK_LINK_FEED_ITEM_SUMMARY } from "../use-link-feed-item-summary";

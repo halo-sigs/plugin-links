@@ -1,5 +1,5 @@
 import type { LinkApplication } from "@/api/generated";
-import { describe, expect, it, rstest } from "@rstest/core";
+import { describe, expect, it, vi } from "vitest";
 import { runWithFeedTestApp } from "../link-feed-test-utils";
 import {
   approveLinkThenHandleOriginComment,
@@ -7,13 +7,13 @@ import {
   useOriginCommentActions,
 } from "../use-origin-comment-actions";
 
-const apiMocks = rstest.hoisted(() => ({
-  patchComment: rstest.fn(),
-  createReply: rstest.fn(),
-  listReplies: rstest.fn(),
+const apiMocks = vi.hoisted(() => ({
+  patchComment: vi.fn(),
+  createReply: vi.fn(),
+  listReplies: vi.fn(),
 }));
 
-rstest.mock("@halo-dev/api-client", () => ({
+vi.mock("@halo-dev/api-client", () => ({
   axiosInstance: {},
   coreApiClient: {
     content: {
@@ -83,7 +83,7 @@ describe("runOriginCommentActions approval", () => {
 
   it("confirms the actual state instead of claiming failure when the approval response is lost", async () => {
     apiMocks.patchComment.mockRejectedValue({ isAxiosError: true, response: undefined });
-    const refetchOriginComment = rstest
+    const refetchOriginComment = vi
       .fn()
       .mockResolvedValueOnce(unapprovedOriginComment)
       .mockResolvedValueOnce(approvedOriginComment);
@@ -113,7 +113,7 @@ describe("runOriginCommentActions approval", () => {
 
   it("reports an indeterminate approval when the confirming refresh also fails", async () => {
     apiMocks.patchComment.mockRejectedValue({ isAxiosError: true, response: { status: 500 } });
-    const refetchOriginComment = rstest.fn().mockRejectedValue(new Error("refresh failed"));
+    const refetchOriginComment = vi.fn().mockRejectedValue(new Error("refresh failed"));
 
     const outcome = await runOriginCommentActions({
       commentName: "comment-a",
@@ -180,7 +180,7 @@ describe("runOriginCommentActions reply", () => {
   it("never resubmits an indeterminate reply and refreshes current state instead", async () => {
     apiMocks.createReply.mockRejectedValue({ isAxiosError: true, response: undefined });
     apiMocks.listReplies.mockResolvedValue({ data: { items: [{}, {}] } });
-    const refetchOriginComment = rstest.fn().mockResolvedValue(approvedOriginComment);
+    const refetchOriginComment = vi.fn().mockResolvedValue(approvedOriginComment);
 
     const outcome = await runOriginCommentActions({
       commentName: "comment-a",
@@ -244,7 +244,7 @@ describe("useOriginCommentActions", () => {
 
 describe("approveLinkThenHandleOriginComment", () => {
   it("prevents every comment request when link approval fails", async () => {
-    const handleComment = rstest.fn();
+    const handleComment = vi.fn();
 
     const result = await approveLinkThenHandleOriginComment({
       approveLink: async () => {

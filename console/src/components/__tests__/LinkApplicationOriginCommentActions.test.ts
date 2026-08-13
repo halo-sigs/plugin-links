@@ -1,6 +1,6 @@
 import { linkApplicationCommentActionsView } from "@/utils/link-application-comment-actions";
-import { describe, expect, it } from "@rstest/core";
 import { mount } from "@vue/test-utils";
+import { describe, expect, it } from "vitest";
 import { defineComponent, h } from "vue";
 import LinkApplicationOriginCommentActions from "../LinkApplicationOriginCommentActions.vue";
 

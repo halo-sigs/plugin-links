@@ -1,12 +1,12 @@
 {
   "type": "module",
   "scripts": {
-    "dev": "rsbuild build --env-mode development --watch",
-    "build": "rsbuild build",
+    "dev": "vite build --mode development --watch",
+    "build": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",
     "lint": "eslint . --fix",
     "prettier": "prettier --write .",
-    "test:unit": "rstest"
+    "test:unit": "vitest run"
   },
   "prettier": {
     "printWidth": 120,
@@ -33,16 +33,13 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@halo-dev/ui-plugin-bundler-kit": "^2.24.0",
+    "@halo-dev/ui-plugin-bundler-kit": "https://pkg.pr.new/@halo-dev/ui-plugin-bundler-kit@9490dc7",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify-json/mingcute": "^1.2.7",
     "@iconify-json/ri": "^1.2.10",
-    "@rsbuild/core": "^2.1.9",
-    "@rsbuild/plugin-vue": "^2.0.1",
-    "@rstest/core": "^0.10.2",
     "@types/node": "^24.12.2",
     "@unocss/eslint-config": "^66.6.8",
-    "@unocss/webpack": "^66.6.8",
+    "@vitejs/plugin-vue": "^6.0.8",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/test-utils": "^2.4.11",
@@ -57,6 +54,8 @@
     "typescript": "~5.9.3",
     "unocss": "^66.6.8",
     "unplugin-icons": "^22.5.0",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.6",
     "vue-tsc": "^2.2.12"
   },
   "packageManager": "pnpm@10.33.2"

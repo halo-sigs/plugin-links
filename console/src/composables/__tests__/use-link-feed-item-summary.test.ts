@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runWithFeedTestApp } from "../link-feed-test-utils";
 import { useLinkFeedItemSummary } from "../use-link-feed-item-summary";
 
-const apiMocks = rstest.hoisted(() => ({
-  getLinkFeedItemSummary: rstest.fn(),
+const apiMocks = vi.hoisted(() => ({
+  getLinkFeedItemSummary: vi.fn(),
 }));
 
-rstest.mock("@/api", () => ({
+vi.mock("@/api", () => ({
   linksConsoleApiClient: {
     feed: apiMocks,
   },
