@@ -18,9 +18,9 @@
     ]
   },
   "dependencies": {
-    "@halo-dev/api-client": "^2.24.0",
-    "@halo-dev/components": "^2.24.0",
-    "@halo-dev/ui-shared": "^2.24.0",
+    "@halo-dev/api-client": "^2.26.0",
+    "@halo-dev/components": "^2.26.0",
+    "@halo-dev/ui-shared": "^2.26.0",
     "@imengyu/vue3-context-menu": "^1.5.4",
     "@tanstack/vue-query": "^4.44.0",
     "@vueuse/core": "^10.11.1",
@@ -33,7 +33,7 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@halo-dev/ui-plugin-bundler-kit": "https://pkg.pr.new/@halo-dev/ui-plugin-bundler-kit@9490dc7",
+    "@halo-dev/ui-plugin-bundler-kit": "^2.26.0",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify-json/mingcute": "^1.2.7",
     "@iconify-json/ri": "^1.2.10",
