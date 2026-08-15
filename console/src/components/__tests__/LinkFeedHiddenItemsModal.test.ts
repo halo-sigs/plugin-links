@@ -1,35 +1,35 @@
 import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { Dialog, Toast } from "@halo-dev/components";
-import { describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
 import { computed, nextTick, shallowRef } from "vue";
 import LinkFeedHiddenItemsModal from "../LinkFeedHiddenItemsModal.vue";
 
-const hiddenStateMocks = rstest.hoisted(() => ({
-  setHiddenState: rstest.fn(),
+const hiddenStateMocks = vi.hoisted(() => ({
+  setHiddenState: vi.fn(),
 }));
 
-rstest.mock("@/composables/use-link-feed-hidden-state", () => ({
+vi.mock("@/composables/use-link-feed-hidden-state", () => ({
   useLinkFeedHiddenState: () => ({
     isUpdating: shallowRef(false),
     setHiddenState: hiddenStateMocks.setHiddenState,
   }),
 }));
 
-rstest.mock("@/composables/use-link-feed-item-actions", () => ({
+vi.mock("@/composables/use-link-feed-item-actions", () => ({
   useLinkFeedItemActions: () => ({
     isMarkingFavorite: { value: false },
     isMarkingRead: { value: false },
     isMarkingReadLater: { value: false },
-    openItem: rstest.fn(),
-    toggleFavorite: rstest.fn(),
-    toggleRead: rstest.fn(),
-    toggleReadLater: rstest.fn(),
+    openItem: vi.fn(),
+    toggleFavorite: vi.fn(),
+    toggleRead: vi.fn(),
+    toggleReadLater: vi.fn(),
   }),
 }));
 
-rstest.mock("@vueuse/core", () => ({
+vi.mock("@vueuse/core", () => ({
   useIntersectionObserver: () => ({
     isSupported: shallowRef(false),
     stop: () => {},
@@ -39,8 +39,8 @@ rstest.mock("@vueuse/core", () => ({
 describe("LinkFeedHiddenItemsModal", () => {
   it("unhides a single item directly without confirmation", async () => {
     hiddenStateMocks.setHiddenState.mockResolvedValue({ requestedCount: 1, updatedCount: 1 });
-    const dialogSpy = rstest.spyOn(Dialog, "warning");
-    const toastSpy = rstest.spyOn(Toast, "success");
+    const dialogSpy = vi.spyOn(Dialog, "warning");
+    const toastSpy = vi.spyOn(Toast, "success");
     mountModal(fakeFeed({ items: [feedItem({ id: "item-1" })] }));
     await nextTick();
 
@@ -71,8 +71,8 @@ describe("LinkFeedHiddenItemsModal", () => {
 
   it("confirms batch unhide with the selected scope and clears the selection", async () => {
     hiddenStateMocks.setHiddenState.mockResolvedValue({ requestedCount: 2, updatedCount: 2 });
-    const dialogSpy = rstest.spyOn(Dialog, "warning");
-    const toastSpy = rstest.spyOn(Toast, "success");
+    const dialogSpy = vi.spyOn(Dialog, "warning");
+    const toastSpy = vi.spyOn(Toast, "success");
     const feed = fakeFeed({
       items: [feedItem({ id: "item-1" }), feedItem({ id: "item-2", title: "Second" })],
     });
@@ -100,7 +100,7 @@ describe("LinkFeedHiddenItemsModal", () => {
 
   it("keeps the selection when the batch unhide request fails", async () => {
     hiddenStateMocks.setHiddenState.mockResolvedValue(undefined);
-    const dialogSpy = rstest.spyOn(Dialog, "warning");
+    const dialogSpy = vi.spyOn(Dialog, "warning");
     mountModal(fakeFeed({ items: [feedItem({ id: "item-1" })] }));
     await nextTick();
 
@@ -210,10 +210,10 @@ function fakeFeed(
     isLoading: computed(() => options.isLoading ?? false),
     isFetching: computed(() => options.isLoading ?? false),
     isLoadingMore: computed(() => false),
-    reload: rstest.fn(),
-    fetchNextPage: rstest.fn(),
-    selectLink: rstest.fn(),
-    selectReadStatus: rstest.fn(),
+    reload: vi.fn(),
+    fetchNextPage: vi.fn(),
+    selectLink: vi.fn(),
+    selectReadStatus: vi.fn(),
   } as unknown as LinkFeedItems;
 }
 

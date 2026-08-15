@@ -25,12 +25,8 @@ import MultiselectLineIcon from "~icons/mingcute/multiselect-line?width=unset&he
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import StarLineIcon from "~icons/mingcute/star-line?width=unset&height=unset";
 
-const LinkFeedItemsModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-feed-items-modal" */ "@/components/LinkFeedItemsModal.vue"),
-);
-const LinkFeedHiddenItemsModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-feed-hidden-items-modal" */ "@/components/LinkFeedHiddenItemsModal.vue"),
-);
+const LinkFeedItemsModal = defineAsyncComponent(() => import("@/components/LinkFeedItemsModal.vue"));
+const LinkFeedHiddenItemsModal = defineAsyncComponent(() => import("@/components/LinkFeedHiddenItemsModal.vue"));
 
 const router = useRouter();
 const { data: groupsWithLinks, isLoading: isLoadingLinks } = useRssLinksFetch();

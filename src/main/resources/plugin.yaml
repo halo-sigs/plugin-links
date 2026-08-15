@@ -7,7 +7,7 @@ metadata:
     # AI Foundation https://www.halo.run/store/apps/app-acslk9nu
     "store.halo.run/recommended-apps": '["app-acslk9nu"]'
 spec:
-  requires: ">=2.25.0"
+  requires: ">=2.26.0"
   pluginDependencies:
     ai-foundation?: ">=1.0.0-beta.4 & <2.0.0"
   author:

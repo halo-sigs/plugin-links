@@ -1,18 +1,18 @@
 import type { LinkFeedItem } from "@/api/generated";
-import { describe, expect, it, rstest } from "@rstest/core";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
 import { createFeedTestQueryClient } from "../../composables/link-feed-test-utils";
 import LinkFeedItemCard from "../LinkFeedItemCard.vue";
 
-const actionMocks = rstest.hoisted(() => ({
-  openItem: rstest.fn(),
-  toggleFavorite: rstest.fn(),
-  toggleRead: rstest.fn(),
-  toggleReadLater: rstest.fn(),
+const actionMocks = vi.hoisted(() => ({
+  openItem: vi.fn(),
+  toggleFavorite: vi.fn(),
+  toggleRead: vi.fn(),
+  toggleReadLater: vi.fn(),
 }));
 
-rstest.mock("@/composables/use-link-feed-item-actions", () => ({
+vi.mock("@/composables/use-link-feed-item-actions", () => ({
   useLinkFeedItemActions: () => ({
     isMarkingFavorite: { value: false },
     isMarkingRead: { value: false },

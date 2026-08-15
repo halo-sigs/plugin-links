@@ -1,17 +1,17 @@
 import type { LinkFeedItem } from "@/api/generated";
-import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createFeedTestQueryClient, runWithFeedTestApp } from "../link-feed-test-utils";
 import { QK_LINK_FEED_HIDDEN_ITEMS } from "../use-link-feed";
 import { useLinkFeedItemActions } from "../use-link-feed-item-actions";
 import { QK_LINK_FEED_ITEM_SUMMARY } from "../use-link-feed-item-summary";
 
-const apiMocks = rstest.hoisted(() => ({
-  markLinkFeedItemFavorite: rstest.fn(),
-  markLinkFeedItemRead: rstest.fn(),
-  markLinkFeedItemReadLater: rstest.fn(),
+const apiMocks = vi.hoisted(() => ({
+  markLinkFeedItemFavorite: vi.fn(),
+  markLinkFeedItemRead: vi.fn(),
+  markLinkFeedItemReadLater: vi.fn(),
 }));
 
-rstest.mock("@/api", () => ({
+vi.mock("@/api", () => ({
   linksConsoleApiClient: {
     feed: apiMocks,
   },
@@ -36,7 +36,7 @@ describe("useLinkFeedItemActions hidden item open behavior", () => {
 
   it("removes read-later and refreshes the hidden list when the item is already read", async () => {
     const queryClient = createFeedTestQueryClient();
-    const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const item = hiddenItem({ read: true, favorite: true, readLater: true });
     const { result } = runWithFeedTestApp(() => useLinkFeedItemActions(item), queryClient);
 
@@ -50,7 +50,7 @@ describe("useLinkFeedItemActions hidden item open behavior", () => {
 
   it("refreshes the item summary after a favorite change", async () => {
     const queryClient = createFeedTestQueryClient();
-    const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = runWithFeedTestApp(() => useLinkFeedItemActions(hiddenItem({ hidden: false })), queryClient);
 
     expect(await result.markFavorite(true)).toBe(true);
@@ -61,7 +61,7 @@ describe("useLinkFeedItemActions hidden item open behavior", () => {
   it("does not report success or invalidate the summary when read-later fails", async () => {
     apiMocks.markLinkFeedItemReadLater.mockRejectedValue(new Error("network"));
     const queryClient = createFeedTestQueryClient();
-    const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = runWithFeedTestApp(() => useLinkFeedItemActions(hiddenItem({ hidden: false })), queryClient);
 
     expect(await result.markReadLater(true)).toBe(false);

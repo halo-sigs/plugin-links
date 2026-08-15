@@ -23,15 +23,9 @@ import { computed, defineAsyncComponent, ref, shallowRef } from "vue";
 import LinkBadge from "./LinkBadge.vue";
 import LinksSortableCard from "./LinksSortableCard.vue";
 
-const GroupEditingModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "group-editing-modal" */ "./GroupEditingModal.vue"),
-);
-const LinkCreationModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-creation-modal" */ "./LinkCreationModal.vue"),
-);
-const LinkEditingModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-editing-modal" */ "./LinkEditingModal.vue"),
-);
+const GroupEditingModal = defineAsyncComponent(() => import("./GroupEditingModal.vue"));
+const LinkCreationModal = defineAsyncComponent(() => import("./LinkCreationModal.vue"));
+const LinkEditingModal = defineAsyncComponent(() => import("./LinkEditingModal.vue"));
 
 const props = defineProps<{
   groupWithLinks: GroupWithLinks;

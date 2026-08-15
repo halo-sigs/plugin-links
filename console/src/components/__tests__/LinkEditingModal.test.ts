@@ -4,20 +4,20 @@ import { QK_LINK_FEED_ITEM_SUMMARY } from "@/composables/use-link-feed-item-summ
 import { QK_LINK_FEED_UNREAD_SUMMARY } from "@/composables/use-link-feed-unread-summary";
 import type { LinkFormState } from "@/types";
 import { Dialog } from "@halo-dev/components";
-import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createFeedTestQueryClient } from "../../composables/link-feed-test-utils";
 import LinkEditingModal from "../LinkEditingModal.vue";
 
-const componentMocks = rstest.hoisted(() => ({
-  deleteLink: rstest.fn(),
-  patchLink: rstest.fn(),
-  startInitialLinkFeedRefresh: rstest.fn(),
-  startLinkVerification: rstest.fn(),
+const componentMocks = vi.hoisted(() => ({
+  deleteLink: vi.fn(),
+  patchLink: vi.fn(),
+  startInitialLinkFeedRefresh: vi.fn(),
+  startLinkVerification: vi.fn(),
 }));
 
-rstest.mock("@/api", () => ({
+vi.mock("@/api", () => ({
   linksCoreApiClient: {
     link: {
       deleteLink: componentMocks.deleteLink,
@@ -26,15 +26,15 @@ rstest.mock("@/api", () => ({
   },
 }));
 
-rstest.mock("@/composables/link-feed-initial-refresh", () => ({
+vi.mock("@/composables/link-feed-initial-refresh", () => ({
   startInitialLinkFeedRefresh: componentMocks.startInitialLinkFeedRefresh,
 }));
 
-rstest.mock("@/composables/link-verification", () => ({
+vi.mock("@/composables/link-verification", () => ({
   startLinkVerification: componentMocks.startLinkVerification,
 }));
 
-const dialogSpy = rstest.spyOn(Dialog, "warning");
+const dialogSpy = vi.spyOn(Dialog, "warning");
 
 describe("LinkEditingModal RSS unsubscribe", () => {
   beforeEach(() => {
@@ -115,7 +115,7 @@ describe("LinkEditingModal RSS unsubscribe", () => {
 
 function mountModal(linkValue: Link) {
   const queryClient = createFeedTestQueryClient();
-  const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
+  const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
   const wrapper = mount(LinkEditingModal, {
     props: { link: linkValue },
     global: {

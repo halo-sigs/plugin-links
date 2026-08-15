@@ -1,24 +1,24 @@
 import type { LinkApplication } from "@/api/generated";
 import { Dialog, Toast } from "@halo-dev/components";
-import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { flushPromises, mount } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { createFeedTestQueryClient } from "../../composables/link-feed-test-utils";
 import LinkApplicationDetailModal from "../LinkApplicationDetailModal.vue";
 
-const apiMocks = rstest.hoisted(() => ({
-  approveLinkApplication: rstest.fn(),
-  getLinkApplicationOriginComment: rstest.fn(),
-  queryLinkGroups: rstest.fn(),
-  patchComment: rstest.fn(),
-  createReply: rstest.fn(),
-  listReplies: rstest.fn(),
-  permissionHas: rstest.fn(),
-  modalClose: rstest.fn(),
+const apiMocks = vi.hoisted(() => ({
+  approveLinkApplication: vi.fn(),
+  getLinkApplicationOriginComment: vi.fn(),
+  queryLinkGroups: vi.fn(),
+  patchComment: vi.fn(),
+  createReply: vi.fn(),
+  listReplies: vi.fn(),
+  permissionHas: vi.fn(),
+  modalClose: vi.fn(),
 }));
 
-rstest.mock("@/api", () => ({
+vi.mock("@/api", () => ({
   linksPublicApiClient: {
     linkGroup: { queryLinkGroups: apiMocks.queryLinkGroups },
   },
@@ -32,7 +32,7 @@ rstest.mock("@/api", () => ({
   linkAiApiClient: {},
 }));
 
-rstest.mock("@halo-dev/api-client", () => ({
+vi.mock("@halo-dev/api-client", () => ({
   axiosInstance: {},
   coreApiClient: {
     content: {
@@ -47,7 +47,7 @@ rstest.mock("@halo-dev/api-client", () => ({
   },
 }));
 
-rstest.mock("@halo-dev/ui-shared", () => ({
+vi.mock("@halo-dev/ui-shared", () => ({
   utils: {
     permission: { has: apiMocks.permissionHas },
     date: { format: (value: string) => value },
@@ -87,8 +87,8 @@ const FormKitStub = defineComponent({
   },
 });
 
-const toastSuccessSpy = rstest.spyOn(Toast, "success").mockImplementation(() => undefined);
-const dialogWarningSpy = rstest.spyOn(Dialog, "warning").mockImplementation(() => undefined);
+const toastSuccessSpy = vi.spyOn(Toast, "success").mockImplementation(() => undefined);
+const dialogWarningSpy = vi.spyOn(Dialog, "warning").mockImplementation(() => undefined);
 
 describe("LinkApplicationDetailModal origin comment orchestration", () => {
   beforeEach(() => {

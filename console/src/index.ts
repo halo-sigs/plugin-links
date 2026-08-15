@@ -1,5 +1,4 @@
 import { definePlugin, type CommentSubjectRefProvider, type CommentSubjectRefResult } from "@halo-dev/ui-shared";
-import "uno.css";
 import { markRaw } from "vue";
 import Rss2FillIcon from "~icons/mingcute/rss-2-fill";
 import RiLinksLine from "~icons/ri/links-line";
@@ -12,7 +11,7 @@ export default definePlugin({
       route: {
         path: "/links",
         name: "Links",
-        component: () => import(/* webpackChunkName: "links-list" */ "@/views/LinkList.vue"),
+        component: () => import("@/views/LinkList.vue"),
         meta: {
           permissions: ["plugin:links:view"],
           title: "链接",
@@ -30,7 +29,7 @@ export default definePlugin({
       route: {
         path: "/links/rss",
         name: "LinkFeedItems",
-        component: () => import(/* webpackChunkName: "link-feed-list" */ "@/views/LinkFeedList.vue"),
+        component: () => import("@/views/LinkFeedList.vue"),
         meta: {
           permissions: ["plugin:links:view"],
           title: "链接订阅",

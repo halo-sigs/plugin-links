@@ -25,21 +25,11 @@ import { computed, defineAsyncComponent, ref, shallowRef } from "vue";
 import RiLinksLine from "~icons/ri/links-line";
 import RiPulseLine from "~icons/ri/pulse-line";
 
-const GroupCreationModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "group-creation-modal" */ "@/components/GroupCreationModal.vue"),
-);
-const GroupSortModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "group-sort-modal" */ "@/components/GroupSortModal.vue"),
-);
-const LinkImportModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-import-modal" */ "@/components/LinkImportModal.vue"),
-);
-const LinkApplicationListModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-application-list-modal" */ "@/components/LinkApplicationListModal.vue"),
-);
-const LinkApplicationDetailModal = defineAsyncComponent(
-  () => import(/* webpackChunkName: "link-application-detail-drawer" */ "@/components/LinkApplicationDetailModal.vue"),
-);
+const GroupCreationModal = defineAsyncComponent(() => import("@/components/GroupCreationModal.vue"));
+const GroupSortModal = defineAsyncComponent(() => import("@/components/GroupSortModal.vue"));
+const LinkImportModal = defineAsyncComponent(() => import("@/components/LinkImportModal.vue"));
+const LinkApplicationListModal = defineAsyncComponent(() => import("@/components/LinkApplicationListModal.vue"));
+const LinkApplicationDetailModal = defineAsyncComponent(() => import("@/components/LinkApplicationDetailModal.vue"));
 
 const { data, isLoading, isFetching, refetch } = useLinksFetch();
 const { data: pendingApplicationsPage } = useLinkApplications({ page: 1, size: 1, status: "PENDING" });

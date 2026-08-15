@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createFeedTestQueryClient, runWithFeedTestApp } from "../link-feed-test-utils";
 import { QK_LINK_FEED_HIDDEN_ITEMS, QK_LINK_FEED_ITEMS } from "../use-link-feed";
 import { useLinkFeedHiddenState } from "../use-link-feed-hidden-state";
 import { QK_LINK_FEED_ITEM_SUMMARY } from "../use-link-feed-item-summary";
 import { QK_LINK_FEED_UNREAD_SUMMARY } from "../use-link-feed-unread-summary";
 
-const apiMocks = rstest.hoisted(() => ({
-  updateLinkFeedItemsHiddenState: rstest.fn(),
+const apiMocks = vi.hoisted(() => ({
+  updateLinkFeedItemsHiddenState: vi.fn(),
 }));
 
-rstest.mock("@/api", () => ({
+vi.mock("@/api", () => ({
   linksConsoleApiClient: {
     feed: {
       updateLinkFeedItemsHiddenState: apiMocks.updateLinkFeedItemsHiddenState,
@@ -49,7 +49,7 @@ describe("useLinkFeedHiddenState", () => {
 
   it("invalidates normal items, hidden items, item summary and unread summary after success", async () => {
     const queryClient = createFeedTestQueryClient();
-    const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = runWithFeedTestApp(() => useLinkFeedHiddenState(), queryClient);
 
     await result.setHiddenState(["item-1"], false);
@@ -66,7 +66,7 @@ describe("useLinkFeedHiddenState", () => {
   it("does not invalidate queries when the request fails", async () => {
     apiMocks.updateLinkFeedItemsHiddenState.mockRejectedValue(new Error("network"));
     const queryClient = createFeedTestQueryClient();
-    const invalidateSpy = rstest.spyOn(queryClient, "invalidateQueries");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = runWithFeedTestApp(() => useLinkFeedHiddenState(), queryClient);
 
     const mutationResult = await result.setHiddenState(["item-1"], true);

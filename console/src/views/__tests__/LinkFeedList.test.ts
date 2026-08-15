@@ -2,25 +2,25 @@ import type { LinkFeedItem } from "@/api/generated";
 import type { LinkFeedItems } from "@/composables/use-link-feed";
 import { Dialog, Toast } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
-import { beforeEach, describe, expect, it, rstest } from "@rstest/core";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, nextTick, shallowRef, type ShallowRef } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
 import LinkFeedList from "../LinkFeedList.vue";
 
-const viewMocks = rstest.hoisted(() => ({
+const viewMocks = vi.hoisted(() => ({
   mainFeed: undefined as LinkFeedItems | undefined,
   itemSummary: {
     value: undefined as { hiddenCount: number; favoriteCount: number; readLaterCount: number } | undefined,
   },
   itemSummaryError: { value: false },
   itemSummaryFetching: { value: false },
-  setHiddenState: rstest.fn(),
+  setHiddenState: vi.fn(),
   useLinkFeedItemsCalls: { count: 0 },
 }));
-const permissionSpy = rstest.spyOn(utils.permission, "has");
+const permissionSpy = vi.spyOn(utils.permission, "has");
 
-rstest.mock("@/composables/use-link-feed", () => ({
+vi.mock("@/composables/use-link-feed", () => ({
   useLinkFeedItems: () => {
     viewMocks.useLinkFeedItemsCalls.count += 1;
     if (viewMocks.useLinkFeedItemsCalls.count === 1) {
@@ -30,14 +30,14 @@ rstest.mock("@/composables/use-link-feed", () => ({
   },
 }));
 
-rstest.mock("@/composables/use-link-feed-hidden-state", () => ({
+vi.mock("@/composables/use-link-feed-hidden-state", () => ({
   useLinkFeedHiddenState: () => ({
     isUpdating: shallowRef(false),
     setHiddenState: viewMocks.setHiddenState,
   }),
 }));
 
-rstest.mock("@/composables/use-link-feed-item-summary", () => ({
+vi.mock("@/composables/use-link-feed-item-summary", () => ({
   useLinkFeedItemSummary: () => ({
     data: viewMocks.itemSummary,
     isError: viewMocks.itemSummaryError,
@@ -45,41 +45,41 @@ rstest.mock("@/composables/use-link-feed-item-summary", () => ({
   }),
 }));
 
-rstest.mock("@/composables/use-link-feed-unread-summary", () => ({
+vi.mock("@/composables/use-link-feed-unread-summary", () => ({
   useLinkFeedUnreadSummary: () => ({ data: shallowRef(undefined) }),
   linkFeedUnreadCount: () => 0,
 }));
 
-rstest.mock("@/composables/use-link-fetch", () => ({
+vi.mock("@/composables/use-link-fetch", () => ({
   useRssLinksFetch: () => ({ data: shallowRef([]), isLoading: shallowRef(false) }),
 }));
 
-rstest.mock("@/composables/use-link-feed-mark-all-read", () => ({
-  useLinkFeedMarkAllRead: () => ({ isMarkingAllRead: shallowRef(false), markAllRead: rstest.fn() }),
+vi.mock("@/composables/use-link-feed-mark-all-read", () => ({
+  useLinkFeedMarkAllRead: () => ({ isMarkingAllRead: shallowRef(false), markAllRead: vi.fn() }),
 }));
 
-rstest.mock("@/composables/use-link-feed-refresh", () => ({
+vi.mock("@/composables/use-link-feed-refresh", () => ({
   useLinkFeedRefresh: () => ({
     isRefreshing: shallowRef(false),
     totalCount: shallowRef(0),
     completedCount: shallowRef(0),
-    refreshLinks: rstest.fn(),
+    refreshLinks: vi.fn(),
   }),
 }));
 
-rstest.mock("@/composables/use-link-feed-item-actions", () => ({
+vi.mock("@/composables/use-link-feed-item-actions", () => ({
   useLinkFeedItemActions: () => ({
     isMarkingFavorite: { value: false },
     isMarkingRead: { value: false },
     isMarkingReadLater: { value: false },
-    openItem: rstest.fn(),
-    toggleFavorite: rstest.fn(),
-    toggleRead: rstest.fn(),
-    toggleReadLater: rstest.fn(),
+    openItem: vi.fn(),
+    toggleFavorite: vi.fn(),
+    toggleRead: vi.fn(),
+    toggleReadLater: vi.fn(),
   }),
 }));
 
-rstest.mock("@vueuse/core", () => ({
+vi.mock("@vueuse/core", () => ({
   useIntersectionObserver: () => ({
     isSupported: shallowRef(false),
     stop: () => {},
@@ -164,8 +164,8 @@ describe("LinkFeedList hidden workflows", () => {
 
   it("hides a single item after confirmation", async () => {
     viewMocks.setHiddenState.mockResolvedValue({ requestedCount: 1, updatedCount: 1 });
-    const dialogSpy = rstest.spyOn(Dialog, "warning");
-    const toastSpy = rstest.spyOn(Toast, "success");
+    const dialogSpy = vi.spyOn(Dialog, "warning");
+    const toastSpy = vi.spyOn(Toast, "success");
     mountView();
     await nextTick();
 
@@ -185,8 +185,8 @@ describe("LinkFeedList hidden workflows", () => {
   });
 
   it("supports batch hide mode with select-all-loaded, confirmation and cleanup", async () => {
-    const dialogSpy = rstest.spyOn(Dialog, "warning");
-    const toastSpy = rstest.spyOn(Toast, "success");
+    const dialogSpy = vi.spyOn(Dialog, "warning");
+    const toastSpy = vi.spyOn(Toast, "success");
     mountView();
     await nextTick();
 
@@ -225,7 +225,7 @@ describe("LinkFeedList hidden workflows", () => {
   });
 
   it("cancels batch hide mode without changes", async () => {
-    const dialogSpy = rstest.spyOn(Dialog, "warning");
+    const dialogSpy = vi.spyOn(Dialog, "warning");
     mountView();
     await nextTick();
 
@@ -325,9 +325,9 @@ function createFeed(items: LinkFeedItem[]): LinkFeedItems {
     isLoading: computed(() => false),
     isFetching: computed(() => false),
     isLoadingMore: computed(() => false),
-    reload: rstest.fn(),
-    fetchNextPage: rstest.fn(),
-    selectLink: rstest.fn(),
+    reload: vi.fn(),
+    fetchNextPage: vi.fn(),
+    selectLink: vi.fn(),
     selectReadStatus: (status: "" | "unread" | "read") => {
       readStatus.value = status;
     },

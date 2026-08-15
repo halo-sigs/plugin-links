@@ -61,6 +61,9 @@ cd console
 # Type check
 pnpm type-check
 
+# Run frontend unit tests
+pnpm test:unit
+
 # Lint and fix
 pnpm lint
 
@@ -73,7 +76,7 @@ pnpm prettier
 ```
 ├── build.gradle                  # Main build config. Java 21, Halo plugin devtools, node plugin
 ├── settings.gradle
-├── console/                      # Vue 3 frontend (Rsbuild, pnpm, UnoCSS)
+├── console/                      # Vue 3 frontend (Vite, pnpm, UnoCSS)
 │   ├── src/
 │   │   ├── index.ts              # Plugin entry point: registers routes, comment subject ref
 │   │   ├── views/LinkList.vue    # Main admin page
@@ -81,7 +84,7 @@ pnpm prettier
 │   │   ├── composables/use-link.ts
 │   │   └── api/generated/        # Auto-generated OpenAPI client (do not edit manually)
 │   ├── package.json
-│   └── rsbuild.config.mjs        # Uses @halo-dev/ui-plugin-bundler-kit
+│   └── vite.config.mjs           # Uses @halo-dev/ui-plugin-bundler-kit
 └── src/main/
     ├── java/run/halo/links/
     │   ├── LinkPlugin.java       # Plugin lifecycle: registers Link & LinkGroup schemes/indexes
@@ -119,7 +122,7 @@ pnpm prettier
 
 ### Frontend
 
-- **Framework**: Vue 3 (Composition API), TypeScript, Rsbuild
+- **Framework**: Vue 3 (Composition API), TypeScript, Vite
 - **Styling**: UnoCSS (atomic CSS via `:uno:` prefix in class names), Halo Dev Components
 - **State**: Vue Query (`@tanstack/vue-query`) for server state; no global client-side store
 - **Icons**: `unplugin-icons` with Iconify (`~icons/ri/...`)
@@ -142,4 +145,4 @@ Gradle's `buildFrontend` task (pnpm build) runs before `compileJava`. In product
 
 - `.editorconfig` is extensive and IntelliJ-specific. Key defaults: Java line length 100, 4-space indent, end-of-line braces, use single-class imports.
 - Frontend uses Prettier with 120 print width, 2-space indent, LF line endings.
-- The project currently has **no unit tests**.
+- Frontend unit tests use Vitest with Vue Test Utils and Happy DOM.

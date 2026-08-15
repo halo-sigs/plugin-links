@@ -3,7 +3,7 @@ schema: spec-driven
 context: |
   Tech stack:
     Backend: Java 21, Spring WebFlux (Project Reactor), Gradle
-    Frontend: Vue 3 (Composition API), TypeScript, Rsbuild, pnpm
+    Frontend: Vue 3 (Composition API), TypeScript, Vite, pnpm
     Styling: UnoCSS, Halo Dev Components
     State: Vue Query (@tanstack/vue-query)
   Architecture:
@@ -11,7 +11,7 @@ context: |
     - Two extension models: Link and LinkGroup (GVK: core.halo.run/v1alpha1)
     - Reactive backend with Mono/Flux throughout
     - Auto-generated OpenAPI TypeScript client in console/src/api/generated/
-    - No unit tests currently exist
+    - Frontend unit tests use Vitest with Vue Test Utils and Happy DOM
   Conventions:
     - Follow .editorconfig (IntelliJ style): Java line length 100, 4-space indent, single-class imports
     - Frontend Prettier: 120 print width, 2-space indent, LF line endings

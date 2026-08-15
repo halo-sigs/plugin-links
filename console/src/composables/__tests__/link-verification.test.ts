@@ -1,5 +1,5 @@
 import type { LinkVerificationRequest, LinkVerificationTriggerResult } from "@/api/generated";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, it } from "vitest";
 import {
   linkVerificationResultMessage,
   normalizeLinkVerificationRequest,
