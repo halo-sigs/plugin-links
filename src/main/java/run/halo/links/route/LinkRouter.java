@@ -31,6 +31,7 @@ import reactor.core.publisher.Mono;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
+import run.halo.app.theme.TemplateNameResolver;
 import run.halo.links.extension.LinkApplication;
 import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.finders.LinkFinder;
@@ -55,6 +56,7 @@ public class LinkRouter {
     private final LinkPublicQueryService linkPublicQueryService;
     private final PluginContext pluginContext;
     private final ReactiveSettingFetcher settingFetcher;
+    private final TemplateNameResolver templateNameResolver;
     private final LinkApplicationSettingsFetcher applicationSettingsFetcher;
     private final LinkApplicationService applicationService;
     private final LinkApplicationRateLimiter rateLimiter;
@@ -273,7 +275,9 @@ public class LinkRouter {
                     model.put(TEMPLATE_ID, "links");
                     return model;
                 })
-                .flatMap(model -> ServerResponse.ok().render("links", model));
+                .flatMap(model -> templateNameResolver
+                    .resolveTemplateNameOrDefault(request.exchange(), "links")
+                    .flatMap(templateName -> ServerResponse.ok().render(templateName, model)));
         };
     }
 
