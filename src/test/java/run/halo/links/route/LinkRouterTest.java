@@ -21,16 +21,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.security.web.server.csrf.CsrfToken;
 import org.springframework.security.web.server.csrf.CsrfWebFilter;
 import org.springframework.security.web.server.csrf.DefaultCsrfToken;
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRepository;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.server.HandlerStrategies;
+import org.springframework.web.reactive.function.server.RenderingResponse;
+import org.springframework.web.reactive.function.server.ServerRequest;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.app.plugin.PluginContext;
 import run.halo.app.plugin.ReactiveSettingFetcher;
+import run.halo.app.theme.TemplateNameResolver;
 import run.halo.links.dto.LinkApplicationSettings;
 import run.halo.links.endpoint.LinkApplicationSettingsFetcher;
 import run.halo.links.extension.LinkApplication;
@@ -55,6 +61,9 @@ class LinkRouterTest {
 
     @Mock
     ReactiveSettingFetcher settingFetcher;
+
+    @Mock
+    TemplateNameResolver templateNameResolver;
 
     @Mock
     LinkApplicationService applicationService;
@@ -110,6 +119,28 @@ class LinkRouterTest {
         StepVerifier.create(router().getLinkTitle())
             .assertNext(title -> assertThat(title).isEqualTo(LinkBaseSettings.DEFAULT_TITLE))
             .verifyComplete();
+    }
+
+    @Test
+    void shouldRenderResolvedTemplateName() {
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/links").build());
+        var request = ServerRequest.create(exchange,
+            HandlerStrategies.withDefaults().messageReaders());
+        when(applicationSettingsFetcher.fetch())
+            .thenReturn(Mono.just(LinkApplicationSettings.defaults()));
+        when(templateNameResolver.resolveTemplateNameOrDefault(exchange, "links"))
+            .thenReturn(Mono.just("plugin:PluginLinks:links"));
+
+        StepVerifier.create(router().linkTemplateRoute().route(request)
+                .flatMap(handler -> handler.handle(request)))
+            .assertNext(response -> {
+                assertThat(response).isInstanceOf(RenderingResponse.class);
+                assertThat(((RenderingResponse) response).name())
+                    .isEqualTo("plugin:PluginLinks:links");
+            })
+            .verifyComplete();
+
+        verify(templateNameResolver).resolveTemplateNameOrDefault(exchange, "links");
     }
 
     @Test
@@ -482,8 +513,8 @@ class LinkRouterTest {
 
     private LinkRouter router() {
         return new LinkRouter(linkFinder, linkPublicQueryService, pluginContext, settingFetcher,
-            applicationSettingsFetcher, applicationService, rateLimiter, captchaService,
-            new LinkApplicationCaptchaCookie());
+            templateNameResolver, applicationSettingsFetcher, applicationService, rateLimiter,
+            captchaService, new LinkApplicationCaptchaCookie());
     }
 
     private void stubEnabledForm() {

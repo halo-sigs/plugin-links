@@ -1,0 +1,71 @@
+<!doctype html>
+<html
+  xmlns:th="https://www.thymeleaf.org"
+  th:replace="~{layout :: html(head = ~{::head}, content = ~{::content})}"
+>
+  <th:block th:fragment="head">
+    <title th:text="|${linksTitle} - ${site.title}|">链接</title>
+    <style>
+      .links nav {
+        margin: 1rem 0 1.5rem;
+      }
+
+      .links nav a {
+        margin-right: 0.75rem;
+        color: inherit;
+      }
+
+      .links nav a.active {
+        font-weight: 600;
+      }
+
+      .links li {
+        margin-bottom: 0.75rem;
+      }
+
+      .links img {
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.5rem;
+        border-radius: 0.25rem;
+        object-fit: cover;
+        vertical-align: middle;
+      }
+    </style>
+  </th:block>
+
+  <th:block th:fragment="content">
+    <section class="links">
+      <h1 th:text="${linksTitle}">链接</h1>
+
+      <nav aria-label="链接分组">
+        <a th:href="@{/links}" th:classappend="${group == null} ? 'active'">全部</a>
+        <a
+          th:each="item : ${simpleGroups}"
+          th:href="@{/links(group=${item.metadata.name})}"
+          th:classappend="${group == item.metadata.name} ? 'active'"
+          th:text="${item.spec.displayName}"
+        ></a>
+      </nav>
+
+      <ul th:if="${not #lists.isEmpty(links)}">
+        <li th:each="link : ${links}">
+          <a th:href="@{${link.spec.url}}" target="_blank" rel="noopener noreferrer">
+            <img
+              th:if="${not #strings.isEmpty(link.spec.logo)}"
+              th:src="@{${link.spec.logo}}"
+              alt=""
+              loading="lazy"
+            />
+            <span th:text="${link.spec.displayName}">链接名称</span>
+          </a>
+          <p
+            th:if="${not #strings.isEmpty(link.spec.description)}"
+            th:text="${link.spec.description}"
+          ></p>
+        </li>
+      </ul>
+      <p th:unless="${not #lists.isEmpty(links)}">暂无链接</p>
+    </section>
+  </th:block>
+</html>
