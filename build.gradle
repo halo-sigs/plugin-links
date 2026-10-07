@@ -25,6 +25,7 @@ dependencies {
     }
     implementation('org.dizitart:nitrite-support:4.3.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
+        exclude group: 'com.fasterxml.jackson.core'
     }
     implementation('org.xerial:sqlite-jdbc:3.53.2.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
