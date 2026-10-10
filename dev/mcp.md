@@ -1,21 +1,12 @@
 # MCP 工具
 
-安装并启用包含工具分类 API 的 [MCP Server](https://github.com/halo-dev/plugin-mcp-server) 开发版后，链接管理插件提供 26 个工具。在 Console 的「工具 → MCP 服务」中编辑访问密钥，选择允许该密钥调用的工具。新增工具不会自动加入已有密钥。
+安装并启用 [MCP Server](https://github.com/halo-dev/plugin-mcp-server) 1.3.0 或更高的 1.x 版本后，链接管理插件提供 26 个工具。在 Console 的「工具 → MCP 服务」中编辑访问密钥，选择允许该密钥调用的工具。新增工具不会自动加入已有密钥。
 
 MCP Server 为下面的本地工具名生成协议名前缀；客户端应使用工具发现返回的完整名称。未安装 MCP Server 时，链接管理插件可以正常启用。
 
 管理目录和访问密钥的工具选择器在「链接管理」下显示三个分类：友链申请（6）、友链订阅（6，含订阅源发现）、友链管理（14，含分组管理、网站资料和友链检测）。分类不改变工具名称和已有授权。
 
-分类字段尚未包含在已发布的 `api:1.0.0` 中，远程 `1.0.0-SNAPSHOT` 也不保证包含本地未发布改动。当前编译依赖 `api:1.0.0-SNAPSHOT`，仅对这一坐标优先使用本机 Maven 仓库。在包含分类改动的版本发布前，首次构建需先把对应 MCP Server 源码的 API 安装到本机：
-
-```bash
-./gradlew -p /path/to/plugin-mcp-server :api:publishToMavenLocal -x :api:signMavenPublication
-./gradlew build
-```
-
-这只写入本机 Maven 仓库，不发布到远程服务。API 源码改变后重新执行本地发布即可。CI 或其他开发机器同样需要这一步，或显式使用 `./gradlew --include-build /path/to/plugin-mcp-server build` 联合构建；不能直接使用尚不含 `category()` 的远程 SNAPSHOT。
-
-运行时也需使用包含该改动的 MCP Server，不能只更新链接插件。
+工具分类使用 MCP Server 1.3.0 引入的 `category()` API。编译依赖从 Maven Central 获取正式制品，无需本地发布 API 或联合构建；运行时的 MCP Server 也需满足上述版本要求。
 
 ## 友链与分组
 
@@ -85,7 +76,7 @@ RSS 列表使用游标分页，将响应的 `nextBeforePublishedAt`、`nextBefor
 
 ## 接入与错误
 
-工具通过 `McpToolProvider` 直接复用插件业务服务，编译期依赖 `run.halo.mcpserver:api:1.0.0-SNAPSHOT`，运行时由 MCP Server 提供 API。插件 JAR 不包含 MCP API 或 MCP Java SDK。
+工具通过 `McpToolProvider` 直接复用插件业务服务，编译期依赖 `run.halo.mcpserver:api:1.3.0`，运行时由 MCP Server 提供 API。插件 JAR 不包含 MCP API 或 MCP Java SDK。
 
 全部工具通过 `displayTitle`、`displayDescription` 提供中文管理界面文案，协议侧的 `title`、`description` 使用英文。每个工具均声明对象类型的 `outputSchema`，约束成功响应的 `structuredContent`，包括嵌套字段、可空值及批量操作的成功/失败分支。工具错误不套用成功输出 Schema。
 
