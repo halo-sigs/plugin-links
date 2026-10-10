@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -252,9 +253,14 @@ public final class LinkToolProvider implements McpToolProvider {
             spec.setPriority(integer(args, "priority", 0, Integer.MIN_VALUE, Integer.MAX_VALUE));
         }
         if (args.containsKey("backlinkScanUrl")) {
-            var verification = new Link.VerificationSpec();
-            verification.setBacklinkScanUrl(optionalUrl(string(args, "backlinkScanUrl")));
-            spec.setVerification(verification);
+            var backlink = string(args, "backlinkScanUrl");
+            if (backlink.isBlank()) {
+                spec.setVerification(null);
+            } else {
+                var verification = new Link.VerificationSpec();
+                verification.setBacklinkScanUrl(url(backlink));
+                spec.setVerification(verification);
+            }
         }
         if (args.containsKey("rssEnabled") || args.containsKey("feedUrls")) {
             var rss = spec.getRss() == null ? new Link.RssSpec() : spec.getRss();
@@ -267,11 +273,11 @@ public final class LinkToolProvider implements McpToolProvider {
                 rss.setFeedUrls(strings(args, "feedUrls").stream().map(LinkToolProvider::url)
                     .distinct().toList());
             }
-            if (Boolean.TRUE.equals(rss.getEnabled())
-                && (rss.getFeedUrls() == null || rss.getFeedUrls().isEmpty())) {
+            boolean noFeeds = rss.getFeedUrls() == null || rss.getFeedUrls().isEmpty();
+            if (Boolean.TRUE.equals(rss.getEnabled()) && noFeeds) {
                 throw error("INVALID_ARGUMENT", "Enabled RSS requires at least one feed URL.");
             }
-            spec.setRss(rss);
+            spec.setRss(noFeeds ? null : rss);
         }
     }
 
@@ -348,6 +354,9 @@ public final class LinkToolProvider implements McpToolProvider {
     private Mono<Map<String, Object>> batch(List<String> names,
         Function<String, Mono<Map<String, Object>>> operation) {
         return Flux.fromIterable(names).concatMap(name -> Mono.defer(() -> operation.apply(name))
+                .onErrorResume(OptimisticLockingFailureException.class,
+                    e -> Mono.just(object("name", name, "success", false, "code", "CONFLICT",
+                        "message", "The resource changed. Read it again before retrying.")))
                 .onErrorResume(e -> Mono.just(object("name", name, "success", false,
                     "code", e instanceof McpToolException toolError ? toolError.code()
                         : "UPDATE_FAILED", "message", "Could not update this resource."))))

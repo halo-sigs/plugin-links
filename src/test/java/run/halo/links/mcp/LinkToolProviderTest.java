@@ -8,15 +8,27 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.openapi4j.core.model.v3.OAI3;
+import org.openapi4j.core.model.v3.OAI3Context;
+import org.openapi4j.schema.validator.ValidationContext;
+import org.openapi4j.schema.validator.ValidationData;
+import org.openapi4j.schema.validator.v3.SchemaValidator;
+import org.springframework.dao.OptimisticLockingFailureException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.Scheme;
+import run.halo.app.extension.Unstructured;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkGroup;
 import run.halo.links.service.LinkGroupService;
@@ -89,6 +101,111 @@ class LinkToolProviderTest {
             .error()).isTrue();
         assertThat(call("update_link", Map.of("name", "one", "priority", 1.5)).error()).isTrue();
         verify(client, never()).update(any(Link.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "  "})
+    void clearingBacklinkProducesValidExtension(String value) {
+        var link = link("one", null);
+        var settings = new Link.VerificationSpec();
+        settings.setBacklinkScanUrl("https://example.com/links");
+        link.getSpec().setVerification(settings);
+        when(client.fetch(Link.class, "one")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class)))
+            .thenAnswer(invocation -> Mono.just(validateLink(invocation.getArgument(0))));
+
+        var response = call("update_link", Map.of("name", "one", "backlinkScanUrl", value,
+            "description", "updated"));
+
+        assertThat(response.error()).isFalse();
+        assertThat(link.getSpec().getVerification()).isNull();
+        assertThat(link.getSpec().getDescription()).isEqualTo("updated");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void creatingDisabledRssWithoutFeedsProducesValidExtension(boolean explicitEmpty) {
+        when(client.create(any(Link.class))).thenAnswer(invocation -> {
+            Link created = invocation.getArgument(0);
+            created.getMetadata().setName("one");
+            return Mono.just(validateLink(created));
+        });
+        var args = new HashMap<String, Object>(Map.of("url", "https://example.com",
+            "displayName", "One", "priority", 1, "rssEnabled", false));
+        if (explicitEmpty) {
+            args.put("feedUrls", List.of());
+        }
+
+        var response = call("create_link", args);
+
+        assertThat(response.error()).isFalse();
+        assertThat(response.structuredContent()).containsEntry("rss", null);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"unconfigured", "clear", "preserve"})
+    void disablingRssProducesValidExtension(String scenario) {
+        var link = link("one", null);
+        if (!scenario.equals("unconfigured")) {
+            var rss = new Link.RssSpec();
+            rss.setEnabled(true);
+            rss.setFeedUrls(List.of("https://example.com/feed.xml"));
+            link.getSpec().setRss(rss);
+        }
+        when(client.fetch(Link.class, "one")).thenReturn(Mono.just(link));
+        when(client.update(any(Link.class)))
+            .thenAnswer(invocation -> Mono.just(validateLink(invocation.getArgument(0))));
+        var args = new HashMap<String, Object>(Map.of("name", "one",
+            "rssEnabled", false));
+        if (scenario.equals("clear")) {
+            args.put("feedUrls", List.of());
+        }
+
+        assertThat(call("update_link", args).error()).isFalse();
+        if (scenario.equals("preserve")) {
+            assertThat(link.getSpec().getRss().getEnabled()).isFalse();
+            assertThat(link.getSpec().getRss().getFeedUrls())
+                .containsExactly("https://example.com/feed.xml");
+        } else {
+            assertThat(link.getSpec().getRss()).isNull();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"move_links", "sort_links", "sort_link_groups"})
+    void batchReportsConflictsAndContinuesWithOtherResources(String toolName) {
+        if (toolName.equals("sort_link_groups")) {
+            for (String name : List.of("one", "two")) {
+                var group = new LinkGroup();
+                group.setMetadata(new Metadata());
+                group.getMetadata().setName(name);
+                group.setSpec(new LinkGroup.LinkGroupSpec());
+                when(client.fetch(LinkGroup.class, name)).thenReturn(Mono.just(group));
+            }
+            when(client.update(any(LinkGroup.class)))
+                .thenReturn(Mono.error(new OptimisticLockingFailureException("conflict")))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        } else {
+            for (String name : List.of("one", "two")) {
+                when(client.fetch(Link.class, name)).thenReturn(Mono.just(link(name, null)));
+            }
+            when(client.update(any(Link.class)))
+                .thenReturn(Mono.error(new OptimisticLockingFailureException("conflict")))
+                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        }
+        var args = new HashMap<String, Object>(Map.of("names", List.of("one", "two")));
+        if (toolName.equals("move_links")) {
+            args.put("groupName", "");
+        }
+
+        var response = call(toolName, args);
+
+        assertThat(response.error()).isFalse();
+        var items = (List<?>) response.structuredContent().get("items");
+        assertThat(((Map<?, ?>) items.getFirst()).get("code")).isEqualTo("CONFLICT");
+        assertThat(((Map<?, ?>) items.get(1)).get("success")).isEqualTo(true);
+        assertThat(((Number) response.structuredContent().get("succeeded")).intValue()).isEqualTo(1);
+        assertThat(((Number) response.structuredContent().get("failed")).intValue()).isEqualTo(1);
     }
 
     @Test
@@ -213,6 +330,17 @@ class LinkToolProviderTest {
         var tool = provider.tools().filter(value -> value.name().equals(name)).blockFirst();
         return McpSchemaAssertions.assertOutput(tool,
             tool.handler().execute(new McpToolInvocation(name, args)).block());
+    }
+
+    private static Link validateLink(Link link) throws Exception {
+        var scheme = Scheme.buildFromType(Link.class);
+        var context = new ValidationContext<OAI3>(
+            new OAI3Context(URI.create("file:/").toURL(), scheme.openApiSchema()));
+        var validator = new SchemaValidator(context, null, scheme.openApiSchema());
+        var validation = new ValidationData<Link>();
+        validator.validate(Unstructured.OBJECT_MAPPER.valueToTree(link), validation);
+        assertThat(validation.isValid()).as("Link schema: %s", validation.results()).isTrue();
+        return link;
     }
 
     private static Link link(String name, String group) {

@@ -32,6 +32,7 @@ import run.halo.links.rss.LinkFeedItemPage;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedService;
+import run.halo.links.service.LinkUrlCanonicalizer;
 import run.halo.mcpserver.api.McpToolAnnotations;
 import run.halo.mcpserver.api.McpToolDefinition;
 import run.halo.mcpserver.api.McpToolProvider;
@@ -52,7 +53,13 @@ public class LinkFeedToolProvider implements McpToolProvider {
                 "从 HTTP(S) 网站发现 RSS 或 Atom 订阅地址。会获取远程内容，不会修改订阅配置。",
                 object("url", schema("string", "Absolute HTTP(S) website URL.")),
                 List.of("url"), new McpToolAnnotations(true, false, true, true, "Discover feeds"),
-                args -> feedService.discover(requiredString(args, "url")).map(McpSupport::result)),
+                args -> {
+                    var url = requiredString(args, "url");
+                    if (LinkUrlCanonicalizer.canonicalKey(url).isEmpty()) {
+                        throw error("INVALID_ARGUMENT", "Expected an absolute HTTP(S) URL.");
+                    }
+                    return feedService.discover(url).map(McpSupport::result);
+                }),
             tool("list_feed_items", "查询订阅文章",
                 "List cached feed items, newest first. Hidden items are excluded by default. "
                     + "Returns bounded summaries, not full article content. For the next page, "

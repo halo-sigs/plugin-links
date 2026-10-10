@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -92,6 +93,13 @@ class LinkFeedToolProviderTest {
         verify(service).discover("https://example.com");
         verify(service).refresh("link-a");
         verifyNoInteractions(store, client);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not-a-url", "file:///tmp/feed.xml", "https:///feed.xml", ""})
+    void shouldRejectInvalidDiscoveryUrlBeforeCallingService(String url) {
+        assertError(call("discover_feeds", Map.of("url", url)), "INVALID_ARGUMENT");
+        verifyNoInteractions(service, store, client);
     }
 
     @Test
