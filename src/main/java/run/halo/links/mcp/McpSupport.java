@@ -74,15 +74,14 @@ final class McpSupport {
     private static String category(String name) {
         return switch (name) {
             case "list_links", "get_link", "create_link", "update_link", "delete_link",
-                "move_links", "sort_links" -> "友链管理";
-            case "list_link_groups", "create_link_group", "update_link_group",
-                "delete_link_group", "sort_link_groups" -> "分组管理";
-            case "fetch_site_metadata", "discover_feeds", "check_links" -> "网站信息与检测";
+                "move_links", "sort_links", "list_link_groups", "create_link_group",
+                "update_link_group", "delete_link_group", "sort_link_groups",
+                "fetch_site_metadata", "check_links" -> "友链管理";
             case "list_link_applications", "get_link_application", "verify_link_application",
                 "approve_link_application", "reject_link_application",
-                "delete_link_application" -> "申请审核";
-            case "list_feed_items", "get_feed_summary", "refresh_link_feed",
-                "set_feed_item_state", "mark_feed_items_read" -> "订阅阅读";
+                "delete_link_application" -> "友链申请";
+            case "discover_feeds", "list_feed_items", "get_feed_summary", "refresh_link_feed",
+                "set_feed_item_state", "mark_feed_items_read" -> "友链订阅";
             default -> throw new IllegalArgumentException("Missing category for tool: " + name);
         };
     }

@@ -78,8 +78,7 @@ class McpConfigurationTest {
                 assertThat(tools.stream().collect(java.util.stream.Collectors.groupingBy(
                     tool -> tool.category(), java.util.stream.Collectors.counting())))
                     .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(
-                        "友链管理", 7L, "分组管理", 5L, "网站信息与检测", 3L,
-                        "申请审核", 6L, "订阅阅读", 5L));
+                        "友链申请", 6L, "友链订阅", 6L, "友链管理", 14L));
                 var byName = tools.stream().collect(java.util.stream.Collectors.toMap(
                     tool -> tool.name(), tool -> tool));
                 assertThat(byName.get("fetch_site_metadata").annotations().openWorldHint())
