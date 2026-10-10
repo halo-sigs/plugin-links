@@ -7,13 +7,29 @@ plugins {
 group 'run.halo.links'
 
 repositories {
+    mavenLocal {
+        content {
+            includeVersion('run.halo.mcpserver', 'api', '1.0.0-SNAPSHOT')
+        }
+    }
     mavenCentral()
+    maven {
+        url = uri('https://central.sonatype.com/repository/maven-snapshots/')
+        content {
+            includeModule('run.halo.mcpserver', 'api')
+        }
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
 }
 
 dependencies {
     implementation platform('run.halo.tools.platform:plugin:2.25.0')
     compileOnly 'run.halo.app:api'
     compileOnly 'run.halo.aifoundation:api:1.0.0-beta.4'
+    compileOnly 'run.halo.mcpserver:api:1.0.0-SNAPSHOT'
+    testImplementation 'run.halo.mcpserver:api:1.0.0-SNAPSHOT'
     implementation('com.rometools:rome:2.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
@@ -35,6 +51,7 @@ dependencies {
     testImplementation 'run.halo.aifoundation:api:1.0.0-beta.4'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'com.networknt:json-schema-validator:3.0.8'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
