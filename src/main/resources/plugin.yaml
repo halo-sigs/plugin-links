@@ -10,6 +10,7 @@ spec:
   requires: ">=2.26.0"
   pluginDependencies:
     ai-foundation?: ">=1.0.0-beta.4 & <2.0.0"
+    mcp-server?: ">=1.3.0 & <2.0.0"
   author:
     name: Halo
     website: https://github.com/halo-dev
