@@ -16,7 +16,7 @@ git clone git@github.com:{your_github_id}/plugin-links.git
 1. JDK 21
 2. Docker
 3. Node.js 24
-4. pnpm 10
+4. pnpm 12
 
 ```bash
 # macOS / Linux

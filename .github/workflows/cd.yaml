@@ -14,7 +14,7 @@ jobs:
       contents: write
     with:
       node-version: 24
-      pnpm-version: 10
+      pnpm-version: 12
       app-id: app-hfbQg
       ui-path: "console"
       sync-github-readme: true
