@@ -7,7 +7,7 @@ on:
 
 jobs:
   cd:
-    uses: halo-sigs/reusable-workflows/.github/workflows/plugin-cd.yaml@v4
+    uses: halo-sigs/reusable-workflows/.github/workflows/plugin-cd.yaml@v5
     secrets:
       halo-pat: ${{ secrets.HALO_PAT }}
     permissions:
@@ -17,3 +17,4 @@ jobs:
       pnpm-version: 10
       app-id: app-hfbQg
       ui-path: "console"
+      sync-github-readme: true
