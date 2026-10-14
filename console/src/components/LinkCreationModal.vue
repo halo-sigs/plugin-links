@@ -40,6 +40,7 @@ const { mutate, isPending } = useMutation({
           url: data.url,
           displayName: data.displayName,
           logo: data.logo,
+          cover: data.cover?.trim() || undefined,
           description: data.description,
           groupName: data.groupName,
           priority: maxPriority + 1,

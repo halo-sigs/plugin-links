@@ -4,6 +4,7 @@ export interface LinkFormState {
   url: string;
   displayName: string;
   logo?: string;
+  cover?: string;
   description?: string;
   groupName?: string;
   rss?: RssSpec;

@@ -97,6 +97,38 @@ describe("LinkEditingModal RSS unsubscribe", () => {
     expect(componentMocks.patchLink).toHaveBeenCalledTimes(1);
   });
 
+  it.each([undefined, "", "   "])("saves without submitting an empty cover (%s)", async (cover) => {
+    const { wrapper } = mountModal(link(false));
+    submitForm(wrapper, { ...formState(false), cover });
+    await flushPromises();
+
+    expect(componentMocks.patchLink).toHaveBeenCalledTimes(1);
+    const { jsonPatchInner } = componentMocks.patchLink.mock.calls[0][0];
+    expect(jsonPatchInner).not.toEqual(expect.arrayContaining([expect.objectContaining({ path: "/spec/cover" })]));
+  });
+
+  it("removes the old cover when it is cleared", async () => {
+    const existing = link(false);
+    Object.assign(existing.spec, { cover: "https://example.com/cover.png" });
+    const { wrapper } = mountModal(existing);
+    submitForm(wrapper, { ...formState(false), cover: "" });
+    await flushPromises();
+
+    expect(componentMocks.patchLink).toHaveBeenCalledWith(expect.objectContaining({
+      jsonPatchInner: expect.arrayContaining([{ op: "remove", path: "/spec/cover" }]),
+    }));
+  });
+
+  it("saves the selected cover with surrounding whitespace removed", async () => {
+    const { wrapper } = mountModal(link(false));
+    submitForm(wrapper, { ...formState(false), cover: " https://example.com/cover.png " });
+    await flushPromises();
+
+    expect(componentMocks.patchLink).toHaveBeenCalledWith(expect.objectContaining({
+      jsonPatchInner: expect.arrayContaining([{ op: "add", path: "/spec/cover", value: "https://example.com/cover.png" }]),
+    }));
+  });
+
   it("invalidates all RSS data queries after confirmed unsubscribe", async () => {
     const { wrapper, invalidateSpy } = mountModal(link(true));
 

@@ -37,6 +37,9 @@ public class LinkApplication extends AbstractExtension {
         @Schema(description = "Logo or icon URL displayed with the link.")
         private String logo;
 
+        @Schema(description = "Optional homepage cover image URL or site-relative path.")
+        private String cover;
+
         @Schema(description = "Short text that introduces the linked website.")
         private String description;
 
@@ -103,6 +106,9 @@ public class LinkApplication extends AbstractExtension {
 
         @Schema(description = "Approved Link logo URL.")
         private String logo;
+
+        @Schema(description = "Approved homepage cover image URL or site-relative path.")
+        private String cover;
 
         @Schema(description = "Approved Link description.")
         private String description;
