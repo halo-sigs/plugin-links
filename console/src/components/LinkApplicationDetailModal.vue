@@ -66,6 +66,7 @@ const approvalForm = reactive<LinkApplicationApprovalFormData>({
   url: props.application.spec.url,
   displayName: props.application.spec.displayName,
   logo: props.application.spec.logo || "",
+  cover: props.application.spec.cover || "",
   description: props.application.spec.description || "",
   groupName: "",
   backlink: props.application.spec.backlink || "",
@@ -386,6 +387,7 @@ function handleDelete() {
         />
         <FormKit v-model="approvalForm.url" type="url" name="url" validation="required" label="链接地址" />
         <FormKit v-model="approvalForm.logo" type="url" name="logo" label="Logo" />
+        <FormKit v-model="approvalForm.cover" type="url" name="cover" label="Homepage cover" />
         <FormKit v-model="approvalForm.description" type="textarea" name="description" label="简介" auto-height />
         <FormKit
           v-model="approvalForm.groupName"
@@ -446,6 +448,10 @@ function handleDelete() {
         <div v-if="frozenFields.logo" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
           <dt class=":uno: w-18 shrink-0 text-gray-500">Logo</dt>
           <dd class=":uno: min-w-0 flex-1 break-all text-gray-900">{{ frozenFields.logo }}</dd>
+        </div>
+        <div v-if="frozenFields.cover" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
+          <dt class=":uno: w-18 shrink-0 text-gray-500">Homepage cover</dt>
+          <dd class=":uno: min-w-0 flex-1 break-all text-gray-900">{{ frozenFields.cover }}</dd>
         </div>
         <div v-if="frozenFields.description" class=":uno: flex gap-3 px-3.5 py-2.5 text-sm">
           <dt class=":uno: w-18 shrink-0 text-gray-500">简介</dt>

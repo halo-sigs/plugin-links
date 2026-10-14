@@ -86,6 +86,7 @@ public class LinkApplicationToolProvider implements McpToolProvider {
                     "url", schema("string", "Optional website URL override."),
                     "displayName", schema("string", "Optional display name override."),
                     "logo", schema("string", "Optional logo URL override."),
+                    "cover", schema("string", "Optional homepage cover image URL override."),
                     "description", schema("string", "Optional description override."),
                     "groupName", schema("string", "Target group name; omitted means ungrouped."),
                     "backlink", schema("string", "Optional backlink URL override."),
@@ -165,14 +166,14 @@ public class LinkApplicationToolProvider implements McpToolProvider {
     private Mono<Map<String, Object>> approve(Map<String, Object> args) {
         String name = requiredString(args, "name");
         var command = new LinkApplicationApprovalService.ApprovalCommand(
-            string(args, "url"), string(args, "displayName"), string(args, "logo"),
+            string(args, "url"), string(args, "displayName"), string(args, "logo"), string(args, "cover"),
             string(args, "description"), string(args, "groupName"), string(args, "backlink"),
             args.containsKey("feedUrls") ? strings(args, "feedUrls") : null);
         return approvalService.approve(name, command).map(link -> {
             var spec = link.getSpec();
             return object("name", name, "status", "APPROVED", "link",
                 object("name", link.getMetadata().getName(), "url", spec.getUrl(),
-                    "displayName", spec.getDisplayName(), "logo", spec.getLogo(),
+                    "displayName", spec.getDisplayName(), "logo", spec.getLogo(), "cover", spec.getCover(),
                     "description", spec.getDescription(), "groupName", spec.getGroupName(),
                     "backlink", spec.getVerification() == null
                         ? null : spec.getVerification().getBacklinkScanUrl(),
@@ -250,7 +251,7 @@ public class LinkApplicationToolProvider implements McpToolProvider {
         var origin = spec.getOrigin();
         return object("name", application.getMetadata().getName(),
             "creationTimestamp", timestamp(application.getMetadata().getCreationTimestamp()),
-            "url", spec.getUrl(), "displayName", spec.getDisplayName(), "logo", spec.getLogo(),
+            "url", spec.getUrl(), "displayName", spec.getDisplayName(), "logo", spec.getLogo(), "cover", spec.getCover(),
             "description", spec.getDescription(), "backlink", spec.getBacklink(),
             "feedUrls", spec.getFeedUrls(), "status", enumName(spec.getStatus()),
             "originType", origin == null ? null : enumName(origin.getType()),

@@ -26,6 +26,9 @@ public class LinkApplicationRestRequest {
     @Schema(description = "Optional logo URL.", nullable = true)
     private String logo;
 
+    @Schema(description = "Optional homepage cover image URL or site-relative path.", nullable = true)
+    private String cover;
+
     @Schema(description = "Optional site description.", nullable = true)
     private String description;
 
@@ -63,6 +66,7 @@ public class LinkApplicationRestRequest {
             normalizeOptional(url),
             normalizeOptional(displayName),
             normalizeOptional(logo),
+            normalizeOptional(cover),
             normalizeOptional(description),
             normalizeOptional(email),
             normalizeOptional(backlink),

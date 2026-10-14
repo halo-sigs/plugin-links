@@ -205,7 +205,7 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
             .defaultIfEmpty(new ApproveRequest())
             .flatMap(body -> approvalService.approve(request.pathVariable("name"),
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    body.getUrl(), body.getDisplayName(), body.getLogo(),
+                    body.getUrl(), body.getDisplayName(), body.getLogo(), body.getCover(),
                     body.getDescription(), body.getGroupName(), body.getBacklink(),
                     body.getFeedUrls())))
             .flatMap(link -> ServerResponse.ok().bodyValue(link));
@@ -313,6 +313,7 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
         private String url;
         private String displayName;
         private String logo;
+        private String cover;
         private String description;
         private String groupName;
         private String backlink;

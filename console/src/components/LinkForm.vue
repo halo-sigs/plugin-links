@@ -223,6 +223,7 @@ async function onSubmit() {
     url: data.value.url,
     displayName: data.value.displayName,
     logo: data.value.logo,
+    cover: data.value.cover?.trim() || undefined,
     description: data.value.description,
     groupName: data.value.groupName || undefined,
     rss: {
@@ -296,6 +297,13 @@ function handleGroupCreated(group: LinkGroup) {
             label="网站名称"
           ></FormKit>
           <FormKit type="attachment" name="logo" v-model="data.logo" label="Logo"></FormKit>
+          <FormKit
+            type="attachment"
+            name="cover"
+            v-model="data.cover"
+            label="首页封面（可选）"
+            help="请手动上传网站首页截图或选择封面图片，留空也可以保存。"
+          ></FormKit>
           <FormKit type="select" name="groupName" v-model="data.groupName" :options="groupOptions" label="分组">
             <template #suffix>
               <button

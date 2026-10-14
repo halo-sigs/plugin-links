@@ -32,7 +32,7 @@ final class McpOutputSchemas {
             case "approve_link_application" -> fields(
                 "name", text(), "status", constant("APPROVED"),
                 "link", fields("name", text(), "url", text(), "displayName", text(),
-                    "logo", nullable(text()), "description", nullable(text()),
+                    "logo", nullable(text()), "cover", nullable(text()), "description", nullable(text()),
                     "groupName", nullable(text()), "backlink", nullable(text()),
                     "feedUrls", nullable(array(text()))));
             case "discover_feeds" -> discovery();
@@ -51,7 +51,7 @@ final class McpOutputSchemas {
 
     private static Map<String, Object> link(boolean detail) {
         var schema = fields("name", text(), "displayName", text(), "url", text(),
-            "description", nullable(text()), "logo", nullable(text()),
+            "description", nullable(text()), "logo", nullable(text()), "cover", nullable(text()),
             "groupName", nullable(text()), "priority", nullable(integer()),
             "verification", nullable(fields("lastCheckedAt", nullable(text()),
                 "access", nullable(access()), "backlink", nullable(backlink()))));
@@ -106,7 +106,7 @@ final class McpOutputSchemas {
 
     private static Map<String, Object> application() {
         return fields("name", text(), "creationTimestamp", nullable(text()), "url", text(),
-            "displayName", text(), "logo", nullable(text()), "description", nullable(text()),
+            "displayName", text(), "logo", nullable(text()), "cover", nullable(text()), "description", nullable(text()),
             "backlink", nullable(text()), "feedUrls", nullable(array(text())),
             "status", nullable(enumeration("PENDING", "APPROVING", "APPROVED", "REJECTED")),
             "originType", nullable(enumeration("FORM", "COMMENT")),
