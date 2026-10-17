@@ -67,7 +67,7 @@ class NitriteToSqliteMigrationTest {
                 });
             assertThat(Files.readAllBytes(legacyPath)).isEqualTo(legacyBytes);
             assertThat(Files.exists(database.migrationMarkerPath())).isTrue();
-            assertThat(snapshotFiles()).hasSize(1);
+            assertThat(snapshotFiles()).isEmpty();
         } finally {
             database.destroy();
         }
@@ -218,7 +218,7 @@ class NitriteToSqliteMigrationTest {
             assertThat(Files.exists(legacyPath)).isTrue();
             assertThat(Files.readAllBytes(legacyPath)).isEqualTo(legacyBytes);
             assertThat(Files.exists(database.migrationMarkerPath())).isTrue();
-            assertThat(snapshotFiles()).hasSize(1);
+            assertThat(snapshotFiles()).isEmpty();
             try (var files = Files.list(tempDir)) {
                 assertThat(files.map(path -> path.getFileName().toString()).toList())
                     .noneMatch(name -> name.startsWith("links.nitrite.corrupt-"));
@@ -308,13 +308,28 @@ class NitriteToSqliteMigrationTest {
 
         LinksSqliteDatabase restarted = new LinksSqliteDatabase(dbPath);
         try {
-            assertThat(new SqliteLinkFeedItemStore(restarted)
-                .listRecent(new LinkFeedItemQuery()))
-                .extracting(LinkFeedItem::getId)
-                .containsExactly("legacy-b", "legacy-a")
-                .doesNotContain("stale-new");
+            assertThat(new SqliteLinkFeedItemStore(restarted).count()).isZero();
         } finally {
             restarted.destroy();
+        }
+    }
+
+    @Test
+    void shouldNotOverwriteCorruptSqliteWithLegacyDataWhenMarkerIsMissing() throws IOException {
+        Path dbPath = tempDir.resolve("links.sqlite");
+        Files.writeString(dbPath, "corrupted SQLite");
+        Path legacyPath = tempDir.resolve("links.nitrite");
+        createLegacyDatabase(legacyPath);
+        byte[] legacyBytes = Files.readAllBytes(legacyPath);
+
+        LinksSqliteDatabase database = new LinksSqliteDatabase(dbPath);
+        try {
+            assertThat(database.isAvailable()).isFalse();
+            assertThat(Files.readString(dbPath)).isEqualTo("corrupted SQLite");
+            assertThat(Files.readAllBytes(legacyPath)).isEqualTo(legacyBytes);
+            assertThat(database.migrationMarkerPath()).doesNotExist();
+        } finally {
+            database.destroy();
         }
     }
 

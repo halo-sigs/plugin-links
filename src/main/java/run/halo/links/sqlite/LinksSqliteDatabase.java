@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.FileTime;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -12,23 +11,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.sqlite.SQLiteConfig;
-import org.sqlite.SQLiteConnection;
 import org.sqlite.SQLiteErrorCode;
 import org.sqlite.SQLiteException;
 import org.sqlite.JDBC;
@@ -44,9 +37,7 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
     static final String MIGRATION_METADATA_KEY = "nitrite_migration_complete";
     private static final int BUSY_TIMEOUT_MILLIS = 5_000;
     private static final int MAX_BUSY_RETRIES = 2;
-    private static final int MAX_SNAPSHOTS = 2;
     private static final double VACUUM_FREE_PAGE_RATIO = 0.25d;
-    private static final Duration SNAPSHOT_INTERVAL = Duration.ofDays(1);
     private static final DateTimeFormatter FILE_TIMESTAMP =
         DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").withZone(ZoneOffset.UTC);
     private static final Set<SQLiteErrorCode> UNAVAILABLE_CODES = Set.of(
@@ -63,45 +54,39 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
     private final Path dbPath;
     private final Path legacyDbPath;
     private final Path migrationMarkerPath;
-    private final Clock clock;
     private Connection connection;
     private volatile boolean available;
     private boolean driverLeaseHeld;
 
     @Autowired
     public LinksSqliteDatabase(PluginsRootGetter pluginsRootGetter) {
-        this(resolveDbPath(pluginsRootGetter), Clock.systemUTC());
+        this(resolveDbPath(pluginsRootGetter));
     }
 
     public LinksSqliteDatabase(Path dbPath) {
-        this(dbPath, Clock.systemUTC());
-    }
-
-    LinksSqliteDatabase(Path dbPath, Clock clock) {
         this.dbPath = dbPath;
         this.legacyDbPath = dbPath.resolveSibling("links.nitrite");
         this.migrationMarkerPath = dbPath.resolveSibling(
             dbPath.getFileName() + ".migration-complete");
-        this.clock = clock;
         try {
             acquireDriverLease();
             driverLeaseHeld = true;
             Files.createDirectories(dbPath.getParent());
-            cleanupTemporaryFiles();
-            boolean migrated = prepareMigration();
-            restoreOrCreateActiveDatabase();
+            prepareMigration();
             this.connection = openActiveDatabase(dbPath);
-            this.available = true;
-            if (migrated) {
-                createSnapshot();
+            if (!Files.exists(migrationMarkerPath)) {
+                markMigrationComplete(connection);
+                writeMigrationMarker();
             }
+            this.available = true;
         } catch (Exception e) {
             closeQuietly(connection);
             connection = null;
             available = false;
             releaseDriverLease();
-            log.error("[plugin-links] RSS SQLite storage could not start at {}; link management "
-                + "will remain available", dbPath, e);
+            log.error("[plugin-links] RSS SQLite storage could not start at {}; check or restore "
+                + "the database manually before restarting the plugin. Link management remains "
+                + "available", dbPath, e);
         }
     }
 
@@ -177,44 +162,6 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
             });
         } catch (RuntimeException e) {
             log.warn("[plugin-links] Failed to compact RSS SQLite database", e);
-        }
-    }
-
-    @Scheduled(fixedDelay = 60 * 60 * 1000L, initialDelay = 60 * 60 * 1000L)
-    public synchronized void snapshotIfDue() {
-        if (!available || !snapshotIsDue()) {
-            return;
-        }
-        createSnapshot();
-    }
-
-    synchronized void createSnapshot() {
-        if (!available || isClosed() || !Files.exists(dbPath)) {
-            return;
-        }
-        String timestamp = FILE_TIMESTAMP.format(Instant.now(clock));
-        Path target = dbPath.resolveSibling(dbPath.getFileName() + ".snapshot-" + timestamp);
-        Path temp = target.resolveSibling(target.getFileName() + ".tmp");
-        try {
-            Files.deleteIfExists(temp);
-            SQLiteConnection sqliteConnection = connection.unwrap(SQLiteConnection.class);
-            int result = sqliteConnection.getDatabase().backup("main", temp.toString(), null);
-            if (result != SQLiteErrorCode.SQLITE_OK.code) {
-                throw new SQLException("SQLite backup failed with result code " + result);
-            }
-            if (!isValidStandaloneDatabase(temp)) {
-                throw new SQLException("New SQLite snapshot failed validation: " + temp);
-            }
-            deleteQuietly(sidecar(temp, "-wal"));
-            deleteQuietly(sidecar(temp, "-shm"));
-            moveReplacing(temp, target);
-            Files.setLastModifiedTime(target, FileTime.from(Instant.now(clock)));
-            rotateSnapshots();
-        } catch (Exception e) {
-            log.warn("[plugin-links] Failed to create RSS SQLite snapshot at {}", target, e);
-            deleteQuietly(temp);
-            deleteQuietly(sidecar(temp, "-wal"));
-            deleteQuietly(sidecar(temp, "-shm"));
         }
     }
 
@@ -353,21 +300,6 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
         }
     }
 
-    static boolean isValidDatabase(Path path) {
-        if (!Files.isRegularFile(path)) {
-            return false;
-        }
-        SQLiteConfig config = new SQLiteConfig();
-        config.setBusyTimeout(BUSY_TIMEOUT_MILLIS);
-        try (Connection candidate = config.createConnection("jdbc:sqlite:" + path);
-            Statement statement = candidate.createStatement()) {
-            statement.execute("PRAGMA query_only = ON");
-            return hasCurrentSchemaAndPassesQuickCheck(statement);
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
     static boolean isValidStandaloneDatabase(Path path) {
         if (!Files.isRegularFile(path)) {
             return false;
@@ -398,41 +330,31 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
         }
     }
 
-    private boolean prepareMigration() throws IOException, SQLException {
-        if (Files.exists(migrationMarkerPath)) {
-            return false;
+    private void prepareMigration() throws IOException, SQLException {
+        // An existing SQLite database always takes precedence, even if it cannot be opened.
+        if (Files.exists(migrationMarkerPath) || Files.exists(dbPath)) {
+            return;
         }
-        if (hasInternalMigrationMarker(dbPath) && isValidDatabase(dbPath)) {
-            writeMigrationMarker();
-            return false;
+        cleanupMigrationTemporaryFiles();
+        if (!NitriteToSqliteMigration.hasLegacySource(legacyDbPath)) {
+            return;
         }
-        if (NitriteToSqliteMigration.hasLegacySource(legacyDbPath)) {
-            Path temp = dbPath.resolveSibling(dbPath.getFileName() + ".migration.tmp");
-            NitriteToSqliteMigration.Result result =
-                NitriteToSqliteMigration.migrate(legacyDbPath, temp, clock);
-            boolean isolateLegacy = false;
-            if (result == NitriteToSqliteMigration.Result.SOURCE_UNREADABLE) {
-                isolateLegacy = Files.exists(legacyDbPath);
-                createEmptyMigrationDatabase(temp);
-            } else if (result == NitriteToSqliteMigration.Result.MIGRATED_FROM_BACKUP
-                && Files.exists(legacyDbPath)) {
-                isolateLegacy = true;
-            }
-            moveReplacing(temp, dbPath);
-            if (isolateLegacy) {
-                isolateLegacyDatabase();
-            }
-            writeMigrationMarker();
-            return true;
+        Path temp = dbPath.resolveSibling(dbPath.getFileName() + ".migration.tmp");
+        NitriteToSqliteMigration.Result result =
+            NitriteToSqliteMigration.migrate(legacyDbPath, temp, Clock.systemUTC());
+        boolean isolateLegacy = false;
+        if (result == NitriteToSqliteMigration.Result.SOURCE_UNREADABLE) {
+            isolateLegacy = Files.exists(legacyDbPath);
+            createEmptyMigrationDatabase(temp);
+        } else if (result == NitriteToSqliteMigration.Result.MIGRATED_FROM_BACKUP
+            && Files.exists(legacyDbPath)) {
+            isolateLegacy = true;
         }
-        if (!Files.exists(dbPath) || !isValidDatabase(dbPath)) {
-            restoreOrCreateActiveDatabase();
-        }
-        try (Connection candidate = openActiveDatabase(dbPath)) {
-            markMigrationComplete(candidate);
+        moveReplacing(temp, dbPath);
+        if (isolateLegacy) {
+            isolateLegacyDatabase();
         }
         writeMigrationMarker();
-        return false;
     }
 
     private void createEmptyMigrationDatabase(Path temp) throws IOException, SQLException {
@@ -445,50 +367,6 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
         }
     }
 
-    private void restoreOrCreateActiveDatabase() throws IOException, SQLException {
-        if (isValidDatabase(dbPath)) {
-            return;
-        }
-        if (Files.exists(dbPath) || Files.exists(sidecar(dbPath, "-wal"))
-            || Files.exists(sidecar(dbPath, "-shm"))) {
-            isolateActiveDatabase();
-        }
-        for (Path snapshot : snapshots()) {
-            if (!isValidStandaloneDatabase(snapshot)) {
-                continue;
-            }
-            Path temp = dbPath.resolveSibling(dbPath.getFileName() + ".restore.tmp");
-            Files.copy(snapshot, temp, StandardCopyOption.REPLACE_EXISTING);
-            if (!isValidStandaloneDatabase(temp)) {
-                deleteQuietly(temp);
-                continue;
-            }
-            moveReplacing(temp, dbPath);
-            return;
-        }
-        try (Connection ignored = openActiveDatabase(dbPath)) {
-            // Schema creation initializes an empty database.
-        }
-    }
-
-    private boolean hasInternalMigrationMarker(Path path) {
-        if (!Files.isRegularFile(path)) {
-            return false;
-        }
-        SQLiteConfig config = new SQLiteConfig();
-        config.setReadOnly(true);
-        try (Connection candidate = config.createConnection("jdbc:sqlite:" + path);
-            var statement = candidate.prepareStatement(
-                "SELECT value FROM storage_metadata WHERE key = ?")) {
-            statement.setString(1, MIGRATION_METADATA_KEY);
-            try (ResultSet result = statement.executeQuery()) {
-                return result.next() && "true".equals(result.getString(1));
-            }
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
     private void writeMigrationMarker() throws IOException {
         Path temp = migrationMarkerPath.resolveSibling(migrationMarkerPath.getFileName() + ".tmp");
         Files.writeString(temp, "completed\n");
@@ -497,102 +375,16 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
 
     private void isolateLegacyDatabase() throws IOException {
         Path target = legacyDbPath.resolveSibling(
-            legacyDbPath.getFileName() + ".corrupt-" + FILE_TIMESTAMP.format(Instant.now(clock)));
+            legacyDbPath.getFileName() + ".corrupt-" + FILE_TIMESTAMP.format(Instant.now()));
         Files.move(legacyDbPath, target, StandardCopyOption.REPLACE_EXISTING);
     }
 
-    private void isolateActiveDatabase() throws IOException {
-        String suffix = ".corrupt-" + FILE_TIMESTAMP.format(Instant.now(clock)) + "-"
-            + UUID.randomUUID();
-        moveIfExists(dbPath, dbPath.resolveSibling(dbPath.getFileName() + suffix));
-        moveIfExists(sidecar(dbPath, "-wal"),
-            dbPath.resolveSibling(dbPath.getFileName() + suffix + "-wal"));
-        moveIfExists(sidecar(dbPath, "-shm"),
-            dbPath.resolveSibling(dbPath.getFileName() + suffix + "-shm"));
-        rotateQuarantinedGroups();
-    }
-
-    private void rotateQuarantinedGroups() throws IOException {
-        String prefix = dbPath.getFileName() + ".corrupt-";
-        try (Stream<Path> stream = Files.list(dbPath.getParent())) {
-            List<Path> mainFiles = stream
-                .filter(Files::isRegularFile)
-                .filter(path -> path.getFileName().toString().startsWith(prefix))
-                .filter(path -> !path.getFileName().toString().endsWith("-wal"))
-                .filter(path -> !path.getFileName().toString().endsWith("-shm"))
-                .sorted(Comparator.comparing((Path path) -> path.getFileName().toString())
-                    .reversed())
-                .toList();
-            for (int i = 1; i < mainFiles.size(); i++) {
-                Path old = mainFiles.get(i);
-                deleteQuietly(old);
-                deleteQuietly(old.resolveSibling(old.getFileName() + "-wal"));
-                deleteQuietly(old.resolveSibling(old.getFileName() + "-shm"));
-            }
-        }
-    }
-
-    private boolean snapshotIsDue() {
-        List<Path> snapshots = validSnapshots();
-        if (snapshots.isEmpty()) {
-            return true;
-        }
-        try {
-            Instant latest = Files.getLastModifiedTime(snapshots.get(0)).toInstant();
-            return !Instant.now(clock).isBefore(latest.plus(SNAPSHOT_INTERVAL));
-        } catch (IOException e) {
-            return true;
-        }
-    }
-
-    private List<Path> snapshots() {
-        String prefix = dbPath.getFileName() + ".snapshot-";
-        try (Stream<Path> stream = Files.list(dbPath.getParent())) {
-            return stream.filter(Files::isRegularFile)
-                .filter(path -> path.getFileName().toString().startsWith(prefix))
-                .filter(path -> !path.getFileName().toString().endsWith(".tmp"))
-                .filter(path -> !path.getFileName().toString().endsWith("-wal"))
-                .filter(path -> !path.getFileName().toString().endsWith("-shm"))
-                .sorted(Comparator.comparing((Path path) -> path.getFileName().toString())
-                    .reversed())
-                .toList();
-        } catch (IOException e) {
-            log.warn("[plugin-links] Failed to list RSS SQLite snapshots", e);
-            return List.of();
-        }
-    }
-
-    private void rotateSnapshots() {
-        List<Path> snapshots = snapshots();
-        List<Path> validSnapshots = snapshots.stream()
-            .filter(LinksSqliteDatabase::isValidStandaloneDatabase)
-            .toList();
-        snapshots.stream()
-            .filter(snapshot -> !validSnapshots.contains(snapshot))
-            .forEach(LinksSqliteDatabase::deleteQuietly);
-        for (int i = MAX_SNAPSHOTS; i < validSnapshots.size(); i++) {
-            deleteQuietly(validSnapshots.get(i));
-        }
-    }
-
-    private List<Path> validSnapshots() {
-        return snapshots().stream()
-            .filter(LinksSqliteDatabase::isValidStandaloneDatabase)
-            .toList();
-    }
-
-    private void cleanupTemporaryFiles() throws IOException {
-        String dbName = dbPath.getFileName().toString();
-        String legacyImportName = legacyDbPath.getFileName() + ".migration-import.tmp";
-        try (Stream<Path> stream = Files.list(dbPath.getParent())) {
-            stream.filter(Files::isRegularFile)
-                .filter(path -> {
-                    String name = path.getFileName().toString();
-                    return name.equals(legacyImportName)
-                        || name.startsWith(dbName) && (name.endsWith(".tmp")
-                            || name.contains(".tmp-"));
-                })
-                .forEach(LinksSqliteDatabase::deleteQuietly);
+    private void cleanupMigrationTemporaryFiles() throws IOException {
+        Files.deleteIfExists(legacyDbPath.resolveSibling(
+            legacyDbPath.getFileName() + ".migration-import.tmp"));
+        for (String suffix : List.of(".migration.tmp", ".migration.tmp-journal",
+            ".migration.tmp-wal", ".migration.tmp-shm", ".migration-complete.tmp")) {
+            Files.deleteIfExists(dbPath.resolveSibling(dbPath.getFileName() + suffix));
         }
     }
 
@@ -660,27 +452,9 @@ public class LinksSqliteDatabase implements DisposableBean, LinkFeedStorageMaint
         }
     }
 
-    private static void moveIfExists(Path source, Path target) throws IOException {
-        if (Files.exists(source)) {
-            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
-        }
-    }
-
-    private static Path sidecar(Path path, String suffix) {
-        return path.resolveSibling(path.getFileName() + suffix);
-    }
-
     private static void moveReplacing(Path source, Path target) throws IOException {
         Files.move(source, target, StandardCopyOption.REPLACE_EXISTING,
             StandardCopyOption.ATOMIC_MOVE);
-    }
-
-    private static void deleteQuietly(Path path) {
-        try {
-            Files.deleteIfExists(path);
-        } catch (IOException e) {
-            log.warn("[plugin-links] Failed to delete RSS SQLite file {}", path, e);
-        }
     }
 
     private static void closeQuietly(Connection candidate) {
