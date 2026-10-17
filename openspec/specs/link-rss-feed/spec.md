@@ -203,7 +203,7 @@ that legacy data is never imported again after a completed cutover.
 #### Scenario: Completed migration is not repeated
 - **WHEN** the plugin starts after migration has been marked complete
 - **THEN** the system does not open or import the legacy Nitrite database
-- **AND** the result is unchanged when the active SQLite file is absent, isolated, or rebuilt
+- **AND** the result is unchanged when the active SQLite file is absent or manually replaced
 
 #### Scenario: Cutover is interrupted before the external marker is written
 - **WHEN** an atomically promoted SQLite database records internally that migration completed but
@@ -219,7 +219,11 @@ that legacy data is never imported again after a completed cutover.
 
 ### Requirement: SQLite feed item durability mode
 The system SHALL configure the active SQLite feed item database for transactional, serialized
-access with write-ahead logging and full synchronous durability.
+access with write-ahead logging, full synchronous durability, and a bounded busy timeout.
+
+#### Scenario: Active database connection is opened
+- **WHEN** the plugin opens the SQLite feed item database
+- **THEN** the connection uses `journal_mode=WAL`, `synchronous=FULL`, and `busy_timeout=5000`
 
 #### Scenario: Feed item write succeeds
 - **WHEN** an RSS operation performs one or more related feed item writes
@@ -236,59 +240,46 @@ access with write-ahead logging and full synchronous durability.
 - **AND** it deregisters SQLite JDBC drivers loaded by the retiring plugin classloader
 - **AND** a later plugin database lifecycle can register the driver and open SQLite again
 
-### Requirement: SQLite feed item snapshots
-The system SHALL maintain validated local snapshots of the active SQLite feed item database.
+### Requirement: SQLite storage lifecycle
+The system SHALL open the active SQLite database directly at startup and leave database backup and
+repair to the user. It SHALL NOT create SQLite snapshots, run a startup-wide consistency scan, or
+automatically restore, quarantine, rotate, or replace existing SQLite database files.
 
-#### Scenario: Initial post-migration snapshot is created
-- **WHEN** a Nitrite migration and SQLite cutover complete successfully
-- **THEN** the system creates and validates a consistent SQLite snapshot immediately
+#### Scenario: Active database opens successfully
+- **WHEN** the plugin starts with an existing SQLite feed item database
+- **THEN** it opens the database and applies compatible schema initialization
+- **AND** it does not run a full database consistency check during normal startup
 
-#### Scenario: Daily snapshot is created
-- **WHEN** no validated snapshot has been created within the configured daily interval
-- **THEN** the system creates a new snapshot using a SQLite-consistent backup operation
-- **AND** it validates the new snapshot before making it eligible for recovery
+#### Scenario: Active database cannot be opened
+- **WHEN** opening the active database or initializing its schema fails
+- **THEN** RSS storage remains unavailable for that plugin run and the failure is logged
+- **AND** the system leaves the existing database files in place for manual repair or restore
+- **AND** it does not restore old snapshots or replace the database with an empty cache
+- **AND** link and link-group management remain available
 
-#### Scenario: Snapshot retention is enforced
-- **WHEN** a third validated snapshot is created
-- **THEN** the system retains the two newest validated snapshots
-- **AND** it removes the older snapshot only after the new snapshot passes validation
+#### Scenario: Existing SQLite file takes precedence over legacy data
+- **WHEN** an active SQLite file exists but the external migration marker is absent
+- **THEN** the system attempts to open that SQLite database without importing legacy Nitrite data
+- **AND** it records migration completion only after opening and schema initialization succeed
+- **AND** an unreadable SQLite file is not overwritten with legacy data
 
-#### Scenario: Snapshot creation fails
-- **WHEN** creation or validation of a new snapshot fails
-- **THEN** the active SQLite database and existing valid snapshots remain unchanged
-- **AND** RSS operations continue
-- **AND** the system records the failure without creating a persistent Console warning
+#### Scenario: Active database is absent after completed migration
+- **WHEN** the active SQLite file is absent and migration has been marked complete
+- **THEN** the system initializes an empty SQLite feed item database
+- **AND** it does not restore old snapshots or repeat legacy Nitrite migration
 
-### Requirement: SQLite startup consistency recovery
-The system SHALL verify the active feed item database at plugin startup and automatically recover
-or rebuild the cache when consistency cannot be established.
+#### Scenario: Old backup and recovery files exist
+- **WHEN** snapshots, quarantined databases, or backup and restore temporary files from an older
+  plugin version remain in the storage directory
+- **THEN** the system leaves those files unchanged for the user to manage
 
-#### Scenario: Active database passes startup validation
-- **WHEN** the active SQLite database passes `quick_check`
-- **THEN** the system opens it as the active feed item store without restoring a snapshot
-
-#### Scenario: Active database fails startup validation
-- **WHEN** the active SQLite database cannot be opened or fails `quick_check`
-- **THEN** the system validates retained snapshots from newest to oldest
-- **AND** it restores the first snapshot that passes validation
-- **AND** it isolates the failed active database and its WAL and shared-memory sidecar files
-
-#### Scenario: No retained snapshot is valid
-- **WHEN** the active database and every retained snapshot fail validation
-- **THEN** the system isolates the failed active database and its WAL and shared-memory sidecar
-  files
-- **AND** it creates a new empty SQLite feed item database
-- **AND** it does not repeat the legacy Nitrite migration
-
-#### Scenario: Quarantined database retention is enforced
-- **WHEN** a newly failed database file group is isolated
-- **THEN** the system retains only the most recent isolated main database, WAL, and shared-memory
-  file group
-- **AND** validated daily snapshots remain subject to their separate two-snapshot retention rule
+#### Scenario: User repairs or restores the database
+- **WHEN** the user repairs or restores the SQLite database while the plugin is stopped
+- **THEN** the next plugin startup attempts to open that database normally
 
 ### Requirement: Runtime RSS storage failure isolation
-The system SHALL isolate persistent SQLite runtime failures to RSS functionality and defer file
-replacement or snapshot recovery until the next plugin startup.
+The system SHALL isolate persistent SQLite runtime failures to RSS functionality and leave file
+repair or restoration to the user.
 
 #### Scenario: Persistent runtime storage failure occurs
 - **WHEN** bounded handling of a transient SQLite error does not restore normal database access
@@ -859,9 +850,9 @@ without changing the current SQLite schema version.
 - **THEN** it does not attempt to add the column again
 - **AND** existing hidden values remain unchanged
 
-#### Scenario: Older snapshot is restored
-- **WHEN** startup restores a valid current-version snapshot whose feed item table lacks the hidden
-  column
+#### Scenario: User restores an older database
+- **WHEN** the user restores a valid current-version database whose feed item table lacks the hidden
+  column before starting the plugin
 - **THEN** opening the restored active database adds the hidden column idempotently
 - **AND** the restored feed items remain available and default to visible
 
