@@ -96,6 +96,12 @@ const { mutate, isPending } = useMutation({
 
     jsonPatchInner.push({
       op: "add",
+      path: "/spec/visible",
+      value: data.visible ?? "PUBLIC",
+    });
+
+    jsonPatchInner.push({
+      op: "add",
       path: "/metadata/annotations",
       value: data.annotations || {},
     });
@@ -201,6 +207,7 @@ function handleDelete() {
           logo: link.spec.logo,
           description: link.spec.description,
           groupName: link.spec.groupName,
+          visible: link.spec.visible,
           rss: link.spec.rss,
           verification: link.spec.verification,
           annotations: link.metadata.annotations,

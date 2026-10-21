@@ -2,7 +2,7 @@
   "openapi" : "3.0.1",
   "info" : {
     "title" : "Halo",
-    "version" : "2.25.2"
+    "version" : "2.26.0-beta.2"
   },
   "servers" : [ {
     "url" : "http://localhost:8091",
@@ -1890,7 +1890,7 @@
         "description" : "Reference to the source Comment."
       },
       "CopyOperation" : {
-        "required" : [ "op", "from", "path" ],
+        "required" : [ "from", "op", "path" ],
         "type" : "object",
         "properties" : {
           "from" : {
@@ -1980,6 +1980,9 @@
           },
           "metadata" : {
             "$ref" : "#/components/schemas/Metadata"
+          },
+          "publiclyVisible" : {
+            "type" : "boolean"
           },
           "spec" : {
             "$ref" : "#/components/schemas/LinkSpec"
@@ -2120,7 +2123,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has previous page."
+            "description" : "Indicates whether current page has next page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -2736,6 +2739,9 @@
           "metadata" : {
             "$ref" : "#/components/schemas/Metadata"
           },
+          "publiclyVisible" : {
+            "type" : "boolean"
+          },
           "spec" : {
             "$ref" : "#/components/schemas/LinkGroupSpec"
           }
@@ -2752,7 +2758,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has previous page."
+            "description" : "Indicates whether current page has next page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -2813,6 +2819,12 @@
             "type" : "integer",
             "description" : "Sort order of the link group; lower values appear earlier.",
             "format" : "int32"
+          },
+          "visible" : {
+            "type" : "string",
+            "description" : "Visibility of a link group.",
+            "default" : "PUBLIC",
+            "enum" : [ "PUBLIC", "PRIVATE" ]
           }
         },
         "description" : "Configurable fields of a link group."
@@ -2846,7 +2858,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has previous page."
+            "description" : "Indicates whether current page has next page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -2919,6 +2931,12 @@
           },
           "verification" : {
             "$ref" : "#/components/schemas/VerificationSpec"
+          },
+          "visible" : {
+            "type" : "string",
+            "description" : "Visibility of a link.",
+            "default" : "PUBLIC",
+            "enum" : [ "PUBLIC", "PRIVATE" ]
           }
         },
         "description" : "Configurable fields of a link."
@@ -3023,7 +3041,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has previous page."
+            "description" : "Indicates whether current page has next page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -3119,7 +3137,7 @@
         "description" : "Metadata of Extension."
       },
       "MoveOperation" : {
-        "required" : [ "op", "from", "path" ],
+        "required" : [ "from", "op", "path" ],
         "type" : "object",
         "properties" : {
           "from" : {

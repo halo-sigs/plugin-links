@@ -33,10 +33,25 @@ public class LinkGroup extends AbstractExtension {
         @Schema(description = "Sort order of the link group; lower values appear earlier.")
         private Integer priority;
 
+        @Schema(description = "Visibility of the link group. Links under a private group are "
+            + "hidden from theme-facing pages and APIs for users without link management "
+            + "permission, regardless of each link's own visibility.", defaultValue = "PUBLIC")
+        private LinkGroupVisible visible;
+
         @Deprecated(since = "1.2.0", forRemoval = true)
         @Schema(description = "Deprecated names of links below this group; use Link.spec.groupName instead.")
         @ArraySchema(arraySchema = @Schema(description = "Deprecated links of this group."),
             schema = @Schema(description = "Metadata name of a Link."))
         private LinkedHashSet<String> links;
+    }
+
+    @Schema(description = "Visibility of a link group.")
+    public enum LinkGroupVisible {
+        PUBLIC,
+        PRIVATE
+    }
+
+    public boolean isPubliclyVisible() {
+        return spec == null || !LinkGroupVisible.PRIVATE.equals(spec.getVisible());
     }
 }

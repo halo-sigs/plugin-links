@@ -9,7 +9,7 @@ import {
 import { QK_LINK_GROUPS } from "@/composables/use-group-fetch";
 import { invalidateLinkFeedItemSummary } from "@/composables/use-link-feed-item-summary";
 import { QK_GROUPS_WITH_LINKS, QK_RSS_GROUPS_WITH_LINKS } from "@/composables/use-link-fetch";
-import { Dialog, IconExternalLinkLine, Toast } from "@halo-dev/components";
+import { Dialog, IconExternalLinkLine, IconEyeOff, Toast } from "@halo-dev/components";
 import { utils } from "@halo-dev/ui-shared";
 import ContextMenu, { type MenuItem } from "@imengyu/vue3-context-menu";
 import "@imengyu/vue3-context-menu/lib/vue3-context-menu.css";
@@ -95,6 +95,7 @@ function handleContextMenu(event: MouseEvent) {
 
 const displayName = computed(() => props.link.spec?.displayName || props.link.metadata.name);
 const linkUrl = computed(() => props.link.spec?.url || "");
+const isPrivate = computed(() => props.link.spec?.visible === "PRIVATE");
 const moveTargetGroups = computed(
   () => props.groups?.filter((group) => group.metadata?.name && group.metadata.name !== props.groupName) || [],
 );
@@ -287,6 +288,13 @@ function invalidateLinkQueries() {
           }"
         >
           {{ displayName }}
+          <IconEyeOff
+            v-if="isPrivate"
+            v-tooltip="{
+              content: '私密链接，仅对具有访问权限的用户可见。',
+            }"
+            class=":uno: ml-1 inline size-3 text-gray-400 align-[-2px]"
+          />
         </span>
         <span
           class=":uno: link-badge__url"

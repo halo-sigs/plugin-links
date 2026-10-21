@@ -42,6 +42,7 @@ const { mutate, isPending } = useMutation({
           logo: data.logo,
           description: data.description,
           groupName: data.groupName,
+          visible: data.visible ?? "PUBLIC",
           priority: maxPriority + 1,
           rss:
             data.rss?.enabled || data.rss?.feedUrls?.length
