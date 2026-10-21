@@ -291,7 +291,7 @@ function invalidateLinkQueries() {
           <IconEyeOff
             v-if="isPrivate"
             v-tooltip="{
-              content: '私密链接，不在前台展示',
+              content: '私密链接，仅对具有访问权限的用户可见。',
             }"
             class=":uno: ml-1 inline size-3 text-gray-400 align-[-2px]"
           />
