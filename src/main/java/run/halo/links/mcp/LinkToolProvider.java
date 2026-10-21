@@ -33,6 +33,7 @@ import run.halo.app.extension.Metadata;
 import run.halo.app.extension.PageRequestImpl;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.links.dto.LinkRequest;
+import run.halo.links.service.LinkImageReference;
 import run.halo.links.extension.Link;
 import run.halo.links.extension.LinkGroup;
 import run.halo.links.service.LinkGroupService;
@@ -245,6 +246,9 @@ public final class LinkToolProvider implements McpToolProvider {
         if (args.containsKey("logo")) {
             spec.setLogo(optionalUrl(string(args, "logo")));
         }
+        if (args.containsKey("cover")) {
+            spec.setCover(optionalUrl(string(args, "cover")));
+        }
         if (args.containsKey("groupName")) {
             var group = string(args, "groupName").trim();
             spec.setGroupName(group.isEmpty() ? null : group);
@@ -406,7 +410,7 @@ public final class LinkToolProvider implements McpToolProvider {
     private static Map<String, Object> linkSummary(Link link) {
         var spec = link.getSpec();
         return object("name", link.getMetadata().getName(), "displayName", spec.getDisplayName(),
-            "url", spec.getUrl(), "description", spec.getDescription(), "logo", spec.getLogo(),
+            "url", spec.getUrl(), "description", spec.getDescription(), "logo", spec.getLogo(), "cover", spec.getCover(),
             "groupName", spec.getGroupName(), "priority", spec.getPriority(),
             "verification", link.getStatus().getVerification());
     }
@@ -485,7 +489,14 @@ public final class LinkToolProvider implements McpToolProvider {
     }
 
     private static String optionalUrl(String value) {
-        return value.isBlank() ? "" : url(value);
+        if (value.isBlank()) {
+            return "";
+        }
+        if (!LinkImageReference.isValid(value)) {
+            throw error("INVALID_ARGUMENT",
+                "Expected an absolute HTTP(S) URL or a site-relative path.");
+        }
+        return value.trim();
     }
 
     private static List<String> orderedNames(Map<String, Object> args) {
@@ -531,6 +542,7 @@ public final class LinkToolProvider implements McpToolProvider {
             "displayName", schema("string", "Nonblank display name."),
             "description", schema("string", "Description; empty string clears it."),
             "logo", schema("string", "HTTP(S) logo URL; empty string clears it."),
+            "cover", schema("string", "HTTP(S) homepage cover image URL; empty string clears it."),
             "groupName", schema("string", "Existing group metadata name; empty means ungrouped."),
             "priority", schema("integer", "Lower priorities appear first."),
             "rssEnabled", schema("boolean", "Enable RSS tracking; requires feedUrls."),

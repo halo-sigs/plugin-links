@@ -49,6 +49,9 @@ public class Link extends AbstractExtension {
         @Schema(description = "Logo or icon URL displayed with the link.")
         private String logo;
 
+        @Schema(description = "Homepage cover image URL or site-relative path displayed in link card previews.")
+        private String cover;
+
         @Schema(description = "Short text that introduces the linked website.")
         private String description;
 
