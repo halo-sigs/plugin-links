@@ -1,4 +1,4 @@
-import type { LinkSpecVisibleEnum, RssSpec, VerificationSpec } from "@/api/generated";
+import type { LinkGroupSpecVisibleEnum, LinkSpecVisibleEnum, RssSpec, VerificationSpec } from "@/api/generated";
 
 export interface LinkFormState {
   url: string;
@@ -14,5 +14,6 @@ export interface LinkFormState {
 
 export interface GroupFormState {
   displayName: string;
+  visible?: LinkGroupSpecVisibleEnum;
   annotations?: Record<string, string>;
 }

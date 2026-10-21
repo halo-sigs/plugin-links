@@ -46,6 +46,12 @@ export interface LinkGroup {
     'metadata': Metadata;
     /**
      * 
+     * @type {boolean}
+     * @memberof LinkGroup
+     */
+    'publiclyVisible'?: boolean;
+    /**
+     * 
      * @type {LinkGroupSpec}
      * @memberof LinkGroup
      */

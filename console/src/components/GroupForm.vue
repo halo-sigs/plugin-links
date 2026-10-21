@@ -13,6 +13,11 @@ const emit = defineEmits<{
 
 const annotationsForm = ref();
 
+const visibilityOptions = [
+  { label: "公开", value: "PUBLIC" },
+  { label: "私密", value: "PRIVATE" },
+];
+
 async function onSubmit(data: GroupFormState) {
   annotationsForm.value?.handleSubmit();
   await nextTick();
@@ -52,6 +57,14 @@ async function onSubmit(data: GroupFormState) {
           :value="formState?.displayName"
           validation="required"
           label="分组名称"
+        />
+        <FormKit
+          type="select"
+          name="visible"
+          :value="formState?.visible ?? 'PUBLIC'"
+          :options="visibilityOptions"
+          label="可见性"
+          help="私密分组下的所有链接仅管理员或具有链接管理权限的用户可见"
         />
       </div>
     </div>

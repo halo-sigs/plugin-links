@@ -8,6 +8,7 @@ import run.halo.app.extension.PageRequest;
 import run.halo.links.vo.LinkGroupVo;
 import run.halo.links.vo.LinkVo;
 import java.util.List;
+import java.util.Set;
 
 public interface LinkPublicQueryService {
 
@@ -40,4 +41,12 @@ public interface LinkPublicQueryService {
     Mono<List<LinkVo>> random(Integer maxSize);
 
     Mono<Integer> count();
+
+    /**
+     * Names of link groups marked as private. Links under these groups are hidden from
+     * users without link management permission.
+     *
+     * @return a mono of set of private link group names
+     */
+    Mono<Set<String>> privateGroupNames();
 }

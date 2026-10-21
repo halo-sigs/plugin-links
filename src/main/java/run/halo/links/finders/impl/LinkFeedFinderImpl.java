@@ -26,6 +26,7 @@ import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.service.LinkFeedPublicQueryService;
 import run.halo.links.service.LinkPrivateAccessChecker;
+import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkFeedGroupVo;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
@@ -34,7 +35,10 @@ import run.halo.links.vo.LinkFeedVo;
 import static org.springframework.data.domain.Sort.Order.asc;
 import static run.halo.app.extension.index.query.Queries.and;
 import static run.halo.app.extension.index.query.Queries.equal;
+import static run.halo.app.extension.index.query.Queries.in;
 import static run.halo.app.extension.index.query.Queries.isNull;
+import static run.halo.app.extension.index.query.Queries.not;
+import static run.halo.app.extension.index.query.Queries.or;
 
 
 @Finder("linkFeedFinder")
@@ -50,12 +54,16 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
 
     private final LinkPrivateAccessChecker accessChecker;
 
+    private final LinkPublicQueryService linkPublicQueryService;
+
     public LinkFeedFinderImpl(ReactiveExtensionClient client, LinkFeedPublicQueryService linkFeedPublicQueryService,
-        LinkFeedItemStore itemStore, LinkPrivateAccessChecker accessChecker) {
+        LinkFeedItemStore itemStore, LinkPrivateAccessChecker accessChecker,
+        LinkPublicQueryService linkPublicQueryService) {
         this.client = client;
         this.linkFeedPublicQueryService = linkFeedPublicQueryService;
         this.itemStore = itemStore;
         this.accessChecker = accessChecker;
+        this.linkPublicQueryService = linkPublicQueryService;
     }
 
     @Override
@@ -85,17 +93,35 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
     }
 
     private Flux<LinkFeedGroupVo> groupByWhenPublicEnabled(Integer limit) {
-        return accessChecker.canViewPrivateLinks()
-            .flatMapMany(canViewPrivate -> {
-                var query = isNull("metadata.deletionTimestamp");
+        return Mono.zip(
+                accessChecker.canViewPrivateLinks(),
+                linkPublicQueryService.privateGroupNames()
+            )
+            .flatMapMany(accessTuple -> {
+                boolean canViewPrivate = accessTuple.getT1();
+                var privateGroups = accessTuple.getT2();
+
+                var linkQuery = isNull("metadata.deletionTimestamp");
+                var groupOptions = ListOptions.builder().build();
                 if (!canViewPrivate) {
-                    query = and(query, equal("spec.visible", Link.LinkVisible.PUBLIC.name()));
+                    linkQuery = and(linkQuery,
+                        equal("spec.visible", Link.LinkVisible.PUBLIC.name()));
+                    if (!privateGroups.isEmpty()) {
+                        linkQuery = and(linkQuery, or(
+                            isNull("spec.groupName"),
+                            not(in("spec.groupName", new ArrayList<>(privateGroups)))
+                        ));
+                    }
+                    groupOptions = ListOptions.builder()
+                        .andQuery(equal("spec.visible",
+                            LinkGroup.LinkGroupVisible.PUBLIC.name()))
+                        .build();
                 }
                 var linkOptions = new ListOptions();
-                linkOptions.setFieldSelector(FieldSelector.of(query));
+                linkOptions.setFieldSelector(FieldSelector.of(linkQuery));
 
                 return Mono.zip(
-                        listAllGroups(ListOptions.builder().build()),
+                        listAllGroups(groupOptions),
                         listAllLinkFeeds(linkOptions, limit)
                     )
                     .flatMapMany(tuple -> {

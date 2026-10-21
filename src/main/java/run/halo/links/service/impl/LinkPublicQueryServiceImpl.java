@@ -21,12 +21,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import static org.springframework.data.domain.Sort.Order.asc;
 import static org.springframework.data.domain.Sort.Order.desc;
 import static run.halo.app.extension.index.query.Queries.equal;
+import static run.halo.app.extension.index.query.Queries.in;
 import static run.halo.app.extension.index.query.Queries.isNull;
+import static run.halo.app.extension.index.query.Queries.not;
+import static run.halo.app.extension.index.query.Queries.or;
 
 @Component
 public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
@@ -63,7 +68,11 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
 
     @Override
     public Mono<List<LinkGroupVo>> listAllGroups(ListOptions options) {
-        return client.listAll(LinkGroup.class, options, Sort.unsorted())
+        return accessChecker.canViewPrivateLinks()
+            .flatMapMany(canViewPrivate -> {
+                var listOptions = canViewPrivate ? options : publicGroupsOnly(options);
+                return client.listAll(LinkGroup.class, listOptions, Sort.unsorted());
+            })
             .sort(groupComparator())
             .map(this::toGroupVo)
             .collectList();
@@ -121,14 +130,41 @@ public class LinkPublicQueryServiceImpl implements LinkPublicQueryService {
     }
 
 
-    private Mono<ListOptions> accessibleOptions(ListOptions options) {
-        return accessChecker.canViewPrivateLinks()
-            .map(canViewPrivate -> canViewPrivate ? options : publicOnly(options));
+    @Override
+    public Mono<Set<String>> privateGroupNames() {
+        var options = ListOptions.builder()
+            .andQuery(equal("spec.visible", LinkGroup.LinkGroupVisible.PRIVATE.name()))
+            .build();
+        return client.listAll(LinkGroup.class, options, Sort.unsorted())
+            .map(group -> group.getMetadata().getName())
+            .collect(Collectors.toSet());
     }
 
-    static ListOptions publicOnly(ListOptions options) {
+    private Mono<ListOptions> accessibleOptions(ListOptions options) {
+        return accessChecker.canViewPrivateLinks()
+            .flatMap(canViewPrivate -> canViewPrivate
+                ? Mono.just(options)
+                : publicOnly(options));
+    }
+
+    private Mono<ListOptions> publicOnly(ListOptions options) {
+        return privateGroupNames()
+            .map(privateGroups -> {
+                var builder = ListOptions.builder(options)
+                    .andQuery(equal("spec.visible", Link.LinkVisible.PUBLIC.name()));
+                if (!privateGroups.isEmpty()) {
+                    builder.andQuery(or(
+                        isNull("spec.groupName"),
+                        not(in("spec.groupName", new ArrayList<>(privateGroups)))
+                    ));
+                }
+                return builder.build();
+            });
+    }
+
+    static ListOptions publicGroupsOnly(ListOptions options) {
         return ListOptions.builder(options)
-            .andQuery(equal("spec.visible", Link.LinkVisible.PUBLIC.name()))
+            .andQuery(equal("spec.visible", LinkGroup.LinkGroupVisible.PUBLIC.name()))
             .build();
     }
 

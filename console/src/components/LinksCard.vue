@@ -9,6 +9,7 @@ import {
   Dialog,
   IconArrowLeft,
   IconArrowRight,
+  IconEyeOff,
   IconMore,
   Toast,
   VButton,
@@ -33,6 +34,8 @@ const props = defineProps<{
 
 const group = computed(() => props.groupWithLinks.group);
 const links = computed(() => props.groupWithLinks.links);
+
+const isPrivateGroup = computed(() => group.value?.spec?.visible === "PRIVATE");
 
 const queryClient = useQueryClient();
 
@@ -227,6 +230,13 @@ function handleDelete({ deleteLinks }: { deleteLinks: boolean }) {
         <div class=":uno: flex flex-wrap items-center gap-3">
           <div class=":uno: text-sm text-gray-900 font-semibold">
             {{ group?.spec?.displayName || "未分组" }}（{{ links.length }}）
+            <IconEyeOff
+              v-if="isPrivateGroup"
+              v-tooltip="{
+                content: '私密分组，其下所有链接仅对具有访问权限的用户可见。',
+              }"
+              class=":uno: ml-1 inline size-3 text-gray-400 align-[-2px]"
+            />
           </div>
           <VSpace v-if="enabledSelect" class=":uno: flex-wrap">
             <VButton size="sm" @click="handleSelectAll">全选</VButton>

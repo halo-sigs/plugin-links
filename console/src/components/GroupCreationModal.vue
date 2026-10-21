@@ -39,6 +39,7 @@ const { mutate, isPending } = useMutation({
         },
         spec: {
           displayName: data.displayName,
+          visible: data.visible ?? "PUBLIC",
           priority: maxPriority + 1,
           links: [],
         },

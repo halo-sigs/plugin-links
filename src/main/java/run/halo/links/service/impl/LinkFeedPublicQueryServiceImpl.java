@@ -18,6 +18,7 @@ import run.halo.links.rss.LinkFeedPublicSettingsFetcher;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.service.LinkFeedPublicQueryService;
 import run.halo.links.service.LinkPrivateAccessChecker;
+import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
 
@@ -46,13 +47,16 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
     private final LinkPrivateAccessChecker accessChecker;
 
+    private final LinkPublicQueryService linkPublicQueryService;
+
     public LinkFeedPublicQueryServiceImpl(ReactiveExtensionClient client,
         LinkFeedItemStore itemStore, LinkFeedPublicSettingsFetcher publicSettingsFetcher,
-        LinkPrivateAccessChecker accessChecker) {
+        LinkPrivateAccessChecker accessChecker, LinkPublicQueryService linkPublicQueryService) {
         this.client = client;
         this.itemStore = itemStore;
         this.publicSettingsFetcher = publicSettingsFetcher;
         this.accessChecker = accessChecker;
+        this.linkPublicQueryService = linkPublicQueryService;
     }
 
 
@@ -95,14 +99,23 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
         return getLinkByLinkNames(linkNames)
             .collectMap(link -> link.getMetadata().getName())
             .zipWith(accessChecker.canViewPrivateLinks())
+            .zipWith(linkPublicQueryService.privateGroupNames())
             .map(tuple -> {
-                var links = tuple.getT1();
-                boolean canViewPrivate = tuple.getT2();
+                var links = tuple.getT1().getT1();
+                boolean canViewPrivate = tuple.getT1().getT2();
+                var privateGroups = tuple.getT2();
 
                 List<LinkFeedItemVo> list = pageItems.stream()
                     .filter(item -> {
                         var link = links.get(item.getLinkName());
-                        return canViewPrivate || link == null || link.isPubliclyVisible();
+                        if (canViewPrivate || link == null) {
+                            return true;
+                        }
+                        if (!link.isPubliclyVisible()) {
+                            return false;
+                        }
+                        var groupName = link.getSpec().getGroupName();
+                        return groupName == null || !privateGroups.contains(groupName);
                     })
                     .map(item -> {
                         LinkFeedItemVo vo = LinkFeedItemVo.from(item);
@@ -130,8 +143,16 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
     }
 
     private Mono<LinkFeedItemPageVo> listByGroup(String groupName, LinkFeedItemQuery query) {
-        return accessChecker.canViewPrivateLinks()
-            .flatMap(canViewPrivate -> {
+        return Mono.zip(
+                accessChecker.canViewPrivateLinks(),
+                linkPublicQueryService.privateGroupNames()
+            )
+            .flatMap(tuple -> {
+                boolean canViewPrivate = tuple.getT1();
+                var privateGroups = tuple.getT2();
+                if (!canViewPrivate && privateGroups.contains(groupName)) {
+                    return Mono.just(emptyPage());
+                }
                 var options = ListOptions.builder()
                     .andQuery(equal("spec.groupName", groupName));
                 if (!canViewPrivate) {

@@ -11,21 +11,30 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.service.LinkFeedPublicQueryService;
+import run.halo.links.service.LinkPublicQueryService;
 import run.halo.links.vo.LinkFeedItemPageVo;
 
 class LinkFeedFinderImplTest {
+
+    private static LinkPublicQueryService publicQueryServiceWithoutPrivateGroups() {
+        var service = mock(LinkPublicQueryService.class);
+        when(service.privateGroupNames()).thenReturn(Mono.just(Set.of()));
+        return service;
+    }
 
     @Test
     void shouldReturnEmptyPageWhenPublicFeedQueriesAreDisabled() {
         LinkFeedPublicQueryService service = mock(LinkFeedPublicQueryService.class);
         when(service.isPublicEnabled()).thenReturn(Mono.just(false));
-        LinkFeedFinderImpl finder = new LinkFeedFinderImpl(null, service, null, null);
+        LinkFeedFinderImpl finder =
+            new LinkFeedFinderImpl(null, service, null, null, publicQueryServiceWithoutPrivateGroups());
 
         StepVerifier.create(finder.list(Map.of("limit", 10)))
             .assertNext(page -> {
@@ -43,7 +52,8 @@ class LinkFeedFinderImplTest {
         LinkFeedItemPageVo page = new LinkFeedItemPageVo(List.of(), null, null, false);
         when(service.isPublicEnabled()).thenReturn(Mono.just(true));
         when(service.listFeeds(isNull(), any(LinkFeedItemQuery.class))).thenReturn(Mono.just(page));
-        LinkFeedFinderImpl finder = new LinkFeedFinderImpl(null, service, null, null);
+        LinkFeedFinderImpl finder =
+            new LinkFeedFinderImpl(null, service, null, null, publicQueryServiceWithoutPrivateGroups());
 
         StepVerifier.create(finder.list(Map.of("limit", 10)))
             .expectNext(page)
@@ -56,7 +66,8 @@ class LinkFeedFinderImplTest {
         LinkFeedItemPageVo page = new LinkFeedItemPageVo(List.of(), null, null, false);
         when(service.isPublicEnabled()).thenReturn(Mono.just(true));
         when(service.listFeeds(isNull(), any(LinkFeedItemQuery.class))).thenReturn(Mono.just(page));
-        LinkFeedFinderImpl finder = new LinkFeedFinderImpl(null, service, null, null);
+        LinkFeedFinderImpl finder =
+            new LinkFeedFinderImpl(null, service, null, null, publicQueryServiceWithoutPrivateGroups());
 
         StepVerifier.create(finder.list(Map.of("limit", 10, "hidden", true)))
             .expectNext(page)
@@ -72,7 +83,8 @@ class LinkFeedFinderImplTest {
     void shouldReturnEmptyGroupsWhenPublicFeedQueriesAreDisabled() {
         LinkFeedPublicQueryService service = mock(LinkFeedPublicQueryService.class);
         when(service.isPublicEnabled()).thenReturn(Mono.just(false));
-        LinkFeedFinderImpl finder = new LinkFeedFinderImpl(null, service, null, null);
+        LinkFeedFinderImpl finder =
+            new LinkFeedFinderImpl(null, service, null, null, publicQueryServiceWithoutPrivateGroups());
 
         StepVerifier.create(finder.groupBy(1))
             .verifyComplete();

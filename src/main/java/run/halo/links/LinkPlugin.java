@@ -88,6 +88,13 @@ public class LinkPlugin extends BasePlugin {
             indexSpecs.add(IndexSpecs.<LinkGroup, Integer>single("spec.priority", Integer.class)
                 .indexFunc(group -> group.getSpec().getPriority())
             );
+            indexSpecs.add(IndexSpecs.<LinkGroup, String>single("spec.visible", String.class)
+                .indexFunc(group -> {
+                    var visible = group.getSpec().getVisible();
+                    return visible == null ? LinkGroup.LinkGroupVisible.PUBLIC.name()
+                        : visible.name();
+                })
+            );
         });
         schemeManager.register(LinkApplication.class, indexSpecs -> {
             indexSpecs.add(IndexSpecs.<LinkApplication, String>single("spec.url", String.class)

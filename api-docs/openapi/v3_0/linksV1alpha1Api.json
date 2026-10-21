@@ -2739,6 +2739,9 @@
           "metadata" : {
             "$ref" : "#/components/schemas/Metadata"
           },
+          "publiclyVisible" : {
+            "type" : "boolean"
+          },
           "spec" : {
             "$ref" : "#/components/schemas/LinkGroupSpec"
           }
@@ -2816,6 +2819,12 @@
             "type" : "integer",
             "description" : "Sort order of the link group; lower values appear earlier.",
             "format" : "int32"
+          },
+          "visible" : {
+            "type" : "string",
+            "description" : "Visibility of a link group.",
+            "default" : "PUBLIC",
+            "enum" : [ "PUBLIC", "PRIVATE" ]
           }
         },
         "description" : "Configurable fields of a link group."
