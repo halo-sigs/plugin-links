@@ -17,6 +17,7 @@ import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedPublicSettingsFetcher;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.service.LinkFeedPublicQueryService;
+import run.halo.links.service.LinkPrivateAccessChecker;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
 
@@ -43,11 +44,15 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
     private final LinkFeedPublicSettingsFetcher publicSettingsFetcher;
 
+    private final LinkPrivateAccessChecker accessChecker;
+
     public LinkFeedPublicQueryServiceImpl(ReactiveExtensionClient client,
-        LinkFeedItemStore itemStore, LinkFeedPublicSettingsFetcher publicSettingsFetcher) {
+        LinkFeedItemStore itemStore, LinkFeedPublicSettingsFetcher publicSettingsFetcher,
+        LinkPrivateAccessChecker accessChecker) {
         this.client = client;
         this.itemStore = itemStore;
         this.publicSettingsFetcher = publicSettingsFetcher;
+        this.accessChecker = accessChecker;
     }
 
 
@@ -89,9 +94,16 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
 
         return getLinkByLinkNames(linkNames)
             .collectMap(link -> link.getMetadata().getName())
-            .map(links -> {
+            .zipWith(accessChecker.canViewPrivateLinks())
+            .map(tuple -> {
+                var links = tuple.getT1();
+                boolean canViewPrivate = tuple.getT2();
 
                 List<LinkFeedItemVo> list = pageItems.stream()
+                    .filter(item -> {
+                        var link = links.get(item.getLinkName());
+                        return canViewPrivate || link == null || link.isPubliclyVisible();
+                    })
                     .map(item -> {
                         LinkFeedItemVo vo = LinkFeedItemVo.from(item);
                         String name = item.getLinkName();
@@ -118,13 +130,18 @@ public class LinkFeedPublicQueryServiceImpl implements LinkFeedPublicQueryServic
     }
 
     private Mono<LinkFeedItemPageVo> listByGroup(String groupName, LinkFeedItemQuery query) {
-        var options = ListOptions.builder()
-            .andQuery(equal("spec.groupName", groupName))
-            .build();
-        return client.listAll(Link.class, options, Sort.unsorted())
-            .collectList()
-            .flatMap(links -> Mono.fromCallable(() -> queryFeedsByLinks(links, query))
-                .subscribeOn(Schedulers.boundedElastic()));
+        return accessChecker.canViewPrivateLinks()
+            .flatMap(canViewPrivate -> {
+                var options = ListOptions.builder()
+                    .andQuery(equal("spec.groupName", groupName));
+                if (!canViewPrivate) {
+                    options.andQuery(equal("spec.visible", Link.LinkVisible.PUBLIC.name()));
+                }
+                return client.listAll(Link.class, options.build(), Sort.unsorted())
+                    .collectList()
+                    .flatMap(links -> Mono.fromCallable(() -> queryFeedsByLinks(links, query))
+                        .subscribeOn(Schedulers.boundedElastic()));
+            });
     }
 
     private LinkFeedItemPageVo queryFeedsByLinks(List<Link> links, LinkFeedItemQuery query) {

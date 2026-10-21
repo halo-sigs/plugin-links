@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.HandlerStrategies;
 import org.springframework.web.reactive.function.server.RenderingResponse;
 import org.springframework.web.reactive.function.server.ServerRequest;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.app.plugin.PluginContext;
@@ -130,6 +132,8 @@ class LinkRouterTest {
             .thenReturn(Mono.just(LinkApplicationSettings.defaults()));
         when(templateNameResolver.resolveTemplateNameOrDefault(exchange, "links"))
             .thenReturn(Mono.just("plugin:PluginLinks:links"));
+        when(linkPublicQueryService.listAll(any(), any())).thenReturn(Mono.just(List.of()));
+        when(linkFinder.groupBy()).thenReturn(Flux.empty());
 
         StepVerifier.create(router().linkTemplateRoute().route(request)
                 .flatMap(handler -> handler.handle(request)))

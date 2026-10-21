@@ -25,12 +25,15 @@ import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
 import run.halo.links.service.LinkFeedPublicQueryService;
+import run.halo.links.service.LinkPrivateAccessChecker;
 import run.halo.links.vo.LinkFeedGroupVo;
 import run.halo.links.vo.LinkFeedItemPageVo;
 import run.halo.links.vo.LinkFeedItemVo;
 import run.halo.links.vo.LinkFeedVo;
 
 import static org.springframework.data.domain.Sort.Order.asc;
+import static run.halo.app.extension.index.query.Queries.and;
+import static run.halo.app.extension.index.query.Queries.equal;
 import static run.halo.app.extension.index.query.Queries.isNull;
 
 
@@ -45,11 +48,14 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
 
     private final LinkFeedItemStore itemStore;
 
+    private final LinkPrivateAccessChecker accessChecker;
+
     public LinkFeedFinderImpl(ReactiveExtensionClient client, LinkFeedPublicQueryService linkFeedPublicQueryService,
-        LinkFeedItemStore itemStore) {
+        LinkFeedItemStore itemStore, LinkPrivateAccessChecker accessChecker) {
         this.client = client;
         this.linkFeedPublicQueryService = linkFeedPublicQueryService;
         this.itemStore = itemStore;
+        this.accessChecker = accessChecker;
     }
 
     @Override
@@ -79,51 +85,57 @@ public class LinkFeedFinderImpl implements LinkFeedFinder {
     }
 
     private Flux<LinkFeedGroupVo> groupByWhenPublicEnabled(Integer limit) {
-        var linkOptions = new ListOptions();
-        linkOptions.setFieldSelector(
-            FieldSelector.of(isNull("metadata.deletionTimestamp")));
-
-        return Mono.zip(
-                listAllGroups(ListOptions.builder().build()),
-                listAllLinkFeeds(linkOptions,limit)
-            )
-            .flatMapMany(tuple -> {
-                var groups = tuple.getT1();
-                var allLinks = tuple.getT2();
-
-                Map<String, List<LinkFeedVo>> linksByGroup = allLinks.stream()
-                    .collect(Collectors.groupingBy(link ->
-                        link.getSpec() != null
-                            && link.getSpec().getGroupName() != null
-                            ? link.getSpec().getGroupName()
-                            : UNGROUPED_NAME));
-
-                var result = groups.stream()
-                    .map(group -> {
-                        var links = linksByGroup.getOrDefault(
-                            group.getMetadata().getName(), List.of());
-
-                        links = links.stream()
-                            .sorted(Comparator.comparing((LinkFeedVo link) -> {
-                                    List<LinkFeedItemVo> linkFeedItems = link.getFeeds();
-                                    if (linkFeedItems != null && !linkFeedItems.isEmpty()) {
-                                        return linkFeedItems.get(0).getPublishedAt();
-                                    }
-                                    return null;
-                                }, Comparator.nullsLast(Comparator.reverseOrder())
-                            )).toList();
-                        return group.withLinks(links);
-                    })
-                    .toList();
-
-                var ungroupedLinks = linksByGroup.get(UNGROUPED_NAME);
-                if (ungroupedLinks != null && !ungroupedLinks.isEmpty()) {
-                    return Flux.fromIterable(result)
-                        .concatWith(ungrouped()
-                            .map(LinkFeedGroupVo::from)
-                            .map(group -> group.withLinks(ungroupedLinks)));
+        return accessChecker.canViewPrivateLinks()
+            .flatMapMany(canViewPrivate -> {
+                var query = isNull("metadata.deletionTimestamp");
+                if (!canViewPrivate) {
+                    query = and(query, equal("spec.visible", Link.LinkVisible.PUBLIC.name()));
                 }
-                return Flux.fromIterable(result);
+                var linkOptions = new ListOptions();
+                linkOptions.setFieldSelector(FieldSelector.of(query));
+
+                return Mono.zip(
+                        listAllGroups(ListOptions.builder().build()),
+                        listAllLinkFeeds(linkOptions, limit)
+                    )
+                    .flatMapMany(tuple -> {
+                        var groups = tuple.getT1();
+                        var allLinks = tuple.getT2();
+
+                        Map<String, List<LinkFeedVo>> linksByGroup = allLinks.stream()
+                            .collect(Collectors.groupingBy(link ->
+                                link.getSpec() != null
+                                    && link.getSpec().getGroupName() != null
+                                    ? link.getSpec().getGroupName()
+                                    : UNGROUPED_NAME));
+
+                        var result = groups.stream()
+                            .map(group -> {
+                                var links = linksByGroup.getOrDefault(
+                                    group.getMetadata().getName(), List.of());
+
+                                links = links.stream()
+                                    .sorted(Comparator.comparing((LinkFeedVo link) -> {
+                                            List<LinkFeedItemVo> linkFeedItems = link.getFeeds();
+                                            if (linkFeedItems != null && !linkFeedItems.isEmpty()) {
+                                                return linkFeedItems.get(0).getPublishedAt();
+                                            }
+                                            return null;
+                                        }, Comparator.nullsLast(Comparator.reverseOrder())
+                                    )).toList();
+                                return group.withLinks(links);
+                            })
+                            .toList();
+
+                        var ungroupedLinks = linksByGroup.get(UNGROUPED_NAME);
+                        if (ungroupedLinks != null && !ungroupedLinks.isEmpty()) {
+                            return Flux.fromIterable(result)
+                                .concatWith(ungrouped()
+                                    .map(LinkFeedGroupVo::from)
+                                    .map(group -> group.withLinks(ungroupedLinks)));
+                        }
+                        return Flux.fromIterable(result);
+                    });
             });
     }
 

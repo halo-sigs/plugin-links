@@ -10,13 +10,21 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import run.halo.links.rss.LinkFeedItemQuery;
 import run.halo.links.rss.LinkFeedItemStore;
 import run.halo.links.rss.LinkFeedStorageUnavailableException;
+import run.halo.links.service.LinkPrivateAccessChecker;
 import run.halo.links.vo.LinkFeedItemVo;
 
 class LinkFeedPublicQueryServiceImplTest {
+
+    private static LinkPrivateAccessChecker publicOnlyChecker() {
+        var checker = mock(LinkPrivateAccessChecker.class);
+        when(checker.canViewPrivateLinks()).thenReturn(Mono.just(false));
+        return checker;
+    }
 
     @Test
     void shouldReturnEmptyPageWhenRssStorageIsUnavailable() {
@@ -25,7 +33,7 @@ class LinkFeedPublicQueryServiceImplTest {
         when(itemStore.listRecent(any()))
             .thenThrow(new LinkFeedStorageUnavailableException("unavailable"));
         LinkFeedPublicQueryServiceImpl service =
-            new LinkFeedPublicQueryServiceImpl(null, itemStore, null);
+            new LinkFeedPublicQueryServiceImpl(null, itemStore, null, publicOnlyChecker());
 
         StepVerifier.create(service.listFeeds(null, query))
             .assertNext(page -> {
@@ -44,7 +52,7 @@ class LinkFeedPublicQueryServiceImplTest {
             return List.of();
         });
         LinkFeedPublicQueryServiceImpl service =
-            new LinkFeedPublicQueryServiceImpl(null, itemStore, null);
+            new LinkFeedPublicQueryServiceImpl(null, itemStore, null, publicOnlyChecker());
 
         StepVerifier.create(service.listFeeds(null, new LinkFeedItemQuery()))
             .assertNext(page -> assertThat(page.getItems()).isEmpty())
@@ -58,7 +66,7 @@ class LinkFeedPublicQueryServiceImplTest {
         LinkFeedItemStore itemStore = mock(LinkFeedItemStore.class);
         when(itemStore.listRecent(any())).thenReturn(List.of());
         LinkFeedPublicQueryServiceImpl service =
-            new LinkFeedPublicQueryServiceImpl(null, itemStore, null);
+            new LinkFeedPublicQueryServiceImpl(null, itemStore, null, publicOnlyChecker());
         LinkFeedItemQuery requested = new LinkFeedItemQuery();
         requested.setHidden(true);
 

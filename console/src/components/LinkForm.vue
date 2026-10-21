@@ -35,6 +35,7 @@ type LinkFormData = LinkFormState & {
 const data = ref<LinkFormData>({
   url: "",
   displayName: "",
+  visible: "PUBLIC",
   rss: {
     enabled: false,
     feedUrls: [],
@@ -69,12 +70,18 @@ const groupOptions = computed(() => {
   return options;
 });
 
+const visibilityOptions = [
+  { label: "公开", value: "PUBLIC" },
+  { label: "私密", value: "PRIVATE" },
+];
+
 onMounted(() => {
   if (props.formState) {
     const formState = toRaw(props.formState);
     const feedUrls = [...(formState.rss?.feedUrls || [])];
     data.value = {
       ...formState,
+      visible: formState.visible ?? "PUBLIC",
       rss: {
         enabled: formState.rss?.enabled ?? false,
         feedUrls,
@@ -225,6 +232,7 @@ async function onSubmit() {
     logo: data.value.logo,
     description: data.value.description,
     groupName: data.value.groupName || undefined,
+    visible: data.value.visible ?? "PUBLIC",
     rss: {
       enabled: data.value.rss.enabled,
       feedUrls,
@@ -312,6 +320,14 @@ function handleGroupCreated(group: LinkGroup) {
             </template>
           </FormKit>
           <FormKit type="textarea" name="description" v-model="data.description" label="描述" auto-height></FormKit>
+          <FormKit
+            type="select"
+            name="visible"
+            v-model="data.visible"
+            :options="visibilityOptions"
+            label="可见性"
+            help="私密链接仅管理员或具有链接管理权限的用户可见"
+          ></FormKit>
         </div>
       </div>
 

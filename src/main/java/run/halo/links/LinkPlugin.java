@@ -77,6 +77,12 @@ public class LinkPlugin extends BasePlugin {
                     return rss == null ? null : rss.getEnabled();
                 })
             );
+            indexSpecs.add(IndexSpecs.<Link, String>single("spec.visible", String.class)
+                .indexFunc(link -> {
+                    var visible = link.getSpec().getVisible();
+                    return visible == null ? Link.LinkVisible.PUBLIC.name() : visible.name();
+                })
+            );
         });
         schemeManager.register(LinkGroup.class, indexSpecs -> {
             indexSpecs.add(IndexSpecs.<LinkGroup, Integer>single("spec.priority", Integer.class)
