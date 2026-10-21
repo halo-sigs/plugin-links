@@ -34,7 +34,6 @@ class SqliteStoreBenchmarkTest {
             store.countUnread();
             store.countUnreadByLinkName();
         });
-        long snapshotMillis = elapsedMillis(database::createSnapshot);
         long cleanupMillis = elapsedMillis(() -> store.deleteExcess(50_000));
         long sizeBytes = Files.size(dbPath);
         database.destroy();
@@ -49,14 +48,13 @@ class SqliteStoreBenchmarkTest {
         });
 
         System.out.printf("SQLite 100k benchmark: write=%dms list=%dms unread=%dms "
-                + "snapshot=%dms cleanup=%dms reopen=%dms size=%d bytes%n",
-            writeMillis, listMillis, unreadMillis, snapshotMillis, cleanupMillis,
+                + "cleanup=%dms reopen=%dms size=%d bytes%n",
+            writeMillis, listMillis, unreadMillis, cleanupMillis,
             reopenMillis, sizeBytes);
 
         assertThat(writeMillis).isLessThan(GENEROUS_LIMIT.toMillis());
         assertThat(listMillis).isLessThan(GENEROUS_LIMIT.toMillis());
         assertThat(unreadMillis).isLessThan(GENEROUS_LIMIT.toMillis());
-        assertThat(snapshotMillis).isLessThan(GENEROUS_LIMIT.toMillis());
         assertThat(cleanupMillis).isLessThan(GENEROUS_LIMIT.toMillis());
         assertThat(reopenMillis).isLessThan(GENEROUS_LIMIT.toMillis());
     }

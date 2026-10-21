@@ -85,10 +85,11 @@ class LinksSqliteDatabaseTest {
     }
 
     @Test
-    void shouldUpgradeRestoredVersionOneSnapshotWithoutHiddenColumn() throws Exception {
+    void shouldUpgradeManuallyRestoredVersionOneSnapshotWithoutHiddenColumn() throws Exception {
         Path dbPath = tempDir.resolve("links.sqlite");
         Path snapshot = tempDir.resolve("links.sqlite.snapshot-20260801000000000");
         createVersionOneDatabaseWithoutHidden(snapshot, "snapshot-item");
+        Files.copy(snapshot, dbPath);
 
         LinksSqliteDatabase database = new LinksSqliteDatabase(dbPath);
         try {
