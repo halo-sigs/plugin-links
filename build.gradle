@@ -51,6 +51,18 @@ test {
     useJUnitPlatform()
 }
 
+tasks.named('jar', Jar) {
+    // Keep ARM64/AMD64 natives, including musl for Alpine Linux.
+    includeEmptyDirs = false
+    eachFile { details ->
+        if (details.path.startsWith('org/sqlite/native/')
+            && !details.path.matches(
+                'org/sqlite/native/(Mac|Linux|Linux-Musl|Windows)/(aarch64|x86_64)/.*')) {
+            details.exclude()
+        }
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
     options.release = 21
