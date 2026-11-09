@@ -75,6 +75,12 @@ export interface LinkApplicationSpec {
      */
     'origin': Origin;
     /**
+     * Administrator-provided reason when the application is rejected.
+     * @type {string}
+     * @memberof LinkApplicationSpec
+     */
+    'rejectReason'?: string;
+    /**
      * Application status.
      * @type {string}
      * @memberof LinkApplicationSpec

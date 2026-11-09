@@ -84,6 +84,9 @@ public class LinkApplicationService {
             && LinkUrlCanonicalizer.canonicalKey(submission.logo()).isEmpty()) {
             return CreateResult.invalid("logo", submission.logo(), "Logo 地址格式错误");
         }
+        if (!LinkImageReference.isValid(submission.cover())) {
+            return CreateResult.invalid("cover", submission.cover(), "封面地址格式错误");
+        }
         if (StringUtils.isNotBlank(submission.backlink())
             && LinkUrlCanonicalizer.canonicalKey(submission.backlink()).isEmpty()) {
             return CreateResult.invalid("backlink", submission.backlink(), "反链地址格式错误");
@@ -156,6 +159,7 @@ public class LinkApplicationService {
         spec.setUrl(submission.url().trim());
         spec.setDisplayName(submission.displayName().trim());
         spec.setLogo(normalizeOptional(submission.logo()));
+        spec.setCover(normalizeOptional(submission.cover()));
         spec.setDescription(normalizeOptional(submission.description()));
         spec.setEmail(normalizeOptional(submission.email()));
         spec.setBacklink(normalizeOptional(submission.backlink()));
@@ -196,12 +200,18 @@ public class LinkApplicationService {
         String url,
         String displayName,
         String logo,
+        String cover,
         String description,
         String email,
         String backlink,
         List<String> feedUrls,
         LinkApplication.Origin origin
     ) {
+        public Submission(String url, String displayName, String logo, String description,
+            String email, String backlink, List<String> feedUrls,
+            LinkApplication.Origin origin) {
+            this(url, displayName, logo, null, description, email, backlink, feedUrls, origin);
+        }
     }
 
     public record CreateResult(

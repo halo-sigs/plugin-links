@@ -54,6 +54,13 @@ const { mutate, isPending } = useMutation({
       },
     ];
 
+    const cover = data.cover?.trim();
+    if (cover) {
+      jsonPatchInner.push({ op: "add", path: "/spec/cover", value: cover });
+    } else if (props.link.spec && Object.hasOwn(props.link.spec, "cover")) {
+      jsonPatchInner.push({ op: "remove", path: "/spec/cover" });
+    }
+
     if (data.groupName) {
       jsonPatchInner.push({
         op: "add",
@@ -199,6 +206,7 @@ function handleDelete() {
           url: link.spec.url,
           displayName: link.spec.displayName,
           logo: link.spec.logo,
+          cover: link.spec.cover,
           description: link.spec.description,
           groupName: link.spec.groupName,
           rss: link.spec.rss,

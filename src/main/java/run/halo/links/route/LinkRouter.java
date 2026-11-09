@@ -104,6 +104,7 @@ public class LinkRouter {
                         url,
                         displayName,
                         getFormValue(formData, "logo"),
+                        getFormValue(formData, "cover"),
                         getFormValue(formData, "description"),
                         getFormValue(formData, "email"),
                         getFormValue(formData, "backlink"),

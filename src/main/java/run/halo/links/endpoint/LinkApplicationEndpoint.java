@@ -90,9 +90,12 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
                         .implementation(Link.class)))
             .POST("linkapplications/{name}/reject", this::rejectLinkApplication,
                 builder -> builder.operationId("rejectLinkApplication")
-                    .description("Reject a pending link application.")
+                    .description("Reject a pending link application and store its rejection reason.")
                     .tag(tag)
                     .parameter(pathNameParameter())
+                    .requestBody(requestBodyBuilder()
+                        .description("Rejection reason passed through for applicant notification.")
+                        .implementation(RejectRequest.class))
                     .response(responseBuilder().responseCode("200")))
             .POST("linkapplications/{name}/verify", this::verifyBacklink,
                 builder -> builder.operationId("verifyBacklink")
@@ -205,14 +208,16 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
             .defaultIfEmpty(new ApproveRequest())
             .flatMap(body -> approvalService.approve(request.pathVariable("name"),
                 new LinkApplicationApprovalService.ApprovalCommand(
-                    body.getUrl(), body.getDisplayName(), body.getLogo(),
+                    body.getUrl(), body.getDisplayName(), body.getLogo(), body.getCover(),
                     body.getDescription(), body.getGroupName(), body.getBacklink(),
                     body.getFeedUrls())))
             .flatMap(link -> ServerResponse.ok().bodyValue(link));
     }
 
     private Mono<ServerResponse> rejectLinkApplication(ServerRequest request) {
-        return client.fetch(LinkApplication.class, request.pathVariable("name"))
+        return request.bodyToMono(RejectRequest.class)
+            .defaultIfEmpty(new RejectRequest())
+            .flatMap(body -> client.fetch(LinkApplication.class, request.pathVariable("name"))
             .switchIfEmpty(Mono.error(notFound("Link application not found.")))
             .flatMap(application -> {
                 var spec = application.getSpec();
@@ -221,8 +226,9 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
                         "Only pending link applications can be rejected."));
                 }
                 spec.setStatus(LinkApplication.Status.REJECTED);
+                spec.setRejectReason(StringUtils.trimToNull(body.getReason()));
                 return client.update(application);
-            })
+            }))
             .then(ServerResponse.ok().build());
     }
 
@@ -313,6 +319,7 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
         private String url;
         private String displayName;
         private String logo;
+        private String cover;
         private String description;
         private String groupName;
         private String backlink;
@@ -322,6 +329,13 @@ public class LinkApplicationEndpoint implements CustomEndpoint {
     @Data
     public static class VerifyRequest {
         private String backlink;
+    }
+
+    @Data
+    public static class RejectRequest {
+        @io.swagger.v3.oas.annotations.media.Schema(
+            description = "Reason stored on the rejected application and available to notification integrations.")
+        private String reason;
     }
 
     @Data

@@ -14,7 +14,7 @@ MCP Server 为下面的本地工具名生成协议名前缀；客户端应使用
 | --- | --- | --- |
 | `list_links` | `keyword`、`groupName` 或 `ungrouped`、`accessState`、`backlinkState`、`page`、`size`、`sortBy`、`sortDirection` | 搜索名称、描述、URL，按分组和已保存的检测状态筛选，返回摘要及分页信息 |
 | `get_link` | `name` | 返回基本资料、RSS 配置和状态、带检测时间的验证结果 |
-| `create_link` | 必填 `url`、`displayName`；可选 `description`、`logo`、`groupName`、`priority`、`rssEnabled`、`feedUrls`、`backlinkScanUrl` | 创建链接，未提供排序时追加在现有链接之后；允许重复 URL |
+| `create_link` | 必填 `url`、`displayName`；可选 `description`、`logo`、`cover`、`groupName`、`priority`、`rssEnabled`、`feedUrls`、`backlinkScanUrl` | 创建链接，未提供排序时追加在现有链接之后；允许重复 URL |
 | `update_link` | `name` 及至少一个上述可编辑字段 | 只修改明确提供的字段 |
 | `delete_link` | `name` | 删除链接，并异步清理对应订阅缓存 |
 | `move_links` | `names`、`groupName` | 批量移动，空字符串目标表示未分组，返回逐项结果 |
@@ -30,7 +30,7 @@ MCP Server 为下面的本地工具名生成协议名前缀；客户端应使用
 - `sortBy` 支持 `priority`、`displayName`、`creationTimestamp`；方向为 `asc` 或 `desc`，默认 priority 升序。
 - `ungrouped=true` 包括未设置分组及引用不存在分组的链接，与 `groupName` 互斥。
 - `accessState` 支持 `UNKNOWN`、`CHECKING`、`ACCESSIBLE`、`INACCESSIBLE`；`backlinkState` 支持 `UNKNOWN`、`CHECKING`、`FOUND`、`MISSING`、`NOT_CONFIGURED`、`FAILED`。`UNKNOWN` 表示没有保存对应检测状态。
-- 更新中的空 `groupName` 取消分组；空 `description`、`logo`、`backlinkScanUrl` 清空该字段；省略字段则保留原值。不接受 `null` 代替清空操作。
+- 更新中的空 `groupName` 取消分组；空 `description`、`logo`、`cover`、`backlinkScanUrl` 清空该字段；省略字段则保留原值。不接受 `null` 代替清空操作。
 - 启用 RSS 必须提供或已经具有有效的 `feedUrls`。关闭 RSS 会异步清理订阅缓存。
 - 普通创建、更新不自动触发检测和 RSS 刷新，可以继续调用对应工具。申请审批则保留已有后端的自动检测、RSS 刷新流程。
 - 批量移动和排序接受 1–100 个不重复标识，返回 `items`、`succeeded`、`failed`。批量操作与分组删除不保证原子性。
@@ -54,7 +54,7 @@ MCP Server 为下面的本地工具名生成协议名前缀；客户端应使用
 | `list_link_applications` | `page`、`size`、`status`、`originType` | 分页查看申请；状态为 PENDING、APPROVING、APPROVED、REJECTED，来源为 FORM、COMMENT |
 | `get_link_application` | `name`、可选 `includeOriginComment` | 查看申请，可按需附带最小来源评论上下文 |
 | `verify_link_application` | `name`、可选 `backlink` | 检查反链，覆盖地址仅用于本次检查，不修改申请状态 |
-| `approve_link_application` | `name`，可选 `url`、`displayName`、`logo`、`description`、`groupName`、`backlink`、`feedUrls` | 批准或恢复审批，返回正式友链；已批准的申请返回已有链接 |
+| `approve_link_application` | `name`，可选 `url`、`displayName`、`logo`、`cover`、`description`、`groupName`、`backlink`、`feedUrls` | 批准或恢复审批，返回正式友链；已批准的申请返回已有链接 |
 | `reject_link_application` | `name` | 仅拒绝 PENDING 申请，保留申请记录 |
 | `delete_link_application` | `name` | 删除申请记录，禁止删除 APPROVING，不连带删除正式友链 |
 

@@ -233,6 +233,24 @@ class LinkApplicationEndpointTest {
     }
 
     @Test
+    void shouldStoreTrimmedRejectionReason() {
+        var application = application("application-a", LinkApplication.Status.PENDING);
+        when(client.fetch(LinkApplication.class, "application-a"))
+            .thenReturn(Mono.just(application));
+        when(client.update(application)).thenReturn(Mono.just(application));
+
+        webClient.post()
+            .uri("/linkapplications/application-a/reject")
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+            .bodyValue("{\"reason\":\"  Please add our link first.  \"}")
+            .exchange()
+            .expectStatus().isOk();
+
+        assertThat(application.getSpec().getStatus()).isEqualTo(LinkApplication.Status.REJECTED);
+        assertThat(application.getSpec().getRejectReason()).isEqualTo("Please add our link first.");
+    }
+
+    @Test
     void shouldVerifyBacklinkOverrideFromReviewForm() {
         var application = application("application-a", LinkApplication.Status.PENDING);
         application.getSpec().setBacklink("https://original.example/links");

@@ -112,6 +112,7 @@ Cookie 由浏览器自动处理。
 | `url` | 是 | 申请网站的 HTTP/HTTPS 地址 |
 | `displayName` | 是 | 网站名称 |
 | `logo` | 否 | Logo 的 HTTP/HTTPS 地址 |
+| `cover` | 否 | 首页封面图片的 HTTP/HTTPS 地址，用于卡片悬停预览 |
 | `description` | 否 | 网站描述 |
 | `email` | 否 | 联系邮箱 |
 | `backlink` | 否 | 反链页面的 HTTP/HTTPS 地址 |
@@ -155,6 +156,11 @@ Cookie 由浏览器自动处理。
         Logo 地址
         <input name="logo" type="url"
                th:value="${param.field == 'logo' ? param.value : ''}">
+    </label>
+    <label>
+        首页封面
+        <input name="cover" type="url"
+               th:value="${param.field == 'cover' ? param.value : ''}">
     </label>
     <label>
         网站描述
@@ -235,6 +241,7 @@ REST API 位于 Halo 公共 API 组：
 | `url` | 是 | 申请网站的 HTTP/HTTPS 地址 |
 | `displayName` | 是 | 网站名称 |
 | `logo` | 否 | Logo 的 HTTP/HTTPS 地址 |
+| `cover` | 否 | 首页封面图片的 HTTP/HTTPS 地址，用于卡片悬停预览 |
 | `description` | 否 | 网站描述 |
 | `email` | 否 | 联系邮箱 |
 | `backlink` | 否 | 反链页面的 HTTP/HTTPS 地址 |
@@ -594,6 +601,7 @@ linkFeedFinder.list({
     "url": "string",
     "displayName": "string",
     "logo": "string",
+    "cover": "string",
     "description": "string",
     "priority": 0,
     "groupName": "string"
@@ -743,6 +751,7 @@ linkFeedFinder.list({
     "url": "string",
     "displayName": "string",
     "logo": "string",
+    "cover": "string",
     "description": "string",
     "priority": 0,
     "groupName": "string",

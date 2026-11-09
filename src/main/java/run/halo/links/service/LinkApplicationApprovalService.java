@@ -43,7 +43,7 @@ public class LinkApplicationApprovalService {
                 "Link application not found.")))
             .flatMap(application -> approve(application,
                 command == null
-                    ? new ApprovalCommand(null, null, null, null, null, null, null)
+                    ? new ApprovalCommand(null, null, null, null, null, null, null, null)
                     : command));
     }
 
@@ -209,6 +209,7 @@ public class LinkApplicationApprovalService {
         spec.setUrl(frozen.getUrl());
         spec.setDisplayName(frozen.getDisplayName());
         spec.setLogo(frozen.getLogo());
+        spec.setCover(frozen.getCover());
         spec.setDescription(frozen.getDescription());
         spec.setGroupName(frozen.getGroupName());
         spec.setPriority(0);
@@ -258,6 +259,11 @@ public class LinkApplicationApprovalService {
         frozen.setDisplayName(required(command.displayName(), spec.getDisplayName(),
             "displayName", "Display name is required."));
         frozen.setLogo(optional(command.logo(), spec.getLogo()));
+        frozen.setCover(optional(command.cover(), spec.getCover()));
+        if (!LinkImageReference.isValid(frozen.getCover())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "cover: Cover URL format is invalid.");
+        }
         frozen.setDescription(optional(command.description(), spec.getDescription()));
         frozen.setGroupName(StringUtils.isBlank(command.groupName())
             ? null : command.groupName().trim());
@@ -328,11 +334,16 @@ public class LinkApplicationApprovalService {
         String url,
         String displayName,
         String logo,
+        String cover,
         String description,
         String groupName,
         String backlink,
         List<String> feedUrls
     ) {
+        public ApprovalCommand(String url, String displayName, String logo,
+            String description, String groupName, String backlink, List<String> feedUrls) {
+            this(url, displayName, logo, null, description, groupName, backlink, feedUrls);
+        }
     }
 
     private record ApprovalCompletion(
