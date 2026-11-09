@@ -59,6 +59,9 @@ public class LinkApplication extends AbstractExtension {
         @Schema(description = "Status of the application.", requiredMode = REQUIRED)
         private Status status;
 
+        @Schema(description = "Administrator-provided reason when the application is rejected.")
+        private String rejectReason;
+
         @Schema(description = "Origin of the application.", requiredMode = REQUIRED)
         private Origin origin;
 

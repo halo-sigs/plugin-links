@@ -62,7 +62,8 @@ export function useApproveLinkApplication() {
 export function useRejectLinkApplication() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => linksConsoleApiClient.application.rejectLinkApplication({ name }),
+    mutationFn: ({ name, reason }: { name: string; reason: string }) =>
+      linksConsoleApiClient.application.rejectLinkApplication({ name }, { data: { reason } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QK_LINK_APPLICATIONS] });
     },

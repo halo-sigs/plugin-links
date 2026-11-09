@@ -96,8 +96,9 @@ public class LinkApplicationToolProvider implements McpToolProvider {
             tool("reject_link_application", "拒绝友链申请",
                 "Reject one PENDING application. Other states cannot be rejected.",
                 "拒绝一条待审核（PENDING）的友链申请，其他状态的申请不能拒绝。",
-                object("name", schema("string", "Application name.")),
-                List.of("name"), write("Reject link application", true, false), this::reject),
+                object("name", schema("string", "Application name."),
+                    "reason", schema("string", "Reason stored for applicant notification.")),
+                List.of("name", "reason"), write("Reject link application", true, false), this::reject),
             tool("delete_link_application", "删除友链申请",
                 "Delete application history unless approval is in progress (APPROVING). "
                     + "This does not delete the formal link created by an approved application.",
@@ -189,6 +190,7 @@ public class LinkApplicationToolProvider implements McpToolProvider {
                     "Only pending link applications can be rejected."));
             }
             spec.setStatus(LinkApplication.Status.REJECTED);
+            spec.setRejectReason(StringUtils.trimToNull(string(args, "reason")));
             return client.update(application).map(LinkApplicationToolProvider::applicationView);
         });
     }
@@ -253,6 +255,7 @@ public class LinkApplicationToolProvider implements McpToolProvider {
             "creationTimestamp", timestamp(application.getMetadata().getCreationTimestamp()),
             "url", spec.getUrl(), "displayName", spec.getDisplayName(), "logo", spec.getLogo(), "cover", spec.getCover(),
             "description", spec.getDescription(), "backlink", spec.getBacklink(),
+            "rejectReason", spec.getRejectReason(),
             "feedUrls", spec.getFeedUrls(), "status", enumName(spec.getStatus()),
             "originType", origin == null ? null : enumName(origin.getType()),
             "commentName", origin == null || origin.getComment() == null

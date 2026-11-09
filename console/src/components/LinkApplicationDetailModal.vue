@@ -23,7 +23,6 @@ import {
   buildLinkApplicationApprovalRequest,
   linkApplicationEffectiveFields,
   linkApplicationOriginCommentErrorState,
-  linkApplicationRejectDescription,
   linkApplicationReviewMode,
   linkApplicationStatusMeta,
   type LinkApplicationApprovalFormData,
@@ -73,6 +72,8 @@ const approvalForm = reactive<LinkApplicationApprovalFormData>({
   feedUrlsText: props.application.spec.feedUrls?.join("\n") || "",
 });
 const verificationBacklink = computed(() => approvalForm.backlink?.trim());
+const rejectFormOpen = shallowRef(false);
+const rejectReason = shallowRef("");
 
 const {
   data: originComment,
@@ -282,19 +283,25 @@ async function runStandaloneCommentActions(intent: OriginCommentActionIntent) {
 }
 
 function handleReject() {
-  Dialog.warning({
-    title: "确认拒绝申请？",
-    description: linkApplicationRejectDescription(props.application),
-    confirmType: "danger",
-    onConfirm: () => {
-      rejectApplication(props.application.metadata.name, {
-        onSuccess: () => {
-          Toast.success("已拒绝申请");
-          modal.value?.close();
-        },
-      });
+  rejectReason.value = "";
+  rejectFormOpen.value = true;
+}
+
+function submitReject() {
+  const reason = rejectReason.value.trim();
+  if (!reason) {
+    Toast.error("请填写拒绝原因");
+    return;
+  }
+  rejectApplication(
+    { name: props.application.metadata.name, reason },
+    {
+      onSuccess: () => {
+        Toast.success("已拒绝申请");
+        modal.value?.close();
+      },
     },
-  });
+  );
 }
 
 function handleVerify() {
@@ -508,6 +515,23 @@ function handleDelete() {
       <VSpace v-else>
         <VButton type="danger" @click="handleDelete">删除</VButton>
         <VButton @click="modal?.close()">关闭</VButton>
+      </VSpace>
+    </template>
+  </VModal>
+
+  <VModal v-if="rejectFormOpen" :title="'填写拒绝原因'" :width="480" :mount-to-body="true">
+    <FormKit
+      v-model="rejectReason"
+      type="textarea"
+      name="rejectReason"
+      label="拒绝原因"
+      placeholder="请填写可发送给申请者的拒绝原因"
+      auto-height
+    />
+    <template #footer>
+      <VSpace class=":uno: justify-end">
+        <VButton :loading="isRejecting" type="danger" @click="submitReject">拒绝</VButton>
+        <VButton :disabled="isRejecting" @click="rejectFormOpen = false">取消</VButton>
       </VSpace>
     </template>
   </VModal>
