@@ -33,13 +33,13 @@ export interface LinkApplicationOriginComment {
      */
     'approved': boolean;
     /**
-     *
+     * 
      * @type {string}
      * @memberof LinkApplicationOriginComment
      */
     'creationTime'?: string;
     /**
-     *
+     * 
      * @type {boolean}
      * @memberof LinkApplicationOriginComment
      */

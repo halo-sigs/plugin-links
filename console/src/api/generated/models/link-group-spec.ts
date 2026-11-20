@@ -39,5 +39,19 @@ export interface LinkGroupSpec {
      * @memberof LinkGroupSpec
      */
     'priority'?: number;
+    /**
+     * Visibility of a link group.
+     * @type {string}
+     * @memberof LinkGroupSpec
+     */
+    'visible'?: LinkGroupSpecVisibleEnum;
 }
+
+export const LinkGroupSpecVisibleEnum = {
+    Public: 'PUBLIC',
+    Private: 'PRIVATE'
+} as const;
+
+export type LinkGroupSpecVisibleEnum = typeof LinkGroupSpecVisibleEnum[keyof typeof LinkGroupSpecVisibleEnum];
+
 

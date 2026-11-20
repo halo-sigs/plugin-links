@@ -222,25 +222,11 @@ public class LinkRouter {
         return request -> {
             String group = queryParam(request, "group");
 
-            var links = new LazyContextVariable<List<LinkVo>>() {
-                @Override
-                protected List<LinkVo> loadValue() {
-                    return loadLinks(group).block(BLOCKING_TIMEOUT);
-                }
-            };
-
             var simpleGroups = new LazyContextVariable<List<LinkGroupVo>>() {
                 @Override
                 protected List<LinkGroupVo> loadValue() {
                     return linkPublicQueryService.listAllGroups(ListOptions.builder().build())
                         .block(BLOCKING_TIMEOUT);
-                }
-            };
-
-            var groups = new LazyContextVariable<List<LinkGroupVo>>() {
-                @Override
-                protected List<LinkGroupVo> loadValue() {
-                    return linkFinder.groupBy().collectList().block(BLOCKING_TIMEOUT);
                 }
             };
 
@@ -258,15 +244,19 @@ public class LinkRouter {
             var applicationEnabledMono = applicationSettingsFetcher.fetch()
                 .map(settings -> settings.selfSubmissionEnabled());
 
+            // Resolve links and groups within the request chain so that the current user's
+            // permission to view private links can be evaluated from the security context.
             return Mono.zip(
                     csrfTokenMono.map(CsrfToken::getToken).defaultIfEmpty(""),
-                    applicationEnabledMono
+                    applicationEnabledMono,
+                    loadLinks(group),
+                    linkFinder.groupBy().collectList()
                 )
                 .map(tuple -> {
                     Map<String, Object> model = new HashMap<>();
-                    model.put("links", links);
+                    model.put("links", tuple.getT3());
                     model.put("simpleGroups", simpleGroups);
-                    model.put("groups", groups);
+                    model.put("groups", tuple.getT4());
                     model.put("group", group);
                     model.put("pluginName", pluginContext.getName());
                     model.put("linksTitle", linksTitle);

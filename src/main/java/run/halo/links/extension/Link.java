@@ -63,6 +63,20 @@ public class Link extends AbstractExtension {
 
         @Schema(description = "Link verification settings.")
         private VerificationSpec verification;
+
+        @Schema(description = "Visibility of the link. Private links are hidden from theme-facing "
+            + "pages and APIs.", defaultValue = "PUBLIC")
+        private LinkVisible visible;
+    }
+
+    @Schema(description = "Visibility of a link.")
+    public enum LinkVisible {
+        PUBLIC,
+        PRIVATE
+    }
+
+    public boolean isPubliclyVisible() {
+        return spec == null || !LinkVisible.PRIVATE.equals(spec.getVisible());
     }
 
     @Data

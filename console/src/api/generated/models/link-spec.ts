@@ -74,5 +74,19 @@ export interface LinkSpec {
      * @memberof LinkSpec
      */
     'verification'?: VerificationSpec;
+    /**
+     * Visibility of a link.
+     * @type {string}
+     * @memberof LinkSpec
+     */
+    'visible'?: LinkSpecVisibleEnum;
 }
+
+export const LinkSpecVisibleEnum = {
+    Public: 'PUBLIC',
+    Private: 'PRIVATE'
+} as const;
+
+export type LinkSpecVisibleEnum = typeof LinkSpecVisibleEnum[keyof typeof LinkSpecVisibleEnum];
+
 

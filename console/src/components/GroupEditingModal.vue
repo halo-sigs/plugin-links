@@ -33,6 +33,11 @@ const { mutate, isPending } = useMutation({
         },
         {
           op: "add",
+          path: "/spec/visible",
+          value: data.visible ?? "PUBLIC",
+        },
+        {
+          op: "add",
           path: "/metadata/annotations",
           value: data.annotations || {},
         },
@@ -57,6 +62,7 @@ function onSubmit(data: GroupFormState) {
       :name="group.metadata.name"
       :formState="{
         displayName: group.spec.displayName,
+        visible: group.spec.visible,
         annotations: group.metadata.annotations,
       }"
       @submit="onSubmit"

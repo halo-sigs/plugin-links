@@ -49,6 +49,12 @@ export interface Link {
     'metadata': Metadata;
     /**
      * 
+     * @type {boolean}
+     * @memberof Link
+     */
+    'publiclyVisible'?: boolean;
+    /**
+     * 
      * @type {LinkSpec}
      * @memberof Link
      */
