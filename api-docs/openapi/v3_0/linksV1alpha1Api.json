@@ -2,7 +2,7 @@
   "openapi" : "3.0.1",
   "info" : {
     "title" : "Halo",
-    "version" : "2.26.0-beta.2"
+    "version" : "2.25.2"
   },
   "servers" : [ {
     "url" : "http://localhost:8091",
@@ -1890,7 +1890,7 @@
         "description" : "Reference to the source Comment."
       },
       "CopyOperation" : {
-        "required" : [ "from", "op", "path" ],
+        "required" : [ "op", "from", "path" ],
         "type" : "object",
         "properties" : {
           "from" : {
@@ -2123,7 +2123,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has next page."
+            "description" : "Indicates whether current page has previous page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -2430,6 +2430,7 @@
         }
       },
       "LinkDetailDTO" : {
+        "required" : [ "title" ],
         "type" : "object",
         "properties" : {
           "description" : {
@@ -2758,7 +2759,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has next page."
+            "description" : "Indicates whether current page has previous page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -2858,7 +2859,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has next page."
+            "description" : "Indicates whether current page has previous page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -3041,7 +3042,7 @@
           },
           "hasNext" : {
             "type" : "boolean",
-            "description" : "Indicates whether current page has next page."
+            "description" : "Indicates whether current page has previous page."
           },
           "hasPrevious" : {
             "type" : "boolean",
@@ -3137,7 +3138,7 @@
         "description" : "Metadata of Extension."
       },
       "MoveOperation" : {
-        "required" : [ "from", "op", "path" ],
+        "required" : [ "op", "from", "path" ],
         "type" : "object",
         "properties" : {
           "from" : {
